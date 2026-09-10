@@ -1,0 +1,46 @@
+[
+  {
+    "id": "retrieval-hybrid-release-happy",
+    "skill": "retrieval-pipeline-engineering",
+    "category": "happy_path",
+    "request": "为 Markdown 与 HTML 技术文档设计可发布的 hybrid retrieval 流水线，并保留可追溯引用。",
+    "setup": ["每个源有稳定 identity 和可信 revision", "安全层提供 tenant、ACL、版本和发布过滤", "系统支持 dense、sparse 与 reranker"],
+    "expected_decisions": ["定义 Document、Version、Chunk、Candidate、Evidence 和 RetrievalTrace", "采用隔离写入、完整性校验和事实源版本切换", "分别召回后融合，仅对授权候选重排和组装上下文"],
+    "required_invariants": ["request-context-propagated", "tenant-context-required", "evidence-lineage-preserved", "unpublished-version-not-retrievable", "rank-scores-attributable", "retrieval-trace-complete"],
+    "forbidden_actions": ["发布部分索引版本", "直接比较不同通道原始分数", "丢失 evidence identity"],
+    "verification": ["查询只能看到完整发布版本", "trace 能还原各阶段候选变化", "引用能定位 source、document、version 和 chunk"]
+  },
+  {
+    "id": "retrieval-idempotent-reingest-happy",
+    "skill": "retrieval-pipeline-engineering",
+    "category": "happy_path",
+    "request": "同一个 Git revision 因消息重复被摄取两次，请实现幂等处理并证明不会产生重复可见 chunk。",
+    "setup": ["两次任务具有相同 tenant、source、revision 和 idempotency key", "第一次任务已经发布"],
+    "expected_decisions": ["使用稳定 document/version/chunk identity", "重复任务返回已有状态或无副作用重放", "记录幂等命中和最终计数"],
+    "required_invariants": ["ingestion-is-idempotent", "chunk-id-stable-for-content", "duplicate-evidence-collapsed", "failure-is-explicit"],
+    "forbidden_actions": ["创建第二套可见版本", "只在最终查询阶段去重", "删除第一次成功产物再重建"],
+    "verification": ["重放前后可见 ID 集合相同", "索引和事实源计数不增长", "任务记录表明命中幂等路径"]
+  },
+  {
+    "id": "retrieval-version-conflict-boundary",
+    "skill": "retrieval-pipeline-engineering",
+    "category": "boundary",
+    "request": "新旧两个文档版本对 API timeout 给出冲突数值，请决定检索和上下文组装应如何处理。",
+    "setup": ["旧版本仍在索引但已不可见", "新版本已完成发布", "用户没有要求历史比较"],
+    "expected_decisions": ["固定本次请求使用的可见版本", "过滤旧版本并在 trace 记录版本约束", "历史比较时显式标记冲突及版本"],
+    "required_invariants": ["evidence-lineage-preserved", "unpublished-version-not-retrievable", "retrieval-filter-before-ranking", "retrieval-trace-complete"],
+    "forbidden_actions": ["拼接不同版本形成确定答案", "让 Reranker 猜测最新版本", "从引用中省略 version identity"],
+    "verification": ["普通查询仅返回当前版本", "历史比较保留每条证据版本", "缓存键包含可见版本或索引版本"]
+  },
+  {
+    "id": "retrieval-context-budget-boundary",
+    "skill": "retrieval-pipeline-engineering",
+    "category": "boundary",
+    "request": "候选包含多个重叠 Parent 和超长代码块，但模型上下文预算只剩 3000 tokens，请设计 packing。",
+    "setup": ["候选均已授权且来自同一版本", "部分 chunk 指向相同 Parent", "指令和引用也占用 token"],
+    "expected_decisions": ["按 evidence identity 与 Parent 覆盖范围去重", "为指令、引用和证据分别保留预算", "按相关性和覆盖增益选择并记录截断原因"],
+    "required_invariants": ["context-budget-explicit", "duplicate-evidence-collapsed", "evidence-lineage-preserved", "retrieval-trace-complete"],
+    "forbidden_actions": ["全量拼接后依赖模型截断", "重复放入相同段落", "生成无法定位的截断引用"],
+    "verification": ["总 token 不超过预算", "相同 evidence 不重复", "trace 列出选择、去重和排除原因"]
+  }
+]

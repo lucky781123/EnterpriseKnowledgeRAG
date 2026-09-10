@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://enterprise-rag.local/contracts/evaluation-observation.schema.json",
+  "title": "EvaluationObservation",
+  "description": "连接评测样例、检索轨迹、Provider 结果和指标判定。",
+  "type": "object",
+  "required": ["run_id", "case_id", "dataset_split", "metrics", "passed", "evaluation_version"],
+  "properties": {
+    "run_id": {"type": "string", "minLength": 1},
+    "case_id": {"type": "string", "minLength": 1},
+    "dataset_split": {"enum": ["smoke", "development", "frozen", "production_sample"]},
+    "request_id": {"type": ["string", "null"]},
+    "metrics": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name", "dimension", "score", "threshold", "passed"],
+        "properties": {
+          "name": {"type": "string", "minLength": 1},
+          "dimension": {"enum": ["retriever", "generator", "end_to_end", "security", "operations"]},
+          "score": {"type": "number"},
+          "threshold": {"type": "number"},
+          "passed": {"type": "boolean"},
+          "reason": {"type": ["string", "null"]}
+        },
+        "additionalProperties": false
+      }
+    },
+    "passed": {"type": "boolean"},
+    "tags": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+    "evaluator_model": {"type": ["string", "null"]},
+    "evaluation_version": {"type": "string", "minLength": 1}
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,10 @@
+{
+  "name": "rag-degradation-and-fallback",
+  "owns": ["failure-taxonomy", "end-to-end-deadline-budget", "stage-budget-allocation", "fallback-graph", "retry-policy", "provider-switch-decision", "retrieval-degradation-decision", "validated-cache-fallback", "abstention-policy", "degradation-user-signaling", "circuit-breaker-policy"],
+  "not_responsible_for": ["provider-transport-implementation", "retrieval-ranking-algorithm", "authorization-policy-definition", "evaluation-threshold-governance"],
+  "depends_on": [],
+  "required_shared_contracts": ["contracts/request-context.schema.json", "contracts/authorization-context.schema.json", "contracts/retrieval-trace.schema.json", "contracts/provider-result.schema.json", "contracts/fallback-decision.schema.json"],
+  "references": ["references/degradation-policy.md", "references/verification-playbook.md"],
+  "scenario_files": ["tests/scenarios-budget-partial.json", "tests/scenarios-failures-security.json"],
+  "invariants": ["fallback-graph-acyclic", "attempts-and-cost-bounded", "remaining-budget-monotonic", "retry-only-idempotent-and-retryable", "fallback-preserves-authorization", "fallback-preserves-evidence-requirement", "cache-revalidated-before-use", "partial-output-not-mislabeled-success", "degraded-mode-user-visible", "abstain-when-evidence-insufficient", "fallback-reason-observable", "open-circuit-stops-new-calls"]
+}

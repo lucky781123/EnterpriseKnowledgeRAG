@@ -1,0 +1,46 @@
+[
+  {
+    "id": "security-acl-propagation-happy",
+    "skill": "rag-acl-multitenancy-security",
+    "category": "happy_path",
+    "request": "摄取一份仅 engineering 组可读的文档，并保证 hybrid retrieval 与引用详情保持同一权限范围。",
+    "setup": ["actor 的 tenant 成员关系已验证", "文档 ACL 允许 engineering group", "摄取会生成 child 与 Parent chunk"],
+    "expected_decisions": ["从可信身份生成 AuthorizationContext", "把 tenant、resource 与 ACL metadata 传播到所有 chunk", "检索、Parent 与引用详情逐阶段授权"],
+    "required_invariants": ["tenant-context-from-trusted-identity", "membership-checked-per-request", "acl-copied-to-chunks", "authorization-before-data-access", "authorization-rechecked-after-expansion", "audit-is-complete-and-redacted"],
+    "forbidden_actions": ["仅在 document 表保存 ACL", "让 LLM 判断 group 权限", "只在生成答案后隐藏未授权引用"],
+    "verification": ["engineering 用户可读取全部合法证据", "其他 group 的所有通道命中为零", "审计含 resource identity 与 policy version"]
+  },
+  {
+    "id": "security-rbac-abac-happy",
+    "skill": "rag-acl-multitenancy-security",
+    "category": "happy_path",
+    "request": "为多 tenant 用户实现 role、group、文档 ACL 和 classification 联合授权，不信任客户端 tenant header。",
+    "setup": ["用户同时属于 tenant-a 和 tenant-b", "请求选择 tenant-b", "资源要求 reviewer role 且 classification 不高于 actor clearance"],
+    "expected_decisions": ["服务端验证 tenant-b 当前成员关系", "按 operation 计算 RBAC 与 ABAC 交集", "把策略版本写入请求上下文和 cache key"],
+    "required_invariants": ["tenant-context-from-trusted-identity", "membership-checked-per-request", "authorization-before-data-access", "cache-key-includes-tenant-and-policy-version"],
+    "forbidden_actions": ["直接接受 header 中的 tenant", "将多个 tenant 权限做并集", "只检查 role 而忽略资源属性"],
+    "verification": ["切换 tenant 后资源集合严格隔离", "移除任一必要属性会拒绝", "唯一键和 repository 查询包含 tenant"]
+  },
+  {
+    "id": "security-policy-change-stream-boundary",
+    "skill": "rag-acl-multitenancy-security",
+    "category": "boundary",
+    "request": "用户开始流式回答后被撤销文档权限，请定义在途请求和后续 chunk 的授权语义。",
+    "setup": ["首个 token 已发送", "policy version 在流式过程中增加", "后续生成可能读取更多 evidence 或调用工具"],
+    "expected_decisions": ["明确已发送内容无法撤回", "在 evidence 读取、工具调用或 checkpoint 处比较授权版本", "检测变化后停止后续敏感输出并记录审计"],
+    "required_invariants": ["authorization-never-weakened", "authorization-rechecked-after-expansion", "revocation-invalidates-derived-data", "failure-is-explicit"],
+    "forbidden_actions": ["继续使用流开始时的永久授权结论", "声称可以撤回已发送 token", "将撤权错误转换为普通完成"],
+    "verification": ["撤权后不再读取或发送新敏感 evidence", "stream 以可识别状态结束", "后续请求和缓存立即被拒绝"]
+  },
+  {
+    "id": "security-offboarding-boundary",
+    "skill": "rag-acl-multitenancy-security",
+    "category": "boundary",
+    "request": "关闭一个 tenant 时仍有摄取、摘要和评测任务运行，请设计可审计的 offboarding 流程。",
+    "setup": ["tenant 有业务数据、索引、缓存和导出物", "多个后台任务已排队", "合规备份有独立保留期限"],
+    "expected_decisions": ["先阻断成员与资源业务可见性", "取消或在消费时拒绝后台任务", "逐系统跟踪删除并单独记录合规备份"],
+    "required_invariants": ["background-job-carries-tenant-context", "revocation-invalidates-derived-data", "security-fails-closed", "audit-is-complete-and-redacted"],
+    "forbidden_actions": ["等待所有派生数据删除后才撤销访问", "让缺 tenant context 的任务继续", "把备份从删除证明中省略"],
+    "verification": ["offboarding 开始后 API 与查询立即不可达", "任务不会重新创建索引或缓存", "清理台账覆盖事实源、派生物、导出和备份"]
+  }
+]

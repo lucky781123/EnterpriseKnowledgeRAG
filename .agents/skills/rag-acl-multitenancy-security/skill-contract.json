@@ -1,0 +1,10 @@
+{
+  "name": "rag-acl-multitenancy-security",
+  "owns": ["tenant-context-establishment", "tenant-membership-validation", "rbac-abac-policy", "document-chunk-acl", "retrieval-time-authorization", "authorization-recheck", "cache-queue-isolation", "audit-redaction", "revocation-propagation", "secure-deletion", "prompt-injection-trust-boundary"],
+  "not_responsible_for": ["retrieval-ranking-algorithm", "provider-adapter-implementation", "fallback-order-selection", "evaluation-threshold-governance"],
+  "depends_on": [],
+  "required_shared_contracts": ["contracts/request-context.schema.json", "contracts/authorization-context.schema.json", "contracts/retrieval-trace.schema.json", "contracts/fallback-decision.schema.json"],
+  "references": ["references/threat-model-and-controls.md", "references/verification-playbook.md"],
+  "scenario_files": ["tests/scenarios-access-lifecycle.json", "tests/scenarios-attacks-failures.json"],
+  "invariants": ["tenant-context-from-trusted-identity", "membership-checked-per-request", "acl-copied-to-chunks", "authorization-before-data-access", "authorization-rechecked-after-expansion", "cache-key-includes-tenant-and-policy-version", "background-job-carries-tenant-context", "revocation-invalidates-derived-data", "prompt-content-treated-as-data", "audit-is-complete-and-redacted", "denial-does-not-reveal-resource", "security-fails-closed"]
+}

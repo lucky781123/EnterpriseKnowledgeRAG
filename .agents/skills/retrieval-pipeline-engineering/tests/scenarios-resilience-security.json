@@ -1,0 +1,46 @@
+[
+  {
+    "id": "retrieval-partial-index-failure",
+    "skill": "retrieval-pipeline-engineering",
+    "category": "failure",
+    "request": "一批 100 个 chunk 中有 8 个 embedding 请求失败，请处理索引状态并支持后续安全重放。",
+    "setup": ["版本尚未发布", "dense 已写 92 个对象而 sparse 已写 100 个", "失败是可重试 timeout"],
+    "expected_decisions": ["保持整个版本不可见并记录派生物计数", "按稳定 chunk ID 重试缺失批次或幂等重放", "所有索引完整性一致后才发布"],
+    "required_invariants": ["ingestion-is-idempotent", "unpublished-version-not-retrievable", "retrieval-failure-classified", "failure-is-explicit"],
+    "forbidden_actions": ["发布部分向量版本", "为重试 chunk 生成新 identity", "忽略 dense 与 sparse 差异"],
+    "verification": ["失败期间查询看不到该版本", "重放后各存储 ID 集合一致", "记录失败批次、重试和发布事件"]
+  },
+  {
+    "id": "retrieval-reranker-timeout-failure",
+    "skill": "retrieval-pipeline-engineering",
+    "category": "failure",
+    "request": "召回已完成但 Reranker 超时，请返回足够信息供上层决定是否降级，而不是在检索层静默处理。",
+    "setup": ["授权候选与融合 rank 已生成", "请求剩余 deadline 很短", "Reranker 阶段预算已用尽"],
+    "expected_decisions": ["保留融合候选和 timeout 状态", "报告剩余预算与失败类型", "不在检索模块重置 timeout 或切换模型"],
+    "required_invariants": ["deadline-never-reset", "retry-is-bounded", "rank-scores-attributable", "retrieval-failure-classified", "retrieval-trace-complete"],
+    "forbidden_actions": ["把融合排序冒充正常重排", "重新给予完整 timeout", "在检索层硬编码 Provider 切换"],
+    "verification": ["trace 标记 rerank failure", "下游收到真实剩余 deadline", "结构化 fallback decision 决定是否跳过"]
+  },
+  {
+    "id": "retrieval-filter-parity-security",
+    "skill": "retrieval-pipeline-engineering",
+    "category": "security",
+    "request": "验证 dense 与 sparse 双路召回在多租户和文档 ACL 下不会返回不同权限范围的候选。",
+    "setup": ["两个 tenant 有文本相同但权限不同的文档", "当前 actor 只能读取其中一个文档", "安全层提供确定授权过滤"],
+    "expected_decisions": ["每条召回通道使用同一授权表达式", "融合前验证 candidate 的 tenant、version 和授权状态", "只记录过滤数量而不记录敏感正文"],
+    "required_invariants": ["tenant-context-required", "authorization-never-weakened", "retrieval-filter-before-ranking", "secrets-never-observed", "retrieval-trace-complete"],
+    "forbidden_actions": ["只在 dense 通道应用 ACL", "先融合跨租户候选再删除", "让 Reranker 根据正文判断权限"],
+    "verification": ["两条通道越权 candidate 均为零", "最终 evidence 仅包含授权文档", "trace 不泄露另一 tenant 正文"]
+  },
+  {
+    "id": "retrieval-parent-reauthorization-security",
+    "skill": "retrieval-pipeline-engineering",
+    "category": "security",
+    "request": "命中的 child chunk 可读，但其 Parent 在最近权限变更后不可读，请处理 Parent 扩展和引用。",
+    "setup": ["child 来自旧授权上下文的缓存", "当前 AuthorizationContext 版本已变化", "Parent 包含更高敏感内容"],
+    "expected_decisions": ["比较授权版本并重新验证 child 与 Parent", "拒绝扩展并移除不再授权的 evidence", "记录拒绝原因但不记录 Parent 正文"],
+    "required_invariants": ["authorization-never-weakened", "parent-expansion-reauthorized", "evidence-lineage-preserved", "secrets-never-observed", "failure-is-explicit"],
+    "forbidden_actions": ["认为 child 命中所以 Parent 自动可读", "沿用旧缓存授权结论", "先返回 Parent 再隐藏引用"],
+    "verification": ["最终 evidence 不包含敏感内容", "授权版本变化触发缓存复核", "审计含资源 identity、拒绝原因和 policy version"]
+  }
+]

@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0",
+  "skills": [
+    {"name": "retrieval-pipeline-engineering", "order": 1, "purpose": "从摄取到上下文组装的检索流水线"},
+    {"name": "rag-acl-multitenancy-security", "order": 2, "purpose": "租户隔离、授权、审计与安全删除"},
+    {"name": "fastapi-model-provider-service", "order": 3, "purpose": "Provider-agnostic FastAPI 模型服务"},
+    {"name": "rag-degradation-and-fallback", "order": 4, "purpose": "有界、可观测且安全的 RAG 降级"},
+    {"name": "deepeval-rag-evaluation", "order": 5, "purpose": "DeepEval 离线、CI 与生产评估"}
+  ],
+  "shared_contracts": [
+    "contracts/request-context.schema.json",
+    "contracts/authorization-context.schema.json",
+    "contracts/retrieval-trace.schema.json",
+    "contracts/provider-result.schema.json",
+    "contracts/fallback-decision.schema.json",
+    "contracts/evaluation-observation.schema.json",
+    "contracts/skill-scenario.schema.json"
+  ],
+  "global_invariants": [
+    "request-context-propagated",
+    "tenant-context-required",
+    "authorization-never-weakened",
+    "evidence-lineage-preserved",
+    "grounded-answer-requires-evidence",
+    "deadline-never-reset",
+    "retry-is-bounded",
+    "secrets-never-observed",
+    "failure-is-explicit"
+  ]
+}

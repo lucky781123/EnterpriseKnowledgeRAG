@@ -1,0 +1,10 @@
+{
+  "name": "deepeval-rag-evaluation",
+  "owns": ["evaluation-objectives", "golden-dataset", "test-case-materialization", "retriever-metrics", "generator-metrics", "end-to-end-metrics", "security-evaluation", "judge-calibration", "evaluation-threshold-governance", "ci-evaluation-gates", "production-sampling", "evaluation-tracing", "drift-detection", "evaluation-versioning"],
+  "not_responsible_for": ["online-retrieval-implementation", "authorization-policy-definition", "provider-transport-implementation", "fallback-execution"],
+  "depends_on": [],
+  "required_shared_contracts": ["contracts/authorization-context.schema.json", "contracts/retrieval-trace.schema.json", "contracts/provider-result.schema.json", "contracts/fallback-decision.schema.json", "contracts/evaluation-observation.schema.json"],
+  "references": ["references/dataset-and-metrics.md", "references/ci-and-production.md"],
+  "scenario_files": ["tests/scenarios-dataset-metrics.json", "tests/scenarios-ci-production-security.json"],
+  "invariants": ["golden-and-testcase-distinct", "context-and-retrieval-context-distinct", "retriever-generator-metrics-separated", "dataset-splits-versioned", "frozen-set-not-tuned-on", "metric-required-fields-validated", "judge-version-pinned-and-calibrated", "thresholds-derived-not-defaulted", "security-failures-hard-gated", "ci-cost-and-runtime-bounded", "production-data-minimized", "normal-and-degraded-evaluated-separately", "evaluation-results-reproducible", "trace-span-attribution-preserved"]
+}

@@ -27,8 +27,11 @@ jobs:
       - name: Run Ruff
         run: python -m ruff check .
 
+      - name: Validate RAG skill suite
+        run: python .agents/skills/_shared/scripts/validate_suite.py .agents/skills
+
       - name: Run tests
         run: python -m pytest -q
 
       - name: Compile Python sources
-        run: python -m compileall -q src tests
+        run: python -m compileall -q src tests .agents/skills/_shared/scripts

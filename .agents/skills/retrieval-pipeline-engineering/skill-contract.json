@@ -1,0 +1,47 @@
+{
+  "name": "retrieval-pipeline-engineering",
+  "owns": [
+    "ingestion-idempotency",
+    "content-normalization",
+    "chunk-identity-and-lineage",
+    "index-publication",
+    "query-transformation",
+    "retrieval-strategy",
+    "rank-fusion",
+    "reranking",
+    "context-packing",
+    "retrieval-observability"
+  ],
+  "not_responsible_for": [
+    "identity-authentication",
+    "authorization-policy-definition",
+    "provider-fallback-order",
+    "evaluation-threshold-governance"
+  ],
+  "depends_on": [],
+  "required_shared_contracts": [
+    "contracts/request-context.schema.json",
+    "contracts/authorization-context.schema.json",
+    "contracts/retrieval-trace.schema.json"
+  ],
+  "references": [
+    "references/pipeline-design.md",
+    "references/verification-playbook.md"
+  ],
+  "scenario_files": [
+    "tests/scenarios-core.json",
+    "tests/scenarios-resilience-security.json"
+  ],
+  "invariants": [
+    "ingestion-is-idempotent",
+    "chunk-id-stable-for-content",
+    "unpublished-version-not-retrievable",
+    "retrieval-filter-before-ranking",
+    "parent-expansion-reauthorized",
+    "rank-scores-attributable",
+    "context-budget-explicit",
+    "duplicate-evidence-collapsed",
+    "retrieval-failure-classified",
+    "retrieval-trace-complete"
+  ]
+}

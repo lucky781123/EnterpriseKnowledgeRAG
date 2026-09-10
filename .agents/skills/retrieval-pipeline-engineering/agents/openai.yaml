@@ -1,0 +1,4 @@
+interface:
+  display_name: "Retrieval Pipeline Engineering"
+  short_description: "设计、实现、调优并验证企业级 RAG 检索与上下文流水线"
+  default_prompt: "Use $retrieval-pipeline-engineering to design and verify this RAG retrieval pipeline."

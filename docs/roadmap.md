@@ -3,11 +3,13 @@
 ## 当前进度
 
 - 开工前置文档：已完成。
+- 项目级 RAG Skill suite：已完成 5 个 Skill、共享契约、40 个压力场景及 CI 验证，`.agents/skills/` 为唯一权威目录。
 - 评测集草案：已生成 40 条，待抽样确认。
 - 第 1 轮代码骨架：已完成第一批基础件。
-- 已通过：Python 编译检查、14 个单元测试、评测集加载和 FastAPI 应用导入。
+- 已通过：Python 编译检查、23 个测试、评测集加载、FastAPI 应用导入、Skill suite validator 和 5 个 Skill 官方结构验证。
 - 已完成：配置契约、Provider 协议/错误分类、Fake LLM、有界本地 LLM 调度器、本地对象存储适配器、领域实体、最小 API，以及 BGE Reranker 的统一异步 Adapter。
 - 已知待处理：真实 Provider、数据库、摄取、检索、权限和问答闭环尚未实现。
+- 当前下一步：进入第 2 轮，先完成 PostgreSQL 数据模型、数据库会话、迁移契约和基础设施健康检查。
 
 ## 目标版本
 

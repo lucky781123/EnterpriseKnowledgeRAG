@@ -1,0 +1,46 @@
+[
+  {
+    "id": "fallback-all-retrieval-failed",
+    "skill": "rag-degradation-and-fallback",
+    "category": "failure",
+    "request": "vector 与 keyword 检索都不可用且没有有效 cache，请回答一个企业内部配置问题。",
+    "setup": ["授权上下文有效", "没有任何可引用 evidence", "生成模型服务健康"],
+    "expected_decisions": ["判定 evidence_sufficient 为 false", "选择 abstain 或 fail", "明确未能访问知识库而不伪造引用"],
+    "required_invariants": ["fallback-preserves-evidence-requirement", "abstain-when-evidence-insufficient", "failure-is-explicit", "fallback-reason-observable"],
+    "forbidden_actions": ["退回纯模型回答并声称来自知识库", "编造 document citation", "把无证据回答标记正常成功"],
+    "verification": ["FallbackDecision action 只能是 abstain/fail", "输出没有伪造引用", "指标记录 retrieval 全失败与 abstain"]
+  },
+  {
+    "id": "fallback-provider-loop-failure",
+    "skill": "rag-degradation-and-fallback",
+    "category": "failure",
+    "request": "Provider A 与 B 都 unavailable，旧实现会 A 到 B 再回 A 循环，请修正为有限终止。",
+    "setup": ["graph 错误地含有 B 到 A 的边", "max attempts 应为 2", "circuit 已观察到连续依赖失败"],
+    "expected_decisions": ["启动时拒绝有环 graph 或运行时阻断已访问边", "达到上限后 fail/abstain", "打开适当范围 circuit 减少新调用"],
+    "required_invariants": ["fallback-graph-acyclic", "attempts-and-cost-bounded", "remaining-budget-monotonic", "open-circuit-stops-new-calls", "failure-is-explicit"],
+    "forbidden_actions": ["继续 A/B 循环", "让每个 adapter 独立 retry", "达到上限后仍发起 half-open 风暴"],
+    "verification": ["静态 graph 校验发现环", "运行路径最多两次上游调用", "后续请求在 open circuit 时快速失败"]
+  },
+  {
+    "id": "fallback-alternate-store-security",
+    "skill": "rag-degradation-and-fallback",
+    "category": "security",
+    "request": "主向量库故障，备用 keyword store 缺少当前 tenant 的 ACL metadata，请决定是否使用。",
+    "setup": ["主检索不可用", "备用 store 有相关文本但无法证明资源权限", "用户要求高可用回答"],
+    "expected_decisions": ["判定备用边不满足授权前置条件", "不读取或返回备用文本", "选择 abstain/fail 并记录安全原因"],
+    "required_invariants": ["authorization-never-weakened", "fallback-preserves-authorization", "fallback-preserves-evidence-requirement", "abstain-when-evidence-insufficient", "failure-is-explicit"],
+    "forbidden_actions": ["为了可用性跳过 ACL", "先读出文本再做 LLM 过滤", "隐藏 security gate 导致的 abstain"],
+    "verification": ["备用 store 数据访问次数为零", "decision preserves_authorization 为 true", "审计记录拒绝该 fallback edge"]
+  },
+  {
+    "id": "fallback-stale-cache-security",
+    "skill": "rag-degradation-and-fallback",
+    "category": "security",
+    "request": "实时检索 timeout，但发现一条旧 answer cache，其 policy 和 index version 已过期，请处理。",
+    "setup": ["cache tenant 相同但 policy version 较旧", "相关文档可能已撤权", "没有其他 evidence"],
+    "expected_decisions": ["拒绝旧 cache 并重新验证资源失败", "判定证据不足", "abstain/fail 而不返回陈旧答案"],
+    "required_invariants": ["cache-revalidated-before-use", "fallback-preserves-authorization", "authorization-never-weakened", "abstain-when-evidence-insufficient", "failure-is-explicit"],
+    "forbidden_actions": ["仅因 tenant 相同使用 cache", "忽略 policy/index version", "把旧答案标记为最新知识库结果"],
+    "verification": ["cache miss 原因可观测", "撤权资源未出现在输出", "用户模式明确不是 normal"]
+  }
+]

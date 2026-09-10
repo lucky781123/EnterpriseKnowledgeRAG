@@ -1,0 +1,46 @@
+[
+  {
+    "id": "fallback-reranker-degraded-happy",
+    "skill": "rag-degradation-and-fallback",
+    "category": "happy_path",
+    "request": "Reranker timeout，但融合候选已授权且评测证明 base rank 可满足当前查询类型，请决定是否降级。",
+    "setup": ["Reranker 失败已结构化分类", "base candidates 证据充分", "剩余 deadline 只够生成回答"],
+    "expected_decisions": ["选择 skip_optional_stage 而不重试 Reranker", "保留原授权和 evidence lineage", "对用户与 telemetry 标记 degraded"],
+    "required_invariants": ["remaining-budget-monotonic", "fallback-preserves-authorization", "fallback-preserves-evidence-requirement", "degraded-mode-user-visible", "fallback-reason-observable"],
+    "forbidden_actions": ["把 base rank 冒充正常重排", "重置 Reranker timeout", "在证据不足时继续生成"],
+    "verification": ["FallbackDecision 记录 skip 与剩余预算", "最终引用来自已授权候选", "normal 与 degraded 指标分开"]
+  },
+  {
+    "id": "fallback-provider-switch-happy",
+    "skill": "rag-degradation-and-fallback",
+    "category": "happy_path",
+    "request": "主 Provider 在首个 token 前返回 unavailable，备用 Provider capability 兼容且预算充足，请执行一次切换。",
+    "setup": ["尚未提交 stream", "备用 alias 已注册且通过合规验证", "总 attempts 上限为 2"],
+    "expected_decisions": ["选择 switch_provider 一次", "传递相同 RequestContext 与剩余 deadline", "记录模型变化、额外成本和 degraded mode"],
+    "required_invariants": ["fallback-graph-acyclic", "attempts-and-cost-bounded", "remaining-budget-monotonic", "retry-only-idempotent-and-retryable", "fallback-preserves-authorization", "degraded-mode-user-visible"],
+    "forbidden_actions": ["让 adapter 私自切换", "给予备用 Provider 完整新 timeout", "隐藏模型和模式变化"],
+    "verification": ["只调用两个声明 node", "第二次调用 timeout 小于剩余 deadline", "最终 decision 和 trace 可还原切换"]
+  },
+  {
+    "id": "fallback-budget-exhausted-boundary",
+    "skill": "rag-degradation-and-fallback",
+    "category": "boundary",
+    "request": "检索已用掉绝大部分时间，只剩 80ms 且任何 Provider 调用最低需要 300ms，请决定响应。",
+    "setup": ["证据已检索但尚未生成", "没有可验证的精确 answer cache", "收尾响应需要 30ms"],
+    "expected_decisions": ["保留收尾预算并 abstain/fail", "不启动注定越过 deadline 的调用", "记录 budget_exhausted 原因"],
+    "required_invariants": ["remaining-budget-monotonic", "attempts-and-cost-bounded", "abstain-when-evidence-insufficient", "failure-is-explicit", "fallback-reason-observable"],
+    "forbidden_actions": ["重置总 deadline", "开始 Provider 调用后依赖强制 kill", "返回没有生成完成依据的成功状态"],
+    "verification": ["Provider 调用次数为零", "响应在原始 deadline 内结束", "用户模式为 abstained 或 failed"]
+  },
+  {
+    "id": "fallback-midstream-partial-boundary",
+    "skill": "rag-degradation-and-fallback",
+    "category": "boundary",
+    "request": "主 Provider 已输出一半答案后连接断开，备用模型可用，请处理 partial output。",
+    "setup": ["stream_committed 为 true", "已有 token 已发送给客户端", "备用模型可能生成不同措辞和引用位置"],
+    "expected_decisions": ["停止透明 retry/switch", "发送或记录唯一 partial/error 终态", "保留已发送范围和资源清理信息"],
+    "required_invariants": ["partial-output-not-mislabeled-success", "degraded-mode-user-visible", "remaining-budget-monotonic", "fallback-reason-observable", "failure-is-explicit"],
+    "forbidden_actions": ["拼接备用模型输出", "从头重放导致重复 token", "用 completed 隐藏中断"],
+    "verification": ["只有一个非成功终态", "备用 Provider 未被调用", "连接、task 与 limiter 全部释放"]
+  }
+]

@@ -4,6 +4,8 @@
 
 > 当前状态：`Phase 2` 基础工程骨架。当前版本可运行健康检查、Provider/Fake LLM、配置校验和基础单元测试；PostgreSQL、Weaviate、权限、摄取、检索和问答闭环仍在后续阶段实施。
 
+仓库级 `.agents/skills/` 已提供 5 个经过自动验证的 RAG 开发 Skill、共享契约和压力场景。它们用于约束后续开发与评审，不代表对应的业务 RAG 能力已经实现。
+
 当前目标是完成：
 
 - P0：可运行的端到端闭环；
@@ -64,7 +66,8 @@ set +a
 ```bash
 python -m pytest -q
 python -m ruff check .
-python -m compileall -q src tests
+python .agents/skills/_shared/scripts/validate_suite.py .agents/skills
+python -m compileall -q src tests .agents/skills/_shared/scripts
 ```
 
 ### 4. 启动当前 API 骨架
@@ -101,6 +104,7 @@ docker compose up --build
 ```text
 src/enterprise_rag/   Python 包和领域代码
 tests/                单元、API、契约和集成测试
+.agents/skills/       RAG 开发 Skill、共享契约和压力场景
 docs/                 架构、运维、评测和 ADR
 config/               非敏感配置模板
 scripts/              本地验证脚本

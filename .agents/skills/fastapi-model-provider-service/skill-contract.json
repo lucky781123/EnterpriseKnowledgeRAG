@@ -1,0 +1,10 @@
+{
+  "name": "fastapi-model-provider-service",
+  "owns": ["provider-protocol", "provider-capability-registry", "provider-adapter", "fastapi-request-response", "streaming-transport", "provider-error-normalization", "connection-lifecycle", "request-cancellation", "service-health", "provider-observability", "provider-secret-redaction"],
+  "not_responsible_for": ["business-fallback-order", "retrieval-strategy", "authorization-policy-definition", "evaluation-threshold-governance"],
+  "depends_on": [],
+  "required_shared_contracts": ["contracts/request-context.schema.json", "contracts/provider-result.schema.json"],
+  "references": ["references/provider-architecture.md", "references/verification-playbook.md"],
+  "scenario_files": ["tests/scenarios-api-streaming.json", "tests/scenarios-failures-security.json"],
+  "invariants": ["provider-contract-stable", "capability-checked-before-call", "deadline-propagated-to-transport", "client-reused-and-closed", "retry-only-before-stream-commit", "cancellation-propagated", "errors-normalized-and-safe", "stream-terminal-event-explicit", "health-separates-live-ready", "provider-secrets-redacted", "business-fallback-outside-adapter", "provider-concurrency-bounded"]
+}

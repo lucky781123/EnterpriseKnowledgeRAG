@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://enterprise-rag.local/contracts/authorization-context.schema.json",
+  "title": "AuthorizationContext",
+  "description": "由可信身份与策略层生成、供所有数据访问阶段使用的授权上下文。",
+  "type": "object",
+  "required": ["tenant_id", "actor_id", "roles", "permissions", "policy_version", "evaluated_at"],
+  "properties": {
+    "tenant_id": {"type": "string", "minLength": 1},
+    "actor_id": {"type": "string", "minLength": 1},
+    "roles": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+    "permissions": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+    "groups": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
+    "policy_version": {"type": "string", "minLength": 1},
+    "evaluated_at": {"type": "string", "format": "date-time"},
+    "resource_scope": {
+      "type": "object",
+      "properties": {
+        "document_ids": {"type": "array", "items": {"type": "string"}},
+        "classification_max": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

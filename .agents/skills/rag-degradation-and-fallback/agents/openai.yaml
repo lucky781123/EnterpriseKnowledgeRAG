@@ -1,0 +1,4 @@
+interface:
+  display_name: "RAG Degradation and Fallback"
+  short_description: "设计、实现并验证有界、安全、可观测的 RAG 降级与回退策略"
+  default_prompt: "Use $rag-degradation-and-fallback to design and verify a bounded fallback policy for this RAG workflow."

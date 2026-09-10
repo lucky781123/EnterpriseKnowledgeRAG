@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://enterprise-rag.local/contracts/provider-result.schema.json",
+  "title": "ProviderResult",
+  "description": "统一表示模型 Provider 的成功、部分结果、失败和取消。",
+  "type": "object",
+  "required": ["request_id", "provider", "model", "status", "latency_ms"],
+  "properties": {
+    "request_id": {"type": "string", "minLength": 1},
+    "provider": {"type": "string", "minLength": 1},
+    "model": {"type": "string", "minLength": 1},
+    "status": {"enum": ["success", "partial", "failure", "cancelled"]},
+    "content": {"type": ["string", "null"]},
+    "latency_ms": {"type": "number", "minimum": 0},
+    "finish_reason": {"type": ["string", "null"]},
+    "usage": {
+      "type": "object",
+      "properties": {
+        "input_tokens": {"type": ["integer", "null"], "minimum": 0},
+        "output_tokens": {"type": ["integer", "null"], "minimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "error": {
+      "type": ["object", "null"],
+      "properties": {
+        "kind": {"enum": ["timeout", "rate_limited", "authentication", "invalid_request", "unavailable", "protocol", "cancelled", "unknown"]},
+        "retryable": {"type": "boolean"},
+        "safe_message": {"type": "string", "minLength": 1}
+      },
+      "required": ["kind", "retryable", "safe_message"],
+      "additionalProperties": false
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"status": {"const": "failure"}}, "required": ["status"]},
+      "then": {"required": ["error"]}
+    }
+  ],
+  "additionalProperties": false
+}

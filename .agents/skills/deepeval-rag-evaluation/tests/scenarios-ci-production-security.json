@@ -1,0 +1,46 @@
+[
+  {
+    "id": "deepeval-missing-fields-failure",
+    "skill": "deepeval-rag-evaluation",
+    "category": "failure",
+    "request": "评测代码没有捕获实际 retrieval_context，却尝试运行 Faithfulness 和 Contextual Recall，请处理。",
+    "setup": ["actual output 存在", "理想 context 存在", "实际 retrieval trace 丢失"],
+    "expected_decisions": ["在运行 metric 前验证必需字段", "将其标记为 evaluation pipeline error", "修复 materialization 而不是复制理想 context"],
+    "required_invariants": ["context-and-retrieval-context-distinct", "metric-required-fields-validated", "evaluation-results-reproducible", "failure-is-explicit"],
+    "forbidden_actions": ["用 context 冒充 retrieval_context", "将异常转换为零分或通过", "仅删除该 metric 保持 CI 绿色"],
+    "verification": ["metric 未在错误 fixture 上运行", "CI 明确报告缺失字段", "修复后 retrieval_context 能关联真实 trace"]
+  },
+  {
+    "id": "deepeval-evaluator-outage-failure",
+    "skill": "deepeval-rag-evaluation",
+    "category": "failure",
+    "request": "CI 中 judge Provider quota 用尽，请区分 evaluator 基础设施故障和产品质量失败。",
+    "setup": ["deterministic checks 已通过", "所有 judge metrics 返回 rate limit", "PR 不能无限等待"],
+    "expected_decisions": ["有界重试后标记 evaluator infrastructure error", "不把未评估样本计为通过", "保留可重跑产物并遵循门禁政策"],
+    "required_invariants": ["ci-cost-and-runtime-bounded", "evaluation-results-reproducible", "failure-is-explicit", "retry-is-bounded"],
+    "forbidden_actions": ["跳过所有 judge 后宣布质量通过", "无限 retry", "把 quota 错误计入产品低分趋势"],
+    "verification": ["CI 状态能区分 infrastructure 与 quality", "attempt 和总耗时有上限", "后续重跑使用相同 case 与版本"]
+  },
+  {
+    "id": "deepeval-production-data-security",
+    "skill": "deepeval-rag-evaluation",
+    "category": "security",
+    "request": "生产抽样包含源码、PII 和租户机密，计划发送给外部 LLM judge，请设计安全评估路径。",
+    "setup": ["部分 tenant 禁止数据外发", "在线 trace 含完整 retrieval context", "本地确定性指标和本地 evaluator 可用"],
+    "expected_decisions": ["按 tenant policy 判断是否允许外部 judge", "最小化和脱敏允许样本", "禁止外发的流量使用本地 evaluator 或 metadata-only 指标"],
+    "required_invariants": ["production-data-minimized", "security-failures-hard-gated", "tenant-context-required", "secrets-never-observed", "evaluation-results-reproducible"],
+    "forbidden_actions": ["默认上传完整 trace", "跨 tenant 共用未隔离评测缓存", "因评测便利绕过数据保留政策"],
+    "verification": ["禁止外发 tenant 没有网络 judge 调用", "脱敏样本无法恢复密钥与 PII", "评测任务和结果按 tenant 隔离"]
+  },
+  {
+    "id": "deepeval-degraded-grounding-security",
+    "skill": "deepeval-rag-evaluation",
+    "category": "security",
+    "request": "降级模式返回了流畅答案，但所有检索通道失败且没有 evidence，请确保评估不会把它算作成功。",
+    "setup": ["actual output 与 expected output 文字接近", "retrieval_context 为空", "FallbackDecision 显示本应 abstain"],
+    "expected_decisions": ["单独标记 degraded mode", "确定性检查证据与 fallback contract", "即使答案相关也因伪装知识库证据而 hard fail"],
+    "required_invariants": ["normal-and-degraded-evaluated-separately", "security-failures-hard-gated", "retriever-generator-metrics-separated", "trace-span-attribution-preserved", "grounded-answer-requires-evidence"],
+    "forbidden_actions": ["只用答案相似度判成功", "把 degraded 样本并入 normal 平均", "忽略 FallbackDecision 与空 evidence"],
+    "verification": ["case 被标记 grounding/fallback contract 失败", "报告展示 normal 与 degraded 差异", "修复后无证据路径应 abstain"]
+  }
+]

@@ -1,0 +1,46 @@
+[
+  {
+    "id": "provider-completion-happy",
+    "skill": "fastapi-model-provider-service",
+    "category": "happy_path",
+    "request": "为已注册的本地 chat model 实现 FastAPI 非流式调用，并统一返回 usage、finish reason 和 trace 信息。",
+    "setup": ["registry 中 alias 与 capability 已验证", "共享 async client 在 lifespan 中创建", "请求带绝对 deadline"],
+    "expected_decisions": ["route 只接收公开 alias 和领域 request", "adapter 映射 SDK 响应为 ProviderResult", "记录安全 observability 字段"],
+    "required_invariants": ["provider-contract-stable", "capability-checked-before-call", "deadline-propagated-to-transport", "client-reused-and-closed", "provider-concurrency-bounded", "request-context-propagated"],
+    "forbidden_actions": ["把 SDK response model 直接返回", "每次请求新建 HTTP client", "在 route 内硬编码 Provider 分支"],
+    "verification": ["API contract test 检查稳定响应 schema", "lifespan 测试确认 client 创建关闭次数", "trace 含 provider/model/status/latency/usage"]
+  },
+  {
+    "id": "provider-streaming-happy",
+    "skill": "fastapi-model-provider-service",
+    "category": "happy_path",
+    "request": "实现可取消的 SSE 或等价 streaming endpoint，并让调用方能区分 delta、usage 与完成状态。",
+    "setup": ["Provider 支持 chat.stream capability", "上游返回多个 token delta 和终止原因", "客户端正常消费"],
+    "expected_decisions": ["定义带 sequence 的显式 stream event", "保持单一完成终态", "流结束后释放连接和 limiter"],
+    "required_invariants": ["provider-contract-stable", "stream-terminal-event-explicit", "cancellation-propagated", "client-reused-and-closed", "provider-concurrency-bounded"],
+    "forbidden_actions": ["发送无法区分类型的裸字符串", "遗漏完成或错误终态", "流结束后保留后台 task"],
+    "verification": ["事件 sequence 单调且只有一个终态", "usage 与 finish reason 可选但结构稳定", "资源计数回到调用前水平"]
+  },
+  {
+    "id": "provider-unsupported-capability-boundary",
+    "skill": "fastapi-model-provider-service",
+    "category": "boundary",
+    "request": "客户端对只支持 completion 的模型请求 structured output streaming，请返回可修正且稳定的错误。",
+    "setup": ["alias 存在", "registry 明确不支持该 capability", "上游 Provider 可访问"],
+    "expected_decisions": ["在网络调用前验证 capability", "返回 normalized invalid/unsupported 错误", "保留 request ID 且不泄露 registry 私有配置"],
+    "required_invariants": ["capability-checked-before-call", "errors-normalized-and-safe", "provider-secrets-redacted", "failure-is-explicit"],
+    "forbidden_actions": ["先请求上游再等待失败", "静默忽略 structured output 要求", "返回 Provider base URL 或密钥状态"],
+    "verification": ["adapter 网络调用次数为零", "错误 code 和字段可由客户端处理", "响应及日志不含私有配置"]
+  },
+  {
+    "id": "provider-disconnect-boundary",
+    "skill": "fastapi-model-provider-service",
+    "category": "boundary",
+    "request": "客户端在排队阶段和流式阶段分别断开，请确保取消向下传播且并发槽位不会泄漏。",
+    "setup": ["Provider limiter 已满并产生等待", "另一个请求正在读取上游 stream", "测试能够触发 task cancellation"],
+    "expected_decisions": ["等待 semaphore 时响应 cancellation", "关闭上游 stream 并释放连接", "结果标记 cancelled 而非 unknown failure"],
+    "required_invariants": ["cancellation-propagated", "provider-concurrency-bounded", "client-reused-and-closed", "errors-normalized-and-safe", "failure-is-explicit"],
+    "forbidden_actions": ["屏蔽 CancelledError 后继续生成", "断开后继续占用 limiter", "自动重新发起完整请求"],
+    "verification": ["排队和流式取消都及时结束", "limiter 可被后续请求获得", "上游连接和 background task 没有残留"]
+  }
+]

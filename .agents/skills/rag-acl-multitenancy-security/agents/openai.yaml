@@ -1,0 +1,4 @@
+interface:
+  display_name: "RAG ACL and Multitenancy Security"
+  short_description: "设计、实现并审查企业级 RAG 多租户隔离与访问控制安全"
+  default_prompt: "Use $rag-acl-multitenancy-security to threat-model and verify this enterprise RAG authorization flow."

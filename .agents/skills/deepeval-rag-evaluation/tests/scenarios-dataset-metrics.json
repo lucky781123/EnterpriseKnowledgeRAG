@@ -1,0 +1,46 @@
+[
+  {
+    "id": "deepeval-golden-materialization-happy",
+    "skill": "deepeval-rag-evaluation",
+    "category": "happy_path",
+    "request": "把人工确认的研发文档 Golden 集合运行成 DeepEval test cases，并保留实际检索轨迹与版本。",
+    "setup": ["Golden 有稳定 ID、input、理想证据、answerability 和 split", "被测 RAG 能返回 actual output、retrieval context 和 trace", "应用和索引版本已知"],
+    "expected_decisions": ["Golden 保持运行前模板", "逐 case 实际调用 RAG 形成 LLMTestCase", "记录 dataset、应用、索引、模型和 fallback mode"],
+    "required_invariants": ["golden-and-testcase-distinct", "context-and-retrieval-context-distinct", "dataset-splits-versioned", "evaluation-results-reproducible", "trace-span-attribution-preserved"],
+    "forbidden_actions": ["把理想 context 复制为 retrieval_context", "只保存最终答案", "覆盖原 Golden 以保存运行结果"],
+    "verification": ["每个 test case 可关联 Golden 与 trace ID", "retrieval_context 来自实际执行", "重复运行保存独立 run/version metadata"]
+  },
+  {
+    "id": "deepeval-metric-separation-happy",
+    "skill": "deepeval-rag-evaluation",
+    "category": "happy_path",
+    "request": "设计 DeepEval 指标集，分别定位候选召回不足、排序错误、答案不相关和无证据主张。",
+    "setup": ["test case 有 input、actual output、expected evidence 和实际 retrieval context", "RAG 能暴露 candidate rank 与最终 evidence", "judge model 已选择"],
+    "expected_decisions": ["分别配置 contextual relevancy/precision/recall 与 answer relevancy/faithfulness", "补充确定性 hit/rank/citation 指标", "按维度保存 score、threshold、reason 和 pass"],
+    "required_invariants": ["retriever-generator-metrics-separated", "metric-required-fields-validated", "judge-version-pinned-and-calibrated", "trace-span-attribution-preserved", "evaluation-results-reproducible"],
+    "forbidden_actions": ["用单一总分代替诊断", "只看答案判断 retrieval", "在字段缺失时默认 metric 通过"],
+    "verification": ["构造四类缺陷时只有相关维度明确失败", "每个 metric 的输入字段通过版本核对", "报告能链接对应 retrieval/generation span"]
+  },
+  {
+    "id": "deepeval-answerability-boundary",
+    "skill": "deepeval-rag-evaluation",
+    "category": "boundary",
+    "request": "评估 answerable、unanswerable、conflict 和 forbidden 四类问题，防止平均分掩盖高风险失败。",
+    "setup": ["每类都有人工确认 Golden", "forbidden case 的知识内容真实存在但当前用户无权限", "conflict case 包含两个版本"],
+    "expected_decisions": ["按 answerability 分 slice", "为 abstain、冲突披露和 unauthorized hit 建立确定性检查", "forbidden 泄漏使用 hard gate"],
+    "required_invariants": ["dataset-splits-versioned", "security-failures-hard-gated", "retriever-generator-metrics-separated", "thresholds-derived-not-defaulted"],
+    "forbidden_actions": ["用总体平均抵消 forbidden 泄漏", "把拒答统一视为低质量", "让 judge 决定资源 ACL 是否正确"],
+    "verification": ["每类独立报告数量和通过率", "forbidden 任一证据泄漏阻断", "unanswerable 正确 abstain 被判为成功"]
+  },
+  {
+    "id": "deepeval-judge-borderline-boundary",
+    "skill": "deepeval-rag-evaluation",
+    "category": "boundary",
+    "request": "多个样本的 LLM judge 分数在门槛附近波动，请制定可复现的 threshold 和人工复核策略。",
+    "setup": ["judge 同一 case 重跑会产生轻微变化", "人工已有 good、bad、borderline 标签", "误报和漏报成本不同"],
+    "expected_decisions": ["固定 judge、criteria、DeepEval 与运行配置", "重复评估估计临界波动", "按人工校准和风险确定 threshold 与 review band"],
+    "required_invariants": ["judge-version-pinned-and-calibrated", "thresholds-derived-not-defaulted", "evaluation-results-reproducible", "ci-cost-and-runtime-bounded"],
+    "forbidden_actions": ["照搬默认 threshold", "把单次分数当绝对真值", "为了过 CI 在 frozen set 上调参"],
+    "verification": ["保存重复分数与人工分歧", "临界区进入人工复核", "threshold rationale 和变更记录可审计"]
+  }
+]

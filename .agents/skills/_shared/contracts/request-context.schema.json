@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://enterprise-rag.local/contracts/request-context.schema.json",
+  "title": "RequestContext",
+  "description": "在检索、授权、Provider、降级和评估阶段传播的请求上下文。",
+  "type": "object",
+  "required": ["request_id", "trace_id", "tenant_id", "actor_id", "authorization_context_version", "deadline_at"],
+  "properties": {
+    "request_id": {"type": "string", "minLength": 1},
+    "trace_id": {"type": "string", "minLength": 1},
+    "tenant_id": {"type": "string", "minLength": 1},
+    "actor_id": {"type": "string", "minLength": 1},
+    "authorization_context_version": {"type": "string", "minLength": 1},
+    "deadline_at": {"type": "string", "format": "date-time"},
+    "locale": {"type": "string", "minLength": 2},
+    "conversation_id": {"type": ["string", "null"]},
+    "query_hash": {"type": "string", "minLength": 1}
+  },
+  "additionalProperties": false
+}

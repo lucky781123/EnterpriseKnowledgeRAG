@@ -1,0 +1,4 @@
+interface:
+  display_name: "DeepEval RAG Evaluation"
+  short_description: "使用 DeepEval 建立可复现的 RAG 离线、CI 与生产评估体系"
+  default_prompt: "Use $deepeval-rag-evaluation to design and verify this RAG evaluation suite and CI gate."

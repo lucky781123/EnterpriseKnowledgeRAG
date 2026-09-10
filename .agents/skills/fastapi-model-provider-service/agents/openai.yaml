@@ -1,0 +1,4 @@
+interface:
+  display_name: "FastAPI Model Provider Service"
+  short_description: "构建、测试并运维 Provider-agnostic FastAPI 模型服务"
+  default_prompt: "Use $fastapi-model-provider-service to design and verify this model-provider API service."

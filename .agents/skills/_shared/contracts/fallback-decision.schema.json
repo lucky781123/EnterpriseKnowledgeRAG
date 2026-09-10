@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://enterprise-rag.local/contracts/fallback-decision.schema.json",
+  "title": "FallbackDecision",
+  "description": "记录一次重试、切换、降级、拒答或失败决策。",
+  "type": "object",
+  "required": ["request_id", "failed_stage", "failure_kind", "action", "attempt", "max_attempts", "remaining_budget_ms", "preserves_authorization", "evidence_sufficient", "reason"],
+  "properties": {
+    "request_id": {"type": "string", "minLength": 1},
+    "failed_stage": {"type": "string", "minLength": 1},
+    "failure_kind": {"type": "string", "minLength": 1},
+    "action": {"enum": ["retry", "switch_provider", "switch_retrieval", "skip_optional_stage", "use_validated_cache", "abstain", "fail"]},
+    "attempt": {"type": "integer", "minimum": 1},
+    "max_attempts": {"type": "integer", "minimum": 1},
+    "remaining_budget_ms": {"type": "integer", "minimum": 0},
+    "preserves_authorization": {"const": true},
+    "evidence_sufficient": {"type": "boolean"},
+    "reason": {"type": "string", "minLength": 1},
+    "user_visible_mode": {"enum": ["normal", "degraded", "partial", "abstained", "failed"]}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"evidence_sufficient": {"const": false}}, "required": ["evidence_sufficient"]},
+      "then": {"properties": {"action": {"enum": ["abstain", "fail"]}}}
+    }
+  ],
+  "additionalProperties": false
+}

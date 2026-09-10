@@ -1,0 +1,46 @@
+[
+  {
+    "id": "provider-timeout-rate-limit-failure",
+    "skill": "fastapi-model-provider-service",
+    "category": "failure",
+    "request": "上游先返回 429，重试后 read timeout，请在原始 deadline 内输出结构化失败供上层决策。",
+    "setup": ["429 被明确标记可重试", "剩余预算只允许一次短重试", "尚未向客户端提交 stream"],
+    "expected_decisions": ["映射 rate_limited 并受预算限制重试", "第二次 timeout 映射为最终 ProviderResult", "把 retry 次数和剩余预算暴露给上层"],
+    "required_invariants": ["deadline-never-reset", "retry-is-bounded", "retry-only-before-stream-commit", "deadline-propagated-to-transport", "errors-normalized-and-safe", "business-fallback-outside-adapter"],
+    "forbidden_actions": ["每次重试重置完整 timeout", "在 adapter 内切换备用 Provider", "无限遵循 Retry-After"],
+    "verification": ["总耗时不超过原始 deadline", "只执行允许次数的尝试", "最终错误不包含 raw upstream body"]
+  },
+  {
+    "id": "provider-midstream-protocol-failure",
+    "skill": "fastapi-model-provider-service",
+    "category": "failure",
+    "request": "流已发送三个 delta 后收到 malformed event，请定义客户端可观察结果和资源清理。",
+    "setup": ["stream 已提交", "上游事件无法解析", "备用 Provider 可用"],
+    "expected_decisions": ["输出或记录 protocol error/partial 终态", "关闭上游流并释放资源", "不透明切换 Provider 或拼接输出"],
+    "required_invariants": ["retry-only-before-stream-commit", "stream-terminal-event-explicit", "errors-normalized-and-safe", "client-reused-and-closed", "business-fallback-outside-adapter"],
+    "forbidden_actions": ["把 malformed event 当空 delta", "从备用 Provider 重新开始并拼接", "用 completed 隐藏部分失败"],
+    "verification": ["客户端收到明确非成功终态", "已有 delta 不被重复", "连接、task 和 limiter 全部释放"]
+  },
+  {
+    "id": "provider-secret-redaction-security",
+    "skill": "fastapi-model-provider-service",
+    "category": "security",
+    "request": "上游异常包含 Authorization header、API key 和完整请求体，请确保 API 响应、日志与 trace 均不泄露。",
+    "setup": ["fake Provider 抛出带敏感值的异常", "普通日志和 tracing 已启用", "调用方无内部诊断权限"],
+    "expected_decisions": ["adapter 生成 normalized safe error", "日志使用 allowlist 字段和 redaction", "原始异常仅进入受控内部诊断或被丢弃"],
+    "required_invariants": ["provider-secrets-redacted", "errors-normalized-and-safe", "secrets-never-observed", "failure-is-explicit"],
+    "forbidden_actions": ["返回 str(exception)", "记录完整 header 或 body", "把密钥写入 trace attribute"],
+    "verification": ["响应、日志与 trace 搜索不到注入的敏感值", "仍可通过 request ID 与 error kind 定位", "安全错误内容保持稳定"]
+  },
+  {
+    "id": "provider-untrusted-endpoint-security",
+    "skill": "fastapi-model-provider-service",
+    "category": "security",
+    "request": "客户端尝试提交自定义 Provider base URL 和 model endpoint，请阻止其把服务变成任意网络代理。",
+    "setup": ["请求包含内部 IP URL", "registry 只公开两个允许 alias", "服务端凭据可访问受信 Provider"],
+    "expected_decisions": ["请求 schema 不接受 base URL 或密钥", "仅从服务端 registry 解析 adapter 与 endpoint", "未知 alias 在网络调用前拒绝"],
+    "required_invariants": ["capability-checked-before-call", "provider-secrets-redacted", "errors-normalized-and-safe", "failure-is-explicit"],
+    "forbidden_actions": ["转发客户端 URL", "把服务端密钥发送到用户 endpoint", "通过 query 参数覆盖 registry"],
+    "verification": ["内部 URL 没有网络访问", "错误不泄露合法 endpoint", "只有注册 alias 能到达对应 adapter"]
+  }
+]

@@ -11,7 +11,7 @@
 
 最终交付目标：**P0 完整 + P1 关键证据 + P2 可演进**。
 
-## 2. 当前状态（2026-09-09）
+## 2. 当前状态（2026-09-10）
 
 - 当前仍处于基础工程骨架和方案归档阶段，尚未完成业务 RAG 闭环。
 - 本机：MacBook Pro，M3 Max，128 GB 统一内存，2 TB SSD。
@@ -23,8 +23,11 @@
 - `omlx`：小模型 Router/Grade/Rewrite 的候选运行时，不是前置依赖；必须通过协议、并发和质量基准后再决定。
 - PDF：首期受控支持文本型、结构相对简单的样本；不承诺复杂 OCR、复杂表格和版面完全还原。
 - 评测集草案：`docs/evaluation/dataset-draft.jsonl`，共 40 条，等待人工抽样确认。
-- 第 1 轮基础代码已开始：配置、Provider 契约、Fake LLM、并发调度器、本地对象存储、领域实体和最小 API 已实现；当前测试套件共 14 个测试通过。
+- 第 1 轮基础代码已完成首批骨架：配置、Provider 契约、Fake LLM、并发调度器、本地对象存储、领域实体和最小 API 已实现。
+- 项目级 RAG Skill suite 已在 `.agents/skills/` 完成，包含 5 个 Skill、7 个共享 JSON Schema、10 个场景文件和 40 个压力场景；CI 和测试均以该目录为唯一权威来源。
+- 当前全量测试共 23 个通过，其中包括原有 14 个应用测试和 9 个 Skill suite 测试；Ruff、compileall、Skill suite validator 和 5 个 Skill 官方结构验证均通过。
 - 环境预检：`docs/preflight-checklist.md`；用户已验证 Docker Desktop 正常（`linux/aarch64`、16 CPU、15.6 GiB），Minikube 未安装，`kubectl` 已安装。Codex 沙箱因 socket 权限可能无法复跑 Docker API。
+- 下一步进入 PostgreSQL 持久化阶段：先定义数据模型、数据库会话、迁移契约、事务边界和版本发布一致性，不提前扩展检索或 Agentic 范围。
 
 ## 3. 已确认技术边界
 
@@ -72,3 +75,4 @@
 - 故障产物：`artifacts/failures/`
 - 环境变量模板：`.env.example`
 - 模型注册表：`config/model-registry.yaml`
+- 项目级 RAG Skill：`.agents/skills/`
