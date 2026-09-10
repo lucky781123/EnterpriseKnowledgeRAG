@@ -1,0 +1,68 @@
+schema_version: 1
+updated_at: "2026-09-09"
+
+# 这里记录模型能力和运行时，不保存任何密钥。
+providers:
+  local_lmstudio:
+    type: openai_compatible
+    base_url: http://127.0.0.1:1234
+    enabled: true
+    roles:
+      - answer
+      - router
+      - grade
+      - rewrite
+    model: qwen3.6-35b-a3b-claude-4.7-opus-reasoning-distilled-vlm-mlx-oq6
+    status: available_for_manual_smoke_test
+    notes: "这里记录服务根地址；Provider 适配层调用 /v1。首期默认模型已冻结；并发能力、JSON 输出和取消语义仍需基准测试。"
+
+  ollama:
+    type: ollama_http
+    base_url: http://127.0.0.1:11434
+    enabled: true
+    roles:
+      - embedding
+    status: embedding_deployed_and_smoke_tested
+    notes: "Reranker 不再通过 Ollama 提供。"
+    embedding_model: hardcore_aryabhata_598/qwen3-embedding:8b
+
+  in_process_bge_reranker:
+    type: python_in_process
+    enabled: true
+    roles:
+      - reranker
+    implementation: enterprise_rag.reranking.bge.BGEReranker
+    adapter: enterprise_rag.reranking.adapters.SyncRerankerAdapter
+    status: adapter_contract_tested; model_runtime_smoke_pending
+
+  online_grok:
+    type: openai_compatible
+    base_url: https://api.deepspacecode.chat/v1
+    enabled: false
+    roles:
+      - answer
+      - evaluation_sample
+    model: grok-4.6
+    credential_env: GROK_API_KEY
+    status: credential_and_contract_test_pending
+    notes: "仅使用环境变量读取密钥；不在日志中输出请求头或完整敏感上下文。"
+
+  omlx_candidate:
+    type: openai_compatible_candidate
+    enabled: false
+    roles:
+      - router
+      - grade
+      - rewrite
+    status: benchmark_pending
+
+test_modes:
+  fake:
+    enabled: true
+    use_for: [unit, state_machine, sse, failure_injection, capacity_upper_bound]
+  local:
+    enabled: true
+    use_for: [integration, regression, local_e2e, local_load_test]
+  online_sample:
+    enabled: false
+    use_for: [quality_sample, provider_latency_sample]
