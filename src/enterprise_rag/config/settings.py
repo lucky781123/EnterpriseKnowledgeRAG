@@ -47,6 +47,13 @@ class Settings:
     grok_model: str
     online_llm_enabled: bool
     evaluation_dataset_path: str
+    postgres_dsn: str | None = None
+    postgres_pool_size: int = 3
+    postgres_max_overflow: int = 2
+    postgres_pool_timeout_seconds: int = 10
+    postgres_pool_recycle_seconds: int = 1800
+    postgres_statement_timeout_ms: int = 30_000
+    postgres_lock_timeout_ms: int = 5_000
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -67,6 +74,15 @@ class Settings:
             grok_model=_env("GROK_MODEL", "grok-4.6") or "",
             online_llm_enabled=_env_bool("ONLINE_LLM_ENABLED", False),
             evaluation_dataset_path=_env("RAG_DATASET_PATH", "docs/evaluation/dataset-draft.jsonl") or "",
+            postgres_dsn=_env("POSTGRES_DSN"),
+            # 连接池和事务超时是保守的单机开发/CI 默认值；生产环境应在部署配置中
+            # 根据数据库连接配额、请求 deadline 和锁竞争实验重新评估。
+            postgres_pool_size=_env_int("POSTGRES_POOL_SIZE", 3),
+            postgres_max_overflow=_env_int("POSTGRES_MAX_OVERFLOW", 2),
+            postgres_pool_timeout_seconds=_env_int("POSTGRES_POOL_TIMEOUT_SECONDS", 10),
+            postgres_pool_recycle_seconds=_env_int("POSTGRES_POOL_RECYCLE_SECONDS", 1800),
+            postgres_statement_timeout_ms=_env_int("POSTGRES_STATEMENT_TIMEOUT_MS", 30_000),
+            postgres_lock_timeout_ms=_env_int("POSTGRES_LOCK_TIMEOUT_MS", 5_000),
         )
         settings.validate()
         return settings

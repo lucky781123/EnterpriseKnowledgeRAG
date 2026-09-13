@@ -2,7 +2,7 @@
 
 面向研发技术文档的企业级 RAG 学习与验证项目。
 
-> 当前状态：`Phase 2` 基础工程骨架。当前版本可运行健康检查、Provider/Fake LLM、配置校验和基础单元测试；PostgreSQL、Weaviate、权限、摄取、检索和问答闭环仍在后续阶段实施。
+> 当前状态：`Phase 3` PostgreSQL 基础切片已完成并接入 migration/readiness 验证；真实摄取、检索、请求级 ACL、Weaviate 和问答闭环仍在后续阶段实施。
 
 仓库级 `.agents/skills/` 已提供 5 个经过自动验证的 RAG 开发 Skill、共享契约和压力场景。它们用于约束后续开发与评审，不代表对应的业务 RAG 能力已经实现。
 
@@ -20,16 +20,17 @@
 - 在线 LLM：通过 OpenAI-compatible Provider 接入，默认关闭，仅用于抽样评测。
 - `omlx`：后续小模型运行时实验，不是主链路前置依赖。
 
-## 第 1 轮当前范围
+## 当前已完成的基础切片
 
-本轮先完成不依赖外部服务的：
+当前仓库已经具备：
 
 - 配置加载与校验；
 - Provider 抽象和 Fake LLM；
 - 评测集加载器；
-- 领域数据结构初稿；
-- FastAPI 健康检查；
-- 单元测试基础设施。
+- 领域数据结构和 PostgreSQL 持久化模型；
+- 异步 session、显式事务和首个 migration contract；
+- 小连接池、事务级 PostgreSQL `SET LOCAL` 超时和 schema readiness；
+- Compose one-shot migration job、API readiness 和 PostgreSQL 集成测试入口。
 
 详细状态见 [PROJECT_CONTEXT.md](./PROJECT_CONTEXT.md) 和 [docs/preflight-checklist.md](./docs/preflight-checklist.md)。
 
@@ -88,7 +89,7 @@ curl http://127.0.0.1:8000/api/v1/meta
 docker compose up --build
 ```
 
-当前 Compose 只启动 API 骨架并提供健康检查，不会伪装成已经接通 PostgreSQL、Redis、RabbitMQ、Weaviate 或 Keycloak。真实基础设施会在对应实现阶段加入。
+当前 Compose 默认复用已运行的 `enterprise-rag-postgres` 容器（本机 `54329`），启动 one-shot migration job 和 API。API 依赖 migration 成功且 `/health/ready` 检查目标 schema 版本；若使用其他 DSN，请在 `.env` 中覆盖 `POSTGRES_DSN`。Redis、RabbitMQ、Weaviate、Keycloak 和真实 RAG 链路仍未接入。
 
 ## 配置文件
 
@@ -109,7 +110,7 @@ docs/                 架构、运维、评测和 ADR
 config/               非敏感配置模板
 scripts/              本地验证脚本
 Dockerfile            API 镜像构建文件
-compose.yaml          当前 API 骨架的 Compose 配置
+compose.yaml          PostgreSQL、migration job 和 API 的本地 Compose 配置
 ```
 
 ## 文档导航
@@ -120,7 +121,7 @@ compose.yaml          当前 API 骨架的 Compose 配置
 
 - 首期不承诺复杂扫描 PDF、复杂表格和版面完全还原。
 - Fake Provider、本地模型和单机 Compose 不能代表生产容量或企业真实效果。
-- 当前版本没有完成数据库迁移、文档摄取、检索、ACL、SSE 闭环。
+- 当前版本没有完成真实文档摄取、检索、请求级 ACL、SSE 和问答闭环。
 
 ## 安全
 

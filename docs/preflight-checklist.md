@@ -1,6 +1,6 @@
 # 开工前置检查清单
 
-更新时间：2026-09-09
+更新时间：2026-09-12
 
 ## A. 已确认
 
@@ -15,11 +15,15 @@
 - [x] Reranker 改为工程内 `BGEReranker`；通过统一 Adapter 提供异步接口，已完成 Fake 契约测试。
 - [x] 在线 Grok 配置已明确为环境变量、第三方 OpenAI-compatible base URL 和 `grok-4.6`。
 - [x] 评测集草案已生成：40 条，JSONL 格式有效。
+- [x] PostgreSQL `16.15` 开发容器已验证：容器名 `enterprise-rag-postgres`，本机端口 `54329`，镜像固定为 `postgres:16`。
+- [x] PostgreSQL 初始 migration、约束、事务回滚和并发发布已在真实数据库验证。
+- [x] migration 已有 one-shot CLI/Compose init job；API readiness 只检查 schema/migration 版本，不自动迁移。
+- [x] 本地 Compose 默认复用 `enterprise-rag-postgres` 的 `54329` 端口，避免重复创建同名容器；数据库密码通过 `POSTGRES_DSN` 显式提供。
 
 ## B. 必须在第一轮基础设施集成前完成
 
 - [x] 用户已在本机终端验证 Docker Desktop 正常：Docker 29.5.2，Server `linux/aarch64`，16 CPU，15.6 GiB daemon memory，12 个容器运行中。
-- [ ] 对 PostgreSQL、Redis、RabbitMQ、Weaviate、Keycloak 镜像做 `linux/arm64` 可用性检查。
+- [ ] 对 Redis、RabbitMQ、Weaviate、Keycloak 镜像做 `linux/arm64` 可用性检查；PostgreSQL 已完成本轮固定镜像验证。
 - [ ] 确定首期对象存储实现；代码先使用本地适配器，避免阻塞。
 - [ ] 验证 Ollama Embedding：维度、批量、超长输入、超时和错误。
 - [ ] 验证工程内 BGE Reranker：模型加载、批量大小、MPS 内存、超时和线程池并发。
@@ -59,6 +63,6 @@ docker buildx imagetools inspect semitechnologies/weaviate:latest
 
 ## F. 判定
 
-当前可以开始：项目文档、配置契约、数据模型和 Fake Provider 的第一轮开发。
+当前可以开始：PostgreSQL 连接可靠性收口、真实摄取基础和后续 Provider 契约开发。
 
-当前不能宣称完成：Docker Compose 集成、真实基础设施健康检查、Minikube 部署和端到端模型链路。这些必须在 Docker daemon 恢复后验证。
+当前不能宣称完成：生产级连接容量/故障转移/备份恢复、Redis/RabbitMQ/Weaviate/Keycloak 集成、Minikube 部署和端到端模型链路。

@@ -35,3 +35,46 @@ jobs:
 
       - name: Compile Python sources
         run: python -m compileall -q src tests .agents/skills/_shared/scripts
+
+      - name: Validate Compose configuration
+        run: docker compose config
+
+  postgres-integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: enterprise_rag
+          POSTGRES_USER: rag
+          POSTGRES_PASSWORD: rag_dev_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U rag -d enterprise_rag"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 12
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install package and development dependencies
+        run: python -m pip install -e '.[dev]'
+
+      - name: Run migration init job
+        env:
+          POSTGRES_DSN: postgresql+asyncpg://rag:rag_dev_password@127.0.0.1:5432/enterprise_rag
+        run: python -m enterprise_rag.db.migration_cli
+
+      - name: Run PostgreSQL integration tests
+        env:
+          POSTGRES_DSN: postgresql+asyncpg://rag:rag_dev_password@127.0.0.1:5432/enterprise_rag
+        run: python -m pytest -q tests/integration/test_postgres.py

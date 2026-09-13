@@ -9,6 +9,12 @@ def test_settings_uses_confirmed_local_models(monkeypatch):
     assert settings.local_llm_base_url == "http://127.0.0.1:1234"
     assert settings.ollama_embedding_model == "hardcore_aryabhata_598/qwen3-embedding:8b"
     assert settings.online_llm_enabled is False
+    assert settings.postgres_pool_size == 3
+    assert settings.postgres_max_overflow == 2
+    assert settings.postgres_pool_timeout_seconds == 10
+    assert settings.postgres_pool_recycle_seconds == 1800
+    assert settings.postgres_statement_timeout_ms == 30_000
+    assert settings.postgres_lock_timeout_ms == 5_000
 
 
 def test_online_provider_requires_key(monkeypatch):
@@ -20,3 +26,12 @@ def test_online_provider_requires_key(monkeypatch):
         assert "GROK_API_KEY" in str(exc)
     else:
         raise AssertionError("应拒绝没有 API Key 的在线配置")
+
+
+def test_settings_reads_optional_postgres_dsn(monkeypatch):
+    monkeypatch.setenv("POSTGRES_DSN", "postgresql://user:pass@localhost/rag")
+    monkeypatch.setenv("ONLINE_LLM_ENABLED", "false")
+
+    settings = Settings.from_env()
+
+    assert settings.postgres_dsn == "postgresql://user:pass@localhost/rag"

@@ -1,15 +1,46 @@
 services:
+  migration:
+    build: .
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      APP_ENV: development
+      LOG_LEVEL: INFO
+      # 默认连接用户已准备好的 enterprise-rag-postgres:54329；密码必须通过
+      # POSTGRES_DSN 显式覆盖，不能假定持久化容器仍使用示例密码。
+      POSTGRES_DSN: ${POSTGRES_DSN:-postgresql+asyncpg://rag:rag_dev_password@host.docker.internal:54329/enterprise_rag}
+      POSTGRES_POOL_SIZE: ${POSTGRES_POOL_SIZE:-3}
+      POSTGRES_MAX_OVERFLOW: ${POSTGRES_MAX_OVERFLOW:-2}
+      POSTGRES_POOL_TIMEOUT_SECONDS: ${POSTGRES_POOL_TIMEOUT_SECONDS:-10}
+      POSTGRES_POOL_RECYCLE_SECONDS: ${POSTGRES_POOL_RECYCLE_SECONDS:-1800}
+      POSTGRES_STATEMENT_TIMEOUT_MS: ${POSTGRES_STATEMENT_TIMEOUT_MS:-30000}
+      POSTGRES_LOCK_TIMEOUT_MS: ${POSTGRES_LOCK_TIMEOUT_MS:-5000}
+    command: ["python", "-m", "enterprise_rag.db.migration_cli"]
+    restart: "no"
+
   api:
     build: .
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      migration:
+        condition: service_completed_successfully
     ports:
       - "${API_PORT:-8000}:8000"
     environment:
       APP_ENV: development
       LOG_LEVEL: INFO
       ONLINE_LLM_ENABLED: "false"
+      POSTGRES_DSN: ${POSTGRES_DSN:-postgresql+asyncpg://rag:rag_dev_password@host.docker.internal:54329/enterprise_rag}
+      POSTGRES_POOL_SIZE: ${POSTGRES_POOL_SIZE:-3}
+      POSTGRES_MAX_OVERFLOW: ${POSTGRES_MAX_OVERFLOW:-2}
+      POSTGRES_POOL_TIMEOUT_SECONDS: ${POSTGRES_POOL_TIMEOUT_SECONDS:-10}
+      POSTGRES_POOL_RECYCLE_SECONDS: ${POSTGRES_POOL_RECYCLE_SECONDS:-1800}
+      POSTGRES_STATEMENT_TIMEOUT_MS: ${POSTGRES_STATEMENT_TIMEOUT_MS:-30000}
+      POSTGRES_LOCK_TIMEOUT_MS: ${POSTGRES_LOCK_TIMEOUT_MS:-5000}
     healthcheck:
       test:
-        ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/live')"]
+        ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready')"]
       interval: 10s
       timeout: 3s
       retries: 5
