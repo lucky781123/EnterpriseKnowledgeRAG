@@ -11,7 +11,7 @@
 
 最终交付目标：**P0 完整 + P1 关键证据 + P2 可演进**。
 
-## 2. 当前状态（2026-09-12）
+## 2. 当前状态（2026-09-14）
 
 - 业务 RAG 闭环仍未完成；Phase 3 的 PostgreSQL 基础切片已实现数据模型、异步 session、首个 migration contract、状态机和版本发布事务边界。
 - 本机：MacBook Pro，M3 Max，128 GB 统一内存，2 TB SSD。
@@ -25,13 +25,14 @@
 - 评测集草案：`docs/evaluation/dataset-draft.jsonl`，共 40 条，等待人工抽样确认。
 - 第 1 轮基础代码已完成首批骨架：配置、Provider 契约、Fake LLM、并发调度器、本地对象存储、领域实体和最小 API 已实现。
 - 项目级 RAG Skill suite 已在 `.agents/skills/` 完成，包含 5 个 Skill、7 个共享 JSON Schema、10 个场景文件和 40 个压力场景；CI 和测试均以该目录为唯一权威来源。
-- 离线全量测试为 `32 passed, 5 skipped`（未设置 `POSTGRES_DSN`）；注入真实 PostgreSQL DSN 后全量测试为 `37 passed`，其中 `tests/integration/test_postgres.py` 的 5 个 migration、约束、回滚和并发发布场景通过。数据库模块与集成测试 Ruff、compileall 和 diff 检查均通过。
+- 显式移除 `POSTGRES_DSN` 的离线全量测试为 `36 passed, 7 skipped`；加载项目根目录 `.env` 中有效开发 DSN 后全量测试为 `43 passed`，其中 `tests/integration/test_postgres.py` 的 7 个真实 PostgreSQL 场景通过。真实应用 `/health/ready` 返回 `200` 并报告 migration `0001_initial`；Ruff、compileall 和 diff 检查均通过。
 - 环境预检：`docs/preflight-checklist.md`；用户已验证 Docker Desktop 正常（`linux/aarch64`、16 CPU、15.6 GiB），Minikube 未安装，`kubectl` 已安装。Codex 沙箱因 socket 权限可能无法复跑 Docker API。
 - 本轮真实验证使用固定镜像 `postgres:16`，容器内 PostgreSQL 版本为 `16.15`，Docker Server 为 `linux/arm64`；测试结果仅证明当前 schema、事务和发布锁场景，不代表生产容量或高并发性能。
 - PostgreSQL 连接池已按单机/CI 保守参数设计：`pool_size=3`、`max_overflow=2`、`pool_timeout=10s`、`pool_recycle=1800s`、`pool_pre_ping=True`；事务超时使用 `SET LOCAL`，默认 `statement_timeout=30s`、`lock_timeout=5s`。
 - migration 由 Compose/部署 one-shot init container 执行；API `/health/ready` 只检查连接和目标 schema/migration 版本，不自动迁移；CI 已增加 PostgreSQL migration/integration job 配置。
 - PostgreSQL 集成测试继续使用同一开发容器，但每个测试创建独立临时数据库并在结束后删除，不再清理固定库的 `public` schema。
-- 下一步仍限于 Phase 3 的连接故障实验和真实摄取基础；不提前扩展检索或 Agentic 范围。
+- Compose 已完成动态验证：one-shot migration 成功时 API 按 `service_completed_successfully` 启动并通过 `/health/ready`，不可达数据库时 migration 非零退出且 API 不启动；验证使用临时 Docker 配置目录绕过用户级 credential helper 拉取问题，不修改用户级配置。
+- Phase 3 连接可靠性与部署集成切片已完成；下一步进入 Phase 4/5 的真实服务契约、摄取基础、评测/压测和交付文档，不提前扩展检索或 Agentic 范围。
 
 ## 3. 已确认技术边界
 

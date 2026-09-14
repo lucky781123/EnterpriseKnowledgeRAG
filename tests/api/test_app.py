@@ -16,6 +16,10 @@ def test_live_health_endpoint(monkeypatch):
 
 
 def test_ready_endpoint_requires_database_configuration(monkeypatch):
+    # 本测试专门验证数据库配置缺失时的 readiness 行为，因此必须显式清除
+    # 调用测试进程时可能从项目 `.env` 或宿主 shell 继承的 POSTGRES_DSN，
+    # 避免外部开发环境配置污染“未配置”这一断言。
+    monkeypatch.delenv("POSTGRES_DSN", raising=False)
     monkeypatch.setenv("APP_ENV", "test")
     monkeypatch.setenv("ONLINE_LLM_ENABLED", "false")
     client = TestClient(create_app())

@@ -48,6 +48,25 @@ pytestmark = pytest.mark.skipif(
 )
 
 
+def test_database_url_override_preserves_password():
+    """替换数据库名时，生成的连接串必须保留真实密码而不是 ``***``。"""
+
+    base_url = make_url("postgresql+asyncpg://rag:secret@127.0.0.1:54329/enterprise_rag")
+    rendered_url = _render_database_url(base_url, "postgres")
+
+    # 该断言复现测试夹具的实际边界：SQLAlchemy URL 的默认字符串表示会隐藏密码，
+    # 如果直接传给 Database，asyncpg 会收到字面量 ``***`` 并认证失败。
+    assert make_url(rendered_url).password == "secret"
+
+
+def _render_database_url(base_url, database_name: str) -> str:
+    """替换数据库名并显式保留密码，避免 SQLAlchemy 默认脱敏破坏测试连接。"""
+
+    # ``str(URL)`` 等价于 ``render_as_string(hide_password=True)``，会把密码渲染成
+    # ``***``。这里仅在内存中为 SQLAlchemy engine 构造真实连接串，不打印或记录该值。
+    return base_url.set(database=database_name).render_as_string(hide_password=False)
+
+
 @pytest.fixture
 async def postgres_database() -> AsyncIterator[Database]:
     """在同一 PostgreSQL 容器内为每个测试创建并销毁独立临时数据库。"""
@@ -57,8 +76,8 @@ async def postgres_database() -> AsyncIterator[Database]:
 
     base_url = make_url(normalize_database_url(POSTGRES_DSN))
     database_name = f"enterprise_rag_test_{uuid4().hex}"
-    admin_database = Database(str(base_url.set(database="postgres")))
-    database = Database(str(base_url.set(database=database_name)))
+    admin_database = Database(_render_database_url(base_url, "postgres"))
+    database = Database(_render_database_url(base_url, database_name))
 
     async def execute_admin(statement: str) -> None:
         """使用 AUTOCOMMIT 执行 CREATE/DROP DATABASE，避免落入事务。"""
