@@ -1,5 +1,5 @@
 schema_version: 1
-updated_at: "2026-09-09"
+updated_at: "2026-09-15"
 
 # 这里记录模型能力和运行时，不保存任何密钥。
 providers:
@@ -13,8 +13,8 @@ providers:
       - grade
       - rewrite
     model: qwen3.6-35b-a3b-claude-4.7-opus-reasoning-distilled-vlm-mlx-oq6
-    status: available_for_manual_smoke_test
-    notes: "这里记录服务根地址；Provider 适配层调用 /v1。首期默认模型已冻结；并发能力、JSON 输出和取消语义仍需基准测试。"
+    status: local_smoke_and_benchmark_verified
+    notes: "这里记录服务根地址；Provider 适配层调用 /v1。首期默认模型已冻结；本机已完成模型发现、JSON/SSE smoke 和并发 1/2 benchmark。该状态不代表生产可用性、容量承诺或上游 GPU 取消语义。"
 
   ollama:
     type: ollama_http

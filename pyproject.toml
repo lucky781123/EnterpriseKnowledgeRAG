@@ -25,6 +25,7 @@ dependencies = [
   "uvicorn>=0.30,<1",
   "SQLAlchemy[asyncio]>=2.0,<3",
   "asyncpg>=0.29,<1",
+  "PyPDF2>=3,<4",
 ]
 
 [project.optional-dependencies]
@@ -34,6 +35,9 @@ dev = [
   "pytest-asyncio>=0.23,<1",
   "ruff>=0.6,<1",
   "aiosqlite>=0.20,<1",
+]
+workbench = [
+  "gradio>=5,<6",
 ]
 reranker = [
   "torch>=2.2",

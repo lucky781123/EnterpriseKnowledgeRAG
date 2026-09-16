@@ -39,6 +39,9 @@ class Settings:
     local_llm_api_key: str
     local_llm_model: str
     local_llm_max_concurrency: int
+    # 等待队列是有界的；超过该数量的请求应立即返回 rate_limited，
+    # 不允许请求在进程内无限堆积并把本地模型拖入不可控状态。
+    local_llm_max_queue_size: int
     ollama_base_url: str
     ollama_embedding_model: str
     ollama_reranker_model: str | None
@@ -66,6 +69,7 @@ class Settings:
             local_llm_api_key=_env("LOCAL_LLM_API_KEY", "local") or "local",
             local_llm_model=local_model or "",
             local_llm_max_concurrency=_env_int("LOCAL_LLM_MAX_CONCURRENCY", 2),
+            local_llm_max_queue_size=_env_int("LOCAL_LLM_MAX_QUEUE_SIZE", 8),
             ollama_base_url=_env("OLLAMA_BASE_URL", "http://127.0.0.1:11434") or "",
             ollama_embedding_model=embedding_model or "",
             ollama_reranker_model=_env("OLLAMA_RERANKER_MODEL"),

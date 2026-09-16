@@ -1,0 +1,206 @@
+{
+  "schema_version": 2,
+  "updated_at": "2026-09-15",
+  "experiment_date": "2026-09-14",
+  "scope": "F2-G caller-supplied evidence excerpt answer",
+  "offline_validation": {
+    "command": "conda run -n aitest python -m pytest -q",
+    "passed": 101,
+    "skipped": 7,
+    "ruff_check": "passed",
+    "compileall": "passed",
+    "compose_config": "passed",
+    "git_diff_check": "passed",
+    "notes": "7 个跳过项是需要显式 PostgreSQL DSN 的集成测试；离线结果不替代真实 PostgreSQL 证据。"
+  },
+  "fake_baseline": {
+    "artifact": "artifacts/benchmarks/f2-g-fake-2026-09-14.json",
+    "sample_count": 10,
+    "success_count": 10,
+    "failure_count": 0,
+    "cancelled_count": 0,
+    "success_rate": 1.0,
+    "completion_latency_ms": {
+      "p50_nearest_rank": 0.016249949112534523,
+      "p95_nearest_rank": 0.05845900159329176,
+      "mean": 0.020712416153401136
+    },
+    "interpretation": "确定性应用层基线；不代表真实模型延迟、吞吐、容量或语义质量。"
+  },
+  "local_lmstudio": {
+    "provider": "local_lmstudio",
+    "base_url": "http://localhost:1234/v1",
+    "model": "qwen3.6-35b-a3b-claude-4.7-opus-reasoning-distilled-vlm-mlx-oq6",
+    "model_discovery": {
+      "http_status": 200,
+      "model_count": 19,
+      "target_present": true
+    },
+    "artifacts": [
+      "local-benchmark-128.json",
+      "local-benchmark-256.json"
+    ],
+    "max_tokens_128": {
+      "normal": {
+        "sample_count": 40,
+        "success_count": 0,
+        "failure_count": 40,
+        "cancelled_count": 0,
+        "failure_class": "truncated",
+        "finish_reason": "length",
+        "answer_status": "incomplete",
+        "citation_validation": "not_checked",
+        "mode_counts": {
+          "json": 20,
+          "sse": 20
+        },
+        "completion_latency_ms": {
+          "p50_nearest_rank": 11042.091500014067,
+          "p95_nearest_rank": 22642.252458026633,
+          "mean": 12178.804895843496
+        },
+        "groups": {
+          "json_concurrency_1": {
+            "sample_count": 10,
+            "completion_p50_ms": 9253.475917037576,
+            "completion_p95_ms": 18566.57779100351,
+            "completed_throughput_per_second": 0.0,
+            "usage_observed_count": 10,
+            "usage_missing_count": 0
+          },
+          "json_concurrency_2": {
+            "sample_count": 10,
+            "completion_p50_ms": 7562.99670797307,
+            "completion_p95_ms": 12674.500166904181,
+            "completed_throughput_per_second": 0.0,
+            "usage_observed_count": 10,
+            "usage_missing_count": 0
+          },
+          "sse_concurrency_1": {
+            "sample_count": 10,
+            "completion_p50_ms": 9378.245750092901,
+            "completion_p95_ms": 18733.835624996573,
+            "completed_throughput_per_second": 0.0,
+            "usage_observed_count": 0,
+            "usage_missing_count": 10
+          },
+          "sse_concurrency_2": {
+            "sample_count": 10,
+            "completion_p50_ms": 7582.8117079799995,
+            "completion_p95_ms": 12750.808667042293,
+            "completed_throughput_per_second": 0.0,
+            "usage_observed_count": 0,
+            "usage_missing_count": 10
+          }
+        },
+        "interpretation": "模型请求确实返回，但 128 token 输出预算不足，不能视为完整业务回答。"
+      },
+      "cancellation": {
+        "sample_count": 2,
+        "cancelled_count": 2,
+        "cancellation_observed_count": 2,
+        "completion_p50_ms": 1001.0873330757022,
+        "completion_p95_ms": 1002.4825000436977,
+        "cleanup_p50_ms": 0.5716250743716955,
+        "cleanup_p95_ms": 0.6265840493142605
+      }
+    },
+    "max_tokens_256": {
+      "normal": {
+        "sample_count": 40,
+        "success_count": 40,
+        "failure_count": 0,
+        "cancelled_count": 0,
+        "finish_reason": "stop",
+        "answer_status_counts": {
+          "answered": 39,
+          "abstained": 1
+        },
+        "citation_validation_counts": {
+          "passed": 39,
+          "not_applicable": 1
+        },
+        "mode_counts": {
+          "json": 20,
+          "sse": 20
+        },
+        "completion_latency_ms": {
+          "p50_nearest_rank": 11042.091500014067,
+          "p95_nearest_rank": 22642.252458026633,
+          "mean": 12178.804895843496
+        },
+        "groups": {
+          "json_concurrency_1": {
+            "sample_count": 10,
+            "completion_p50_ms": 12562.761374982074,
+            "completion_p95_ms": 25148.47929100506,
+            "completed_throughput_per_second": 0.3976333143471601,
+            "usage_observed_count": 10,
+            "usage_missing_count": 0
+          },
+          "json_concurrency_2": {
+            "sample_count": 10,
+            "completion_p50_ms": 10294.489874970168,
+            "completion_p95_ms": 17731.086375075392,
+            "completed_throughput_per_second": 0.5639727429995273,
+            "usage_observed_count": 10,
+            "usage_missing_count": 0
+          },
+          "sse_concurrency_1": {
+            "sample_count": 10,
+            "completion_p50_ms": 12565.763833001256,
+            "completion_p95_ms": 25189.082499942742,
+            "ttft_p50_ms": 12100.788166979328,
+            "ttft_p95_ms": 24725.47670896165,
+            "completed_throughput_per_second": 0.39699360842049575,
+            "usage_observed_count": 0,
+            "usage_missing_count": 10
+          },
+          "sse_concurrency_2": {
+            "sample_count": 10,
+            "completion_p50_ms": 9721.233332995325,
+            "completion_p95_ms": 17559.15137496777,
+            "ttft_p50_ms": 9419.773207977414,
+            "ttft_p95_ms": 16948.861291981302,
+            "completed_throughput_per_second": 0.5694950097677304,
+            "usage_observed_count": 0,
+            "usage_missing_count": 10
+          }
+        },
+        "interpretation": "完整终态和引用身份校验可观察；这不等于语义正确、事实真实性或真实检索质量通过。"
+      },
+      "cancellation": {
+        "sample_count": 2,
+        "cancelled_count": 2,
+        "cancellation_observed_count": 2,
+        "completion_p50_ms": 1002.2537918994203,
+        "completion_p95_ms": 1002.6589169865474,
+        "cleanup_p50_ms": 0.6217920454218984,
+        "cleanup_p95_ms": 0.7410419639199972
+      }
+    }
+  },
+  "not_applicable": [
+    "retrieval",
+    "embedding",
+    "reranker",
+    "document_ingestion",
+    "acl_authorization",
+    "production_capacity"
+  ],
+  "unmeasured": [
+    "gpu_memory",
+    "power",
+    "cost",
+    "upstream_gpu_stop",
+    "semantic_answer_quality",
+    "token_throughput_when_sse_usage_missing"
+  ],
+  "warnings": [
+    "结果仅代表当前机器、当前 LM Studio 进程、当前模型、当前 Prompt 和当前配置。",
+    "Fake、真实本地模型和未来在线 Provider 的结果必须分开解释，不能合并延迟分布。",
+    "主动取消的本地 cleanup 完成只证明应用资源回收，不证明上游 GPU 已停止生成。",
+    "SSE usage 在本次 LM Studio 观察中缺失，因此不从字符数、chunk 数或时间反推 token 吞吐。",
+    "本产物不提供生产 SLO、容量、成本、检索召回或端到端 RAG 质量结论。"
+  ]
+}

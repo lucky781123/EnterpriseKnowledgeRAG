@@ -6,11 +6,12 @@
 - 项目级 RAG Skill suite：已完成 5 个 Skill、共享契约、40 个压力场景及 CI 验证，`.agents/skills/` 为唯一权威目录。
 - 评测集草案：已生成 40 条，待抽样确认。
 - 第 1 轮代码骨架：已完成第一批基础件。
-- Phase 3 PostgreSQL 基础切片：数据模型、显式事务、migration、发布约束已完成；连接池、事务级超时、Compose migration job、CI PostgreSQL job 和 schema readiness 正在收口。
-- 已通过：Python 编译检查、23 个测试、评测集加载、FastAPI 应用导入、Skill suite validator 和 5 个 Skill 官方结构验证。
+- Phase 3 PostgreSQL 基础切片：数据模型、显式事务、migration、发布约束、连接池、事务级超时、Compose migration job、CI PostgreSQL job 和 schema readiness 已完成并取得真实验证证据。
+- 已验证：离线全量 `126 passed, 11 skipped`，有效开发 DSN 全量 `137 passed`，并通过 Python 编译检查、评测集加载、FastAPI 应用导入、Skill suite validator 和 5 个 Skill 官方结构验证。
 - 已完成：配置契约、Provider 协议/错误分类、Fake LLM、有界本地 LLM 调度器、本地对象存储适配器、领域实体、最小 API，以及 BGE Reranker 的统一异步 Adapter。
-- 已知待处理：真实 Provider、摄取、检索、请求级权限闭环和问答链尚未实现；PostgreSQL 生产容量、备份恢复和故障转移也未验证。
-- 当前下一步：完成 PostgreSQL 连接可靠性与部署集成的真实 CI/本地验证，再进入摄取基础；不把单机 Compose 结果写成生产容量结论。
+- 已完成：LM Studio OpenAI-compatible Provider、JSON/SSE 摘录问答、取消/超时清理、评测与 benchmark、精简工作台，以及 Markdown/HTML/受控文本 PDF 的真实摄取基础。
+- 当前待处理：Embedding、BM25F/Weaviate 索引、可重建发布、Dense+sparse 检索、请求级 ACL/OIDC、上传/Git 同步、队列 Worker、在线 Provider 和完整 RAG 问答链；PostgreSQL 生产容量、备份恢复和故障转移也未验证。
+- 当前下一步：单独设计 Embedding、稀疏索引、可重建发布和检索闭环；不把 parsed manifest 当作检索索引，也不把单机 Compose 或本地模型结果写成生产容量结论。
 
 ## 目标版本
 

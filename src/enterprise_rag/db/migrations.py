@@ -1,7 +1,7 @@
-"""首个仓库内 Python migration contract。
+"""仓库内 Python migration contract。
 
-当前项目只有初始 schema，因此使用一次受控 metadata.create_all 创建空库，并在
-schema_migrations 记录成功版本。未来 schema 变化必须新增显式版本函数。
+首期闭环将基础业务表和 PostgreSQL-only Dense 向量表拆为两个显式版本，既支持
+空库一次升级，也支持已有 ``0001`` 数据库按顺序推进到 ``0002``。
 """
 
 from __future__ import annotations
@@ -16,7 +16,9 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from enterprise_rag.db.models import Base, SchemaMigrationModel
 
 INITIAL_VERSION = "0001_initial"
-SUPPORTED_VERSIONS = frozenset({INITIAL_VERSION})
+EMBEDDING_VERSION = "0002_embedding_records"
+LATEST_VERSION = EMBEDDING_VERSION
+SUPPORTED_VERSIONS = frozenset({INITIAL_VERSION, EMBEDDING_VERSION})
 EXPECTED_TABLES = frozenset(
     {
         "document_acl",
@@ -26,8 +28,10 @@ EXPECTED_TABLES = frozenset(
         "schema_migrations",
         "tenants",
         "version_artifacts",
+        "embedding_records",
     }
 )
+INITIAL_TABLES = EXPECTED_TABLES - {"embedding_records"}
 
 
 class MigrationError(RuntimeError):
@@ -69,7 +73,7 @@ def _validate_applied_versions(applied_versions: Collection[str]) -> None:
 
 
 def _inspect_schema_readiness(
-    connection: Connection, target_version: str = INITIAL_VERSION
+    connection: Connection, target_version: str = LATEST_VERSION
 ) -> MigrationReadiness:
     """在已建立的连接上只读检查表集合和 migration 版本，不执行迁移。"""
 
@@ -101,7 +105,10 @@ def _inspect_schema_readiness(
             unknown_versions=unknown_versions,
         )
 
-    missing_tables = tuple(sorted(EXPECTED_TABLES - table_names))
+    # 不同目标版本只检查该版本承诺的表集合，保证 ``0001`` 数据库不会因为尚未
+    # 创建 ``embedding_records`` 而被错误判断为 schema 损坏。
+    required_tables = INITIAL_TABLES if target_version == INITIAL_VERSION else EXPECTED_TABLES
+    missing_tables = tuple(sorted(required_tables - table_names))
     if missing_tables:
         return MigrationReadiness(
             ready=False,
@@ -128,7 +135,7 @@ def _inspect_schema_readiness(
 
 
 async def check_database_readiness(
-    engine: AsyncEngine, target_version: str = INITIAL_VERSION
+    engine: AsyncEngine, target_version: str = LATEST_VERSION
 ) -> MigrationReadiness:
     """检查数据库连接和 schema 版本；readiness 失败不会尝试修复数据库。"""
 
@@ -160,26 +167,52 @@ def _apply_initial_schema(connection: Connection) -> None:
     # SQLite 等不同 dialect 时，循环外键的建表排序状态互相污染。
     migration_metadata = MetaData()
     for table in Base.metadata.tables.values():
+        # ``embedding_records`` 属于 ``0002``，不能被旧版本迁移提前创建。
+        if table.name == "embedding_records":
+            continue
         table.to_metadata(migration_metadata)
     migration_metadata.create_all(connection)
     connection.execute(SchemaMigrationModel.__table__.insert().values(version=INITIAL_VERSION))
 
 
-async def upgrade_database(engine: AsyncEngine, target_version: str = INITIAL_VERSION) -> None:
-    """把空库升级到受支持目标版本，并把任意失败包装为 MigrationError。"""
+def _apply_embedding_schema(connection: Connection) -> None:
+    """创建 ``0002`` 向量表，并在 DDL 成功后记录 migration 版本。"""
+
+    applied_versions = _read_applied_versions(connection)
+    _validate_applied_versions(applied_versions)
+    if EMBEDDING_VERSION in applied_versions:
+        return
+    if INITIAL_VERSION not in applied_versions:
+        raise RuntimeError("应用 0002 前必须先完成 0001")
+
+    # 复制完整 metadata 以便 SQLAlchemy 解析复合外键依赖，但只创建本版本新增的
+    # embedding_records 表，避免隐式修改任何既有基础表。
+    migration_metadata = MetaData()
+    for table in Base.metadata.tables.values():
+        table.to_metadata(migration_metadata)
+    migration_metadata.tables["embedding_records"].create(connection, checkfirst=True)
+    connection.execute(SchemaMigrationModel.__table__.insert().values(version=EMBEDDING_VERSION))
+
+
+async def upgrade_database(engine: AsyncEngine, target_version: str = LATEST_VERSION) -> None:
+    """按版本顺序升级数据库，并把任意失败包装为 ``MigrationError``。"""
 
     try:
-        if target_version != INITIAL_VERSION:
+        if target_version not in SUPPORTED_VERSIONS:
             raise ValueError(f"不支持的 migration 目标版本: {target_version}")
         async with engine.begin() as connection:
             await connection.run_sync(_apply_initial_schema)
+            if target_version == EMBEDDING_VERSION:
+                await connection.run_sync(_apply_embedding_schema)
     except Exception as exc:
         raise MigrationError(target_version, exc) from exc
 
 
 __all__ = [
     "EXPECTED_TABLES",
+    "EMBEDDING_VERSION",
     "INITIAL_VERSION",
+    "LATEST_VERSION",
     "MigrationError",
     "MigrationReadiness",
     "SUPPORTED_VERSIONS",

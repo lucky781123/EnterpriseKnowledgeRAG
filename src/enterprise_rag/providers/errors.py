@@ -10,6 +10,7 @@ class ProviderErrorKind(StrEnum):
     INVALID_REQUEST = "invalid_request"
     UNAVAILABLE = "unavailable"
     PROTOCOL = "protocol"
+    CANCELLED = "cancelled"
     UNKNOWN = "unknown"
 
 

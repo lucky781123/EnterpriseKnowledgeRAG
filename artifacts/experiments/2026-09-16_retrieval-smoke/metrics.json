@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "experiment": "retrieval_smoke",
+  "started_at": "2026-09-15T19:02:26.821539+00:00",
+  "finished_at": "2026-09-15T19:02:31.048505+00:00",
+  "run_status": "completed",
+  "stage": "retrieval_api",
+  "vector_backend": "postgres_json_application_cosine",
+  "production_performance_claim": false,
+  "retrieval_quality_claim": false,
+  "scope": "single_machine_development_smoke",
+  "dependencies": {
+    "postgres": {
+      "status": "available",
+      "vector_extension": {
+        "available": false,
+        "installed": false,
+        "available_version": null,
+        "installed_version": null
+      }
+    },
+    "ollama": {
+      "status": "available",
+      "model": "hardcore_aryabhata_598/qwen3-embedding:8b"
+    },
+    "lmstudio": {
+      "status": "available",
+      "model": "qwen3.6-35b-a3b-claude-4.7-opus-reasoning-distilled-vlm-mlx-oq6"
+    }
+  },
+  "ingestion": {
+    "status": "succeeded",
+    "version_status": "ready",
+    "document_created": true,
+    "version_created": true,
+    "parsed_manifest_created": true
+  },
+  "indexing": {
+    "indexed_count": 1,
+    "record_count": 1,
+    "dimensions": [
+      4096
+    ],
+    "records_with_parent_text": 1
+  },
+  "retrieval": {
+    "query_embedding_dimension": 4096,
+    "correct_scope_hit_count": 1,
+    "wrong_tenant_hit_count": 0,
+    "wrong_version_hit_count": 0,
+    "top_hit_uses_parent_context": true,
+    "top_hit_contains_expected_fact": true
+  },
+  "api": {
+    "http_status": 200,
+    "context_source": "retrieved",
+    "answer_status": "answered",
+    "citation_validation": "passed",
+    "citation_count": 1,
+    "provider_result": {
+      "status": "success",
+      "model": "qwen3.6-35b-a3b-claude-4.7-opus-reasoning-distilled-vlm-mlx-oq6",
+      "finish_reason": "stop"
+    },
+    "timings": {
+      "queue_ms": 0.006292015314102173,
+      "ttft_ms": null,
+      "generation_ms": 3395.074125030078,
+      "validation_ms": 0.5667500663548708,
+      "completion_ms": 3395.7826669793576
+    }
+  },
+  "cleanup": {
+    "temporary_database_dropped": true,
+    "temporary_storage_removed": true
+  }
+}

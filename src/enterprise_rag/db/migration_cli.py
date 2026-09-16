@@ -6,7 +6,7 @@ import asyncio
 import sys
 
 from enterprise_rag.config.settings import Settings
-from enterprise_rag.db.migrations import INITIAL_VERSION
+from enterprise_rag.db.migrations import LATEST_VERSION
 from enterprise_rag.db.session import Database
 
 
@@ -42,10 +42,9 @@ def main() -> int:
         print(f"数据库 migration 失败: {type(exc).__name__}", file=sys.stderr)
         return 1
 
-    print(f"数据库 migration 已完成: {INITIAL_VERSION}")
+    print(f"数据库 migration 已完成: {LATEST_VERSION}")
     return 0
 
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

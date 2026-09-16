@@ -1,0 +1,152 @@
+{
+  "provider": "local_lmstudio",
+  "status": "environment_unavailable",
+  "model": "qwen3.6-35b-a3b-claude-4.7-opus-reasoning-distilled-vlm-oq6",
+  "base_url": "http://localhost:1234/v1",
+  "model_discovery": {
+    "ok": true,
+    "error_kind": null,
+    "status_code": 200,
+    "model_count": 19,
+    "target_present": false
+  },
+  "warmup": [],
+  "groups": [],
+  "cancellation": {
+    "summary": {
+      "sample_count": 0,
+      "success_count": 0,
+      "failure_count": 0,
+      "cancelled_count": 0,
+      "success_rate": 0.0,
+      "failure_rate": 0.0,
+      "cancelled_rate": 0.0,
+      "success_latency_ms": {
+        "raw": [],
+        "count": 0,
+        "p50_nearest_rank": null,
+        "p95_nearest_rank": null,
+        "mean": null
+      },
+      "queue_latency_ms": {
+        "raw": [],
+        "count": 0,
+        "p50_nearest_rank": null,
+        "p95_nearest_rank": null,
+        "mean": null
+      },
+      "ttft_ms": {
+        "raw": [],
+        "count": 0,
+        "p50_nearest_rank": null,
+        "p95_nearest_rank": null,
+        "mean": null
+      },
+      "generation_ms": {
+        "raw": [],
+        "count": 0,
+        "p50_nearest_rank": null,
+        "p95_nearest_rank": null,
+        "mean": null
+      },
+      "completion_ms": {
+        "raw": [],
+        "count": 0,
+        "p50_nearest_rank": null,
+        "p95_nearest_rank": null,
+        "mean": null
+      },
+      "error_counts": {},
+      "mode_counts": {},
+      "truncated_count": 0,
+      "cleanup_ms": {
+        "raw": [],
+        "count": 0,
+        "p50_nearest_rank": null,
+        "p95_nearest_rank": null,
+        "mean": null
+      },
+      "latency_ms": {
+        "p50_nearest_rank": null,
+        "p95_nearest_rank": null,
+        "mean": null
+      }
+    },
+    "samples": []
+  },
+  "not_applicable": [
+    "retrieval",
+    "embedding",
+    "reranker",
+    "production_capacity"
+  ],
+  "unmeasured": [
+    "gpu_memory",
+    "power",
+    "cost",
+    "upstream_gpu_stop"
+  ],
+  "warnings": [
+    "结果仅代表当前机器、当前 LM Studio 进程、当前模型和当前配置",
+    "取消清理完成不等于已证明上游 GPU 停止生成",
+    "usage 缺失时不推算 token 吞吐"
+  ],
+  "not_run_reason": "目标模型不在 /v1/models 列表中",
+  "finished_at": "2026-09-14T22:18:47.955105+00:00",
+  "metadata": {
+    "started_at": "2026-09-14T22:18:47.919530+00:00",
+    "finished_at": "2026-09-14T22:18:47.955105+00:00",
+    "command": [
+      "scripts/excerpt_benchmark.py",
+      "--provider",
+      "local",
+      "--base-url",
+      "http://localhost:1234/v1",
+      "--model",
+      "qwen3.6-35b-a3b-claude-4.7-opus-reasoning-distilled-vlm-oq6",
+      "--iterations",
+      "10",
+      "--max-tokens",
+      "128",
+      "--concurrency",
+      "1",
+      "2",
+      "--warmup",
+      "1",
+      "--cancel-runs",
+      "2",
+      "--group-timeout-seconds",
+      "600",
+      "--output",
+      "artifacts/experiments/2026-09-14_f2-g/local-benchmark-128.json"
+    ],
+    "code_commit": "166767693c24a9c5019619576a0711fa29ba2dcb",
+    "dirty_patch_hash": "11f7bd3751788406dde81b72c9025aa4e67af8348e7084ba8f4a55375b0841b2",
+    "git_status": "M pyproject.toml\n M src/enterprise_rag/api/app.py\n M src/enterprise_rag/config/settings.py\n M src/enterprise_rag/providers/errors.py\n M src/enterprise_rag/providers/protocols.py\n M src/enterprise_rag/providers/scheduler.py\n M tests/api/test_app.py\n M tests/unit/test_scheduler.py\n?? artifacts/\n?? docs/adr/ADR-010-excerpt-answer-boundary.md\n?? docs/evaluation/f2-g-evaluation.md\n?? docs/operations/\n?? docs/superpowers/\n?? scripts/excerpt_benchmark.py\n?? src/enterprise_rag/api/middleware.py\n?? src/enterprise_rag/api/schemas.py\n?? src/enterprise_rag/api/sse.py\n?? src/enterprise_rag/evaluation/excerpt.py\n?? src/enterprise_rag/excerpts/\n?? src/enterprise_rag/providers/lmstudio.py\n?? src/enterprise_rag/providers/readiness.py\n?? src/enterprise_rag/providers/registry.py\n?? src/enterprise_rag/workbench/\n?? tests/api/test_query_api.py\n?? tests/api/test_query_stream.py\n?? tests/api/test_request_contracts.py\n?? tests/contract/test_lmstudio_provider.py\n?? tests/evaluation/\n?? tests/unit/test_excerpt_service.py\n?? tests/unit/test_excerpt_validation.py\n?? tests/unit/test_provider_errors.py\n?? tests/workbench/",
+    "config_hash": "c4e1e1c289cbaf1e4c5b6802ad9efc5a0907945e6dd39ce6fea24ad70f657947",
+    "config": {
+      "base_url": "http://localhost:1234/v1",
+      "model": "qwen3.6-35b-a3b-claude-4.7-opus-reasoning-distilled-vlm-oq6",
+      "max_tokens": 128,
+      "concurrency_levels": [
+        1,
+        2
+      ],
+      "iterations": 10,
+      "warmup_per_mode": 1,
+      "cancellation_runs": 2,
+      "group_timeout_seconds": 600.0,
+      "temperature": 0.0
+    },
+    "fixture_hash": "2fbf7a41914243a8e67c1f875f486a5ae57605eed030706d2f0e3c2a3da8d8f3",
+    "prompt_hash": "727eceadb8abd52e799da3929840614cff42b93d7e6d82bd5b819066d5858bda",
+    "model_registry_hash": "d5265f8dafe8d61590467515dfcc2a3e6570ab6ab60e6cb03bb66f5ae4513528",
+    "runtime": {
+      "python": "3.11.15",
+      "platform": "macOS-26.5-arm64-arm-64bit",
+      "httpx": "0.28.1",
+      "fastapi": "0.136.3",
+      "pydantic": "2.13.4"
+    }
+  }
+}

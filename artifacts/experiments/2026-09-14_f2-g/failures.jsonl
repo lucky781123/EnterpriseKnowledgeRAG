@@ -1,0 +1,1 @@
+{"kind":"complete_truncated","observed":"finish_reason=length","configuration":{"max_tokens":32},"interpretation":"模型调用成功但输出预算不足；不能标记为完整回答"}

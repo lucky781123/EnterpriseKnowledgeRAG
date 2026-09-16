@@ -1,0 +1,10 @@
+{
+  "date": "2026-09-14",
+  "scope": "F2-G excerpt answer",
+  "provider": "fake baseline plus local LM Studio smoke",
+  "model": "qwen3.6-35b-a3b-claude-4.7-opus-reasoning-distilled-vlm-mlx-oq6",
+  "base_url": "http://localhost:1234/v1",
+  "retrieval": "not_applicable",
+  "embedding": "not_applicable",
+  "reranker": "not_applicable"
+}

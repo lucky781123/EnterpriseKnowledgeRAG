@@ -19,6 +19,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    JSON,
     UniqueConstraint,
     func,
 )
@@ -260,6 +261,34 @@ class VersionArtifactModel(Base):
     )
 
 
+class EmbeddingRecordModel(Base):
+    """首期 PostgreSQL-only Dense 向量记录；embedding 使用 JSON 保存以兼容无 pgvector 环境。"""
+
+    __tablename__ = "embedding_records"
+
+    tenant_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    document_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    version_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    chunk_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    parent_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    parent_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    heading_path: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    source_locators: Mapped[list[dict]] = mapped_column(JSON, nullable=False)
+    embedding: Mapped[list[float]] = mapped_column(JSON, nullable=False)
+    dimension: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["tenant_id", "document_id", "version_id"],
+            ["document_versions.tenant_id", "document_versions.document_id", "document_versions.id"],
+            ondelete="CASCADE",
+            name="fk_embeddings_version_tenant",
+        ),
+        CheckConstraint("dimension > 0", name="ck_embeddings_dimension_positive"),
+    )
+
+
 class DocumentACLModel(Base):
     """文档级 allow ACL；首期只支持 READ，缺失授权由上层 fail closed。"""
 
@@ -366,5 +395,6 @@ __all__ = [
     "SchemaMigrationModel",
     "TenantModel",
     "VersionArtifactModel",
+    "EmbeddingRecordModel",
     "VersionStatus",
 ]

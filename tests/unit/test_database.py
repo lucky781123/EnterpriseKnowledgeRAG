@@ -15,7 +15,14 @@ import pytest
 from sqlalchemy import MetaData, inspect, select, text
 from sqlalchemy.exc import IntegrityError
 
-from enterprise_rag.db.migrations import EXPECTED_TABLES, MigrationError
+from enterprise_rag.db.migrations import (
+    EMBEDDING_VERSION,
+    EXPECTED_TABLES,
+    INITIAL_VERSION,
+    LATEST_VERSION,
+    MigrationError,
+    upgrade_database,
+)
 from enterprise_rag.db.models import (
     ACLPermission,
     ACLPrincipalType,
@@ -25,6 +32,7 @@ from enterprise_rag.db.models import (
     DocumentModel,
     DocumentStatus,
     DocumentVersionModel,
+    EmbeddingRecordModel,
     IngestionJobModel,
     JobStatus,
     TenantModel,
@@ -66,7 +74,8 @@ async def test_schema_readiness_distinguishes_unmigrated_and_ready_database(tmp_
         after_migration = await database.schema_readiness()
         assert after_migration.ready is True
         assert after_migration.status == "ready"
-        assert after_migration.applied_versions == ("0001_initial",)
+        assert after_migration.target_version == LATEST_VERSION
+        assert after_migration.applied_versions == (INITIAL_VERSION, EMBEDDING_VERSION)
     finally:
         await database.dispose()
 
@@ -117,9 +126,62 @@ async def test_empty_database_migration_is_repeatable(tmp_path):
             ).scalars().all()
 
         assert table_names == EXPECTED_TABLES
-        assert applied_versions == ["0001_initial"]
+        assert applied_versions == [INITIAL_VERSION, EMBEDDING_VERSION]
     finally:
         await database.dispose()
+
+
+@pytest.mark.asyncio
+async def test_database_can_upgrade_from_initial_schema_to_embedding_schema(tmp_path):
+    """真实执行 0001 -> 0002，确认初始 schema 不会提前包含向量表。"""
+
+    database = Database(f"sqlite+aiosqlite:///{tmp_path / 'migration-upgrade.db'}")
+    try:
+        # 先只应用 0001，模拟已经运行旧版本代码的数据库。
+        await upgrade_database(database.engine, target_version=INITIAL_VERSION)
+        async with database.engine.connect() as connection:
+            initial_tables = await connection.run_sync(
+                lambda sync_connection: set(inspect(sync_connection).get_table_names())
+            )
+            initial_versions = (
+                await connection.execute(text("SELECT version FROM schema_migrations ORDER BY version"))
+            ).scalars().all()
+
+        assert "embedding_records" not in initial_tables
+        assert initial_versions == [INITIAL_VERSION]
+
+        # 默认升级目标必须推进到最新版本，并且重复执行保持幂等。
+        await database.migrate()
+        await database.migrate()
+        async with database.engine.connect() as connection:
+            upgraded_tables = await connection.run_sync(
+                lambda sync_connection: set(inspect(sync_connection).get_table_names())
+            )
+            upgraded_versions = (
+                await connection.execute(text("SELECT version FROM schema_migrations ORDER BY version"))
+            ).scalars().all()
+
+        assert upgraded_tables == EXPECTED_TABLES
+        assert upgraded_versions == [INITIAL_VERSION, EMBEDDING_VERSION]
+    finally:
+        await database.dispose()
+
+
+def test_artifact_and_embedding_models_keep_distinct_columns_and_constraints():
+    """产物状态与向量字段必须留在各自表，避免 ORM 映射和数据库约束串位。"""
+
+    artifact_columns = set(VersionArtifactModel.__table__.c.keys())
+    embedding_columns = set(EmbeddingRecordModel.__table__.c.keys())
+    embedding_constraint_names = {
+        constraint.name for constraint in EmbeddingRecordModel.__table__.constraints
+    }
+
+    assert {"status", "item_count", "failure_reason", "updated_at"} <= artifact_columns
+    assert {"text", "parent_text", "embedding", "dimension"} <= embedding_columns
+    assert "status" not in embedding_columns
+    assert "fk_embeddings_version_tenant" in embedding_constraint_names
+    assert "ck_embeddings_dimension_positive" in embedding_constraint_names
+    assert VersionArtifactModel.version.property.back_populates == "artifacts"
 
 
 @pytest.mark.asyncio
@@ -137,7 +199,7 @@ async def test_migration_failure_is_wrapped_and_version_is_not_recorded(tmp_path
         with pytest.raises(MigrationError) as captured:
             await database.migrate()
 
-        assert captured.value.target_version == "0001_initial"
+        assert captured.value.target_version == LATEST_VERSION
         assert isinstance(captured.value.cause, RuntimeError)
 
         async with database.engine.connect() as connection:

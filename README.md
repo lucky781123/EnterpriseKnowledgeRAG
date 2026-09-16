@@ -2,7 +2,7 @@
 
 面向研发技术文档的企业级 RAG 学习与验证项目。
 
-> 当前状态：`Phase 3` PostgreSQL 基础切片已完成并接入 migration/readiness 验证；真实摄取、检索、请求级 ACL、Weaviate 和问答闭环仍在后续阶段实施。
+> 当前状态（2026-09-15）：PostgreSQL 基础切片、F2-G/F2-I 服务切片和真实摄取基础已实现并完成当前切片验证；Embedding、索引、检索、请求级 ACL 和完整 RAG 闭环仍在后续阶段实施。
 
 仓库级 `.agents/skills/` 已提供 5 个经过自动验证的 RAG 开发 Skill、共享契约和压力场景。它们用于约束后续开发与评审，不代表对应的业务 RAG 能力已经实现。
 
@@ -31,6 +31,10 @@
 - 异步 session、显式事务和首个 migration contract；
 - 小连接池、事务级 PostgreSQL `SET LOCAL` 超时和 schema readiness；
 - Compose one-shot migration job、API readiness 和 PostgreSQL 集成测试入口。
+- LM Studio OpenAI-compatible Provider、JSON complete、统一 SSE stream、取消/超时清理和 Provider readiness。
+- F2-G 原文摘录问答：调用方提供 `question + evidence`，服务执行 evidence identity 校验并返回结构化答案状态。
+- Markdown、HTML 和受控文本型 PDF 的校验、解析、确定性 Parent/Child chunk、lineage、对象产物和 PostgreSQL 摄取状态编排。
+- 摄取幂等、内容冲突、FAILED replay、同内容 version 复用和共享 version 并发 parser owner 协调。
 
 详细状态见 [PROJECT_CONTEXT.md](./PROJECT_CONTEXT.md) 和 [docs/preflight-checklist.md](./docs/preflight-checklist.md)。
 
@@ -89,7 +93,7 @@ curl http://127.0.0.1:8000/api/v1/meta
 docker compose up --build
 ```
 
-当前 Compose 默认复用已运行的 `enterprise-rag-postgres` 容器（本机 `54329`），启动 one-shot migration job 和 API。API 依赖 migration 成功且 `/health/ready` 检查目标 schema 版本；若使用其他 DSN，请在 `.env` 中覆盖 `POSTGRES_DSN`。Redis、RabbitMQ、Weaviate、Keycloak 和真实 RAG 链路仍未接入。
+当前 Compose 默认复用已运行的 `enterprise-rag-postgres` 容器（本机 `54329`），启动 one-shot migration job 和 API。API 依赖 migration 成功且 `/health/ready` 检查目标 schema 版本；若使用其他 DSN，请在 `.env` 中覆盖 `POSTGRES_DSN`。Redis、RabbitMQ、Weaviate、Keycloak、Embedding/索引和完整检索问答链仍未接入。
 
 ## 配置文件
 
@@ -121,7 +125,8 @@ compose.yaml          PostgreSQL、migration job 和 API 的本地 Compose 配�
 
 - 首期不承诺复杂扫描 PDF、复杂表格和版面完全还原。
 - Fake Provider、本地模型和单机 Compose 不能代表生产容量或企业真实效果。
-- 当前版本没有完成真实文档摄取、检索、请求级 ACL、SSE 和问答闭环。
+- 当前版本已完成真实摄取基础和 F2-G/F2-I 的摘录式 JSON/SSE 闭环，但尚未完成 Embedding、Dense/BM25F 检索、请求级 ACL、Weaviate 和完整 RAG 问答链。
+- 当前摄取入口是受控服务调用和测试编排，不包含上传/Git 同步 API、OCR、队列 Worker 或自动发布。
 
 ## 安全
 
