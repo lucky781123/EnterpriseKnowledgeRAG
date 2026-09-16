@@ -57,6 +57,10 @@ class Settings:
     postgres_pool_recycle_seconds: int = 1800
     postgres_statement_timeout_ms: int = 30_000
     postgres_lock_timeout_ms: int = 5_000
+    weaviate_enabled: bool = False
+    weaviate_base_url: str = "http://127.0.0.1:8080"
+    weaviate_api_key: str | None = None
+    weaviate_schema_version: str = "dense-v1"
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -87,6 +91,11 @@ class Settings:
             postgres_pool_recycle_seconds=_env_int("POSTGRES_POOL_RECYCLE_SECONDS", 1800),
             postgres_statement_timeout_ms=_env_int("POSTGRES_STATEMENT_TIMEOUT_MS", 30_000),
             postgres_lock_timeout_ms=_env_int("POSTGRES_LOCK_TIMEOUT_MS", 5_000),
+            # Weaviate 默认关闭；只有显式启用且由部署注入 endpoint/key 时才创建适配器。
+            weaviate_enabled=_env_bool("WEAVIATE_ENABLED", False),
+            weaviate_base_url=_env("WEAVIATE_BASE_URL", "http://127.0.0.1:8080") or "",
+            weaviate_api_key=_env("WEAVIATE_API_KEY"),
+            weaviate_schema_version=_env("WEAVIATE_SCHEMA_VERSION", "dense-v1") or "",
         )
         settings.validate()
         return settings
@@ -98,3 +107,7 @@ class Settings:
             raise ValueError("LOCAL_LLM_MODEL 不能为空")
         if not self.ollama_embedding_model:
             raise ValueError("OLLAMA_EMBEDDING_MODEL 不能为空")
+        if self.weaviate_enabled and not self.weaviate_base_url:
+            raise ValueError("WEAVIATE_ENABLED=true 时 WEAVIATE_BASE_URL 不能为空")
+        if not self.weaviate_schema_version:
+            raise ValueError("WEAVIATE_SCHEMA_VERSION 不能为空")

@@ -52,6 +52,16 @@ class ArtifactStatus(StrEnum):
     FAILED = "failed"
 
 
+class DenseGenerationStatus(StrEnum):
+    """Weaviate Dense generation 的构建、发布和保留生命周期状态。"""
+
+    BUILDING = "building"
+    READY = "ready"
+    ACTIVE = "active"
+    RETIRED = "retired"
+    FAILED = "failed"
+
+
 class ACLPrincipalType(StrEnum):
     """文档 ACL 主体类型；主体 ID 由认证与成员关系层解释。"""
 

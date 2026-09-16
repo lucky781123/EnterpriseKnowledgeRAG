@@ -2,7 +2,7 @@
 
 面向研发技术文档的企业级 RAG 学习与验证项目。
 
-> 当前状态（2026-09-15）：PostgreSQL 基础切片、F2-G/F2-I 服务切片和真实摄取基础已实现并完成当前切片验证；Embedding、索引、检索、请求级 ACL 和完整 RAG 闭环仍在后续阶段实施。
+> 当前状态（2026-09-16）：PostgreSQL 基础切片、F2-G/F2-I 服务切片、真实摄取基础和 Weaviate Dense 迁移 contract 已实现；真实 Weaviate smoke、BM25F、检索、请求级 ACL 和完整 RAG 闭环仍在后续阶段实施。
 
 仓库级 `.agents/skills/` 已提供 5 个经过自动验证的 RAG 开发 Skill、共享契约和压力场景。它们用于约束后续开发与评审，不代表对应的业务 RAG 能力已经实现。
 
@@ -125,7 +125,7 @@ compose.yaml          PostgreSQL、migration job 和 API 的本地 Compose 配�
 
 - 首期不承诺复杂扫描 PDF、复杂表格和版面完全还原。
 - Fake Provider、本地模型和单机 Compose 不能代表生产容量或企业真实效果。
-- 当前版本已完成真实摄取基础和 F2-G/F2-I 的摘录式 JSON/SSE 闭环，但尚未完成 Embedding、Dense/BM25F 检索、请求级 ACL、Weaviate 和完整 RAG 问答链。
+- 当前版本已完成真实摄取基础、F2-G/F2-I 摘录式 JSON/SSE 闭环和 Weaviate Dense 的离线迁移 contract，但尚未完成真实 Weaviate 联调、BM25F、完整 Dense/BM25F 检索、请求级 ACL 和完整 RAG 问答链。
 - 当前摄取入口是受控服务调用和测试编排，不包含上传/Git 同步 API、OCR、队列 Worker 或自动发布。
 
 ## 安全

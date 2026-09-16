@@ -7,7 +7,14 @@ from collections.abc import Sequence
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from enterprise_rag.db.models import EmbeddingRecordModel
+from enterprise_rag.db.models import (
+    DenseGenerationModel,
+    DenseGenerationPointerModel,
+    DenseGenerationStatus,
+    EmbeddingRecordModel,
+    TenantDenseCollectionModel,
+)
+from enterprise_rag.retrieval.contracts import IndexProfile, WeaviateTransport
 from enterprise_rag.retrieval.service import EmbeddingRecord, RetrievalResult, _cosine
 
 
@@ -100,3 +107,74 @@ class PostgresVectorRepository:
             )
             for row in ranked
         ]
+
+
+class WeaviateRetrievalUnavailable(RuntimeError):
+    """表示 PostgreSQL 没有可读的 active Dense generation。"""
+
+
+class WeaviateVectorRepository:
+    """通过 PostgreSQL active pointer 读取 Weaviate Dense generation。"""
+
+    def __init__(self, transport: WeaviateTransport, index_profile: IndexProfile) -> None:
+        """保存外部 transport 和固定 profile；请求方不能覆盖 collection 或 profile。"""
+
+        self.transport = transport
+        self.index_profile = index_profile
+
+    async def search(
+        self,
+        session: AsyncSession,
+        tenant_id: str,
+        version_id: str,
+        query: Sequence[float],
+        top_k: int,
+    ) -> list[RetrievalResult]:
+        """先读取 active pointer，再以 generation/version 双过滤查询 Weaviate。"""
+
+        if top_k <= 0:
+            raise ValueError("top_k 必须大于 0")
+        pointers = (
+            await session.scalars(
+                select(DenseGenerationPointerModel).where(
+                    DenseGenerationPointerModel.tenant_id == tenant_id,
+                    DenseGenerationPointerModel.version_id == version_id,
+                    DenseGenerationPointerModel.index_profile_key == self.index_profile.key,
+                )
+            )
+        ).all()
+        if len(pointers) != 1 or not pointers[0].active_generation_id:
+            raise WeaviateRetrievalUnavailable("active generation 不存在")
+        pointer = pointers[0]
+        generation = await session.scalar(
+            select(DenseGenerationModel).where(
+                DenseGenerationModel.generation_id == pointer.active_generation_id,
+                DenseGenerationModel.tenant_id == tenant_id,
+                DenseGenerationModel.version_id == version_id,
+                DenseGenerationModel.index_profile_key == self.index_profile.key,
+            )
+        )
+        if generation is None or generation.status is not DenseGenerationStatus.ACTIVE:
+            raise WeaviateRetrievalUnavailable("active generation 不可读")
+        collection = await session.scalar(
+            select(TenantDenseCollectionModel).where(
+                TenantDenseCollectionModel.tenant_id == tenant_id,
+                TenantDenseCollectionModel.collection_name == generation.collection_name,
+            )
+        )
+        if collection is None:
+            raise WeaviateRetrievalUnavailable("tenant collection 不存在")
+        return await self.transport.search(
+            collection.collection_name,
+            generation_id=generation.generation_id,
+            version_id=version_id,
+            query=query,
+            top_k=top_k,
+        )
+
+
+__all__ = [
+    "PostgresVectorRepository",
+    "WeaviateRetrievalUnavailable",
+    "WeaviateVectorRepository",
+]

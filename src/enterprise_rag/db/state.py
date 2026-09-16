@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from enterprise_rag.domain.entities import JobStatus, VersionStatus
+from enterprise_rag.domain.entities import DenseGenerationStatus, JobStatus, VersionStatus
 
 
 class InvalidStateTransition(ValueError):
@@ -51,4 +51,38 @@ def transition_version_status(current: VersionStatus, target: VersionStatus) -> 
     return target
 
 
-__all__ = ["InvalidStateTransition", "transition_job_status", "transition_version_status"]
+_ALLOWED_DENSE_GENERATION_TRANSITIONS: dict[
+    DenseGenerationStatus, frozenset[DenseGenerationStatus]
+] = {
+    DenseGenerationStatus.BUILDING: frozenset(
+        {DenseGenerationStatus.BUILDING, DenseGenerationStatus.READY, DenseGenerationStatus.FAILED}
+    ),
+    DenseGenerationStatus.READY: frozenset(
+        {DenseGenerationStatus.READY, DenseGenerationStatus.ACTIVE, DenseGenerationStatus.FAILED}
+    ),
+    DenseGenerationStatus.ACTIVE: frozenset(
+        {DenseGenerationStatus.ACTIVE, DenseGenerationStatus.RETIRED}
+    ),
+    DenseGenerationStatus.RETIRED: frozenset(
+        {DenseGenerationStatus.RETIRED, DenseGenerationStatus.ACTIVE}
+    ),
+    DenseGenerationStatus.FAILED: frozenset({DenseGenerationStatus.FAILED}),
+}
+
+
+def transition_generation_status(
+    current: DenseGenerationStatus, target: DenseGenerationStatus
+) -> DenseGenerationStatus:
+    """验证 Dense generation 生命周期，不允许跳过完整性检查直接发布。"""
+
+    if target not in _ALLOWED_DENSE_GENERATION_TRANSITIONS[current]:
+        raise InvalidStateTransition(f"非法 Dense generation 状态转换: {current.value} -> {target.value}")
+    return target
+
+
+__all__ = [
+    "InvalidStateTransition",
+    "transition_generation_status",
+    "transition_job_status",
+    "transition_version_status",
+]

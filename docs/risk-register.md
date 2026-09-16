@@ -8,6 +8,8 @@
 | Embedding/Reranker 模型更换 | 向量不可比、质量回退 | 新索引空间、影子评测、回滚 | 评测门禁通过后切换 | 待验证 |
 | 任务重复投递 | 重复索引、脏状态 | 稳定幂等键、条件更新、Outbox/等价机制 | 崩溃注入和重复重放 | 待验证 |
 | 发布与索引跨库不一致 | 半成品被查询 | 先构建后发布；查询版本复核 | 发布失败和孤立产物测试 | 待验证 |
+| Weaviate 真实 API 版本/分页差异 | collection、批量写入或清理行为不兼容 | 固定 transport 边界；默认读取路径保持 PostgreSQL；脱敏 smoke runner | 真实开发 Weaviate 联调、分页和故障注入 | 待验证 |
+| Dense generation 与 PostgreSQL pointer 暂时不一致 | 查询读到旧索引或不可读 generation | PostgreSQL pointer 事实先行；未发布 generation fail closed；旧 active 可回滚 | 真实跨系统发布/回滚和重试实验 | 待验证 |
 | ACL 撤销延迟 | 越权泄漏 | 权威权限复核；缓存版本化；恢复时重检 | 租户、Parent、缓存、撤权专项 | 待验证 |
 | Prompt Injection | 模型执行文档中的恶意指令 | 数据/指令隔离、最小权限、输出校验 | 恶意文档专项集 | 待验证 |
 | SSE 断连后后台继续生成 | 资源泄漏、费用增加 | 取消、deadline、迟到结果丢弃 | 断连和供应商超时测试 | 待验证 |

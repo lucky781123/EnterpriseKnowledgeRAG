@@ -6,7 +6,7 @@
 |---|---|---|---|
 | 文档摄取 | Markdown/HTML 可上传或 Git 同步；受控 PDF 可明确成功/失败 | 集成测试、失败样本 | 受控解析和状态编排已验证；上传/Git 同步入口未实现 |
 | 解析切块 | Parent/Child、标题路径、版本和来源元数据正确 | 单测、样本快照 | 已验证 |
-| 索引 | Embedding、BM25F、版本发布可完成 | 索引检查、查询测试 | 后续切片 |
+| 索引 | Embedding、BM25F、版本发布可完成 | 索引检查、查询测试 | Dense generation/发布 contract 已实现；真实 Weaviate smoke、BM25F 后续切片 |
 | 检索 | Dense + BM25F + RRF + Reranker 可返回证据 | API 测试、引用样例 | 后续切片 |
 | 问答 | Linear 能回答、无答案、引用和版本冲突 | 端到端测试 | F2-G 摘录问答已验证；完整检索问答后续实现 |
 | 鉴权 | OIDC、租户、RBAC、文档 ACL 生效 | 越权测试 | 后续切片 |

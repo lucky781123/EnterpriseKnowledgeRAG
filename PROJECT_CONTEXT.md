@@ -25,7 +25,7 @@
 - 评测集草案：`docs/evaluation/dataset-draft.jsonl`，共 40 条，等待人工抽样确认。
 - 第 1 轮基础代码已完成首批骨架：配置、Provider 契约、Fake LLM、并发调度器、本地对象存储、领域实体和最小 API 已实现。
 - 项目级 RAG Skill suite 已在 `.agents/skills/` 完成，包含 5 个 Skill、7 个共享 JSON Schema、10 个场景文件和 40 个压力场景；CI 和测试均以该目录为唯一权威来源。
-- 显式移除 `POSTGRES_DSN` 的离线全量测试为 `126 passed, 11 skipped`；加载项目根目录 `.env` 中有效开发 DSN 后全量测试为 `137 passed`，其中数据库基础集成 7 个场景、真实摄取集成 4 个场景均通过。真实应用 `/health/ready` 返回 `200` 并报告 migration `0001_initial`；Ruff、compileall 和 diff 检查均通过。
+- 历史 PostgreSQL/F2-G 基线曾记录离线 `126 passed, 11 skipped` 和有效开发 DSN `137 passed`；本轮加入 Weaviate Dense contract/smoke 后，最新离线全量为 `171 passed, 11 skipped`。本轮未注入 `POSTGRES_DSN`，因此 PostgreSQL 集成仍明确跳过；Ruff、compileall、Compose config 和 diff 检查均通过。
 - 环境预检：`docs/preflight-checklist.md`；用户已验证 Docker Desktop 正常（`linux/aarch64`、16 CPU、15.6 GiB），Minikube 未安装，`kubectl` 已安装。Codex 沙箱因 socket 权限可能无法复跑 Docker API。
 - 本轮真实验证使用固定镜像 `postgres:16`，容器内 PostgreSQL 版本为 `16.15`，Docker Server 为 `linux/arm64`；测试结果仅证明当前 schema、事务和发布锁场景，不代表生产容量或高并发性能。
 - PostgreSQL 连接池已按单机/CI 保守参数设计：`pool_size=3`、`max_overflow=2`、`pool_timeout=10s`、`pool_recycle=1800s`、`pool_pre_ping=True`；事务超时使用 `SET LOCAL`，默认 `statement_timeout=30s`、`lock_timeout=5s`。
@@ -36,13 +36,15 @@
 - F2-G 原文摘录问答已实现：请求接收调用方提供的 `question + evidence`，执行 evidence identity 校验，固定记录 `context_source=caller_supplied`，并明确不把调用方上下文冒充为检索或授权结果。
 - F2-G Provider/API 已实现：LM Studio OpenAI-compatible adapter、JSON complete、统一 SSE stream、模型 readiness、共享 `httpx` client 生命周期、按 alias 的 `LocalLLMScheduler`、队列/总 deadline、错误归一化、主动取消和清理路径均有对应测试。
 - F2-G 评测与实验已实现：摘录 evaluator、Fake/mock/真实 LM Studio 分层证据、可复现 benchmark runner、并发 1/2、`max_tokens=128/256`、usage 缺失和取消清理结果均已写入 `artifacts/experiments/2026-09-14_f2-g/`；精简 F2-I 本地工作台已接入同一服务入口。
-- F2-G 专项离线验证为 `101 passed, 7 skipped`；包含真实摄取基础的本轮最新离线全量为 `126 passed, 11 skipped`，有效开发 DSN 全量为 `137 passed`。Ruff、`compileall`、`docker compose config --quiet` 和 `git diff --check` 通过。真实 LM Studio `/v1/models` 返回 HTTP 200、发现 19 个模型且目标模型存在；`max_tokens=128` 的 40 个正常样本均为 `finish_reason=length/incomplete`，`max_tokens=256` 的 40 个正常样本均为 `finish_reason=stop`，其中 39 个引用身份校验通过、1 个合法 abstention。
+- F2-G 专项和真实摄取基础的历史证据保持不变；当前最新离线全量为 `171 passed, 11 skipped`。真实 LM Studio/F2-G 观测仍按原实验产物解释，不外推为生产质量或容量。
 - F2-G 当前边界仍明确：尚未实现 Embedding、索引、Weaviate 检索、ACL/OIDC 闭环、在线 Provider 网络适配器或生产容量验证；真实本地 benchmark 不代表语义质量、成本、SLO、GPU 行为或生产吞吐。
 - 真实摄取基础已实现：支持 Markdown、HTML 和受控文本型 PDF 的校验与统一解析，生成带标题路径/locator 的 `ParsedBlock` 以及确定性 Parent/Child chunk；原文和 parsed manifest 写入本地对象存储，PostgreSQL 保存 job/version/artifact 状态。
 - 摄取可靠性已验证：同租户幂等键复用、内容冲突、FAILED 显式 replay、同内容 version 复用和共享 version 并发成功/失败均有测试；真实 PostgreSQL 并发失败证据证明 parser 只执行一次。摄取成功不会自动设置 `documents.current_version_id`。
 - 真实摄取基础边界：不包含上传/Git 同步 API、OCR、Embedding、BM25F/Weaviate、ACL/OIDC、队列 Worker、自动发布或完整检索问答链；parsed manifest 不是检索索引。
 - 方案 B 最小检索闭环已通过真实 smoke：固定 Markdown 经 Ollama Embedding 写入 PostgreSQL JSON，应用层执行 cosine，按 tenant/version 过滤并回溯 Parent，再通过 FastAPI 调用 LM Studio；证据见 `artifacts/experiments/2026-09-16_retrieval-smoke/`。
 - 方案 B 当前边界：向量检索仍是 PostgreSQL JSON + 应用层 cosine 的演示路径；未实现 Weaviate Dense 迁移、BM25F/RRF、reranker、ACL/OIDC 请求闭环、可重建发布、生产容量或检索质量评测。
+- Weaviate Dense 迁移切片已实现：每个 tenant 独立 collection、generation scope、PostgreSQL active/previous pointer、批量 checkpoint、完整性校验、回填、retire、cleanup 和显式 repository 注入；默认 API 读取路径仍保持 PostgreSQL。
+- Weaviate Dense 当前验证边界：transport/indexer/generation/发布回滚/cleanup contract 已有离线测试；真实 smoke runner 已生成 `skipped` 脱敏产物，因为当前运行未启用真实 Weaviate。真实 collection、批量写入、查询、删除、版本差异和性能仍是待实验。
 
 ## 3. 已确认技术边界
 

@@ -1,7 +1,7 @@
 """仓库内 Python migration contract。
 
-首期闭环将基础业务表和 PostgreSQL-only Dense 向量表拆为两个显式版本，既支持
-空库一次升级，也支持已有 ``0001`` 数据库按顺序推进到 ``0002``。
+首期闭环将基础业务表、PostgreSQL-only Dense 向量表和 Weaviate generation 事实表
+拆为三个显式版本，既支持空库一次升级，也支持已有数据库按顺序推进。
 """
 
 from __future__ import annotations
@@ -17,8 +17,8 @@ from enterprise_rag.db.models import Base, SchemaMigrationModel
 
 INITIAL_VERSION = "0001_initial"
 EMBEDDING_VERSION = "0002_embedding_records"
-LATEST_VERSION = EMBEDDING_VERSION
-SUPPORTED_VERSIONS = frozenset({INITIAL_VERSION, EMBEDDING_VERSION})
+WEAVIATE_DENSE_VERSION = "0003_weaviate_dense_generations"
+LATEST_VERSION = WEAVIATE_DENSE_VERSION
 EXPECTED_TABLES = frozenset(
     {
         "document_acl",
@@ -29,9 +29,22 @@ EXPECTED_TABLES = frozenset(
         "tenants",
         "version_artifacts",
         "embedding_records",
+        "tenant_dense_collections",
+        "dense_generations",
+        "dense_generation_pointers",
     }
 )
-INITIAL_TABLES = EXPECTED_TABLES - {"embedding_records"}
+WEAVIATE_DENSE_TABLES = frozenset(
+    {"tenant_dense_collections", "dense_generations", "dense_generation_pointers"}
+)
+WEAVIATE_DENSE_TABLE_ORDER = (
+    "tenant_dense_collections",
+    "dense_generations",
+    "dense_generation_pointers",
+)
+SUPPORTED_VERSIONS = frozenset({INITIAL_VERSION, EMBEDDING_VERSION, WEAVIATE_DENSE_VERSION})
+INITIAL_TABLES = EXPECTED_TABLES - {"embedding_records"} - WEAVIATE_DENSE_TABLES
+EMBEDDING_TABLES = INITIAL_TABLES | {"embedding_records"}
 
 
 class MigrationError(RuntimeError):
@@ -107,7 +120,12 @@ def _inspect_schema_readiness(
 
     # 不同目标版本只检查该版本承诺的表集合，保证 ``0001`` 数据库不会因为尚未
     # 创建 ``embedding_records`` 而被错误判断为 schema 损坏。
-    required_tables = INITIAL_TABLES if target_version == INITIAL_VERSION else EXPECTED_TABLES
+    required_tables_by_version = {
+        INITIAL_VERSION: INITIAL_TABLES,
+        EMBEDDING_VERSION: EMBEDDING_TABLES,
+        WEAVIATE_DENSE_VERSION: EXPECTED_TABLES,
+    }
+    required_tables = required_tables_by_version[target_version]
     missing_tables = tuple(sorted(required_tables - table_names))
     if missing_tables:
         return MigrationReadiness(
@@ -167,8 +185,9 @@ def _apply_initial_schema(connection: Connection) -> None:
     # SQLite 等不同 dialect 时，循环外键的建表排序状态互相污染。
     migration_metadata = MetaData()
     for table in Base.metadata.tables.values():
-        # ``embedding_records`` 属于 ``0002``，不能被旧版本迁移提前创建。
-        if table.name == "embedding_records":
+        # ``embedding_records`` 属于 ``0002``，Dense generation 表属于 ``0003``，
+        # 都不能被旧版本迁移提前创建。
+        if table.name == "embedding_records" or table.name in WEAVIATE_DENSE_TABLES:
             continue
         table.to_metadata(migration_metadata)
     migration_metadata.create_all(connection)
@@ -202,10 +221,33 @@ async def upgrade_database(engine: AsyncEngine, target_version: str = LATEST_VER
             raise ValueError(f"不支持的 migration 目标版本: {target_version}")
         async with engine.begin() as connection:
             await connection.run_sync(_apply_initial_schema)
-            if target_version == EMBEDDING_VERSION:
+            if target_version in {EMBEDDING_VERSION, WEAVIATE_DENSE_VERSION}:
                 await connection.run_sync(_apply_embedding_schema)
+            if target_version == WEAVIATE_DENSE_VERSION:
+                await connection.run_sync(_apply_weaviate_dense_schema)
     except Exception as exc:
         raise MigrationError(target_version, exc) from exc
+
+
+def _apply_weaviate_dense_schema(connection: Connection) -> None:
+    """创建 ``0003`` Dense generation 事实表，并在 DDL 成功后记录版本。"""
+
+    applied_versions = _read_applied_versions(connection)
+    _validate_applied_versions(applied_versions)
+    if WEAVIATE_DENSE_VERSION in applied_versions:
+        return
+    if EMBEDDING_VERSION not in applied_versions:
+        raise RuntimeError("应用 0003 前必须先完成 0002")
+
+    # 复制完整 metadata 只为解析复合外键依赖，再按本版本的三张表逐一创建。
+    migration_metadata = MetaData()
+    for table in Base.metadata.tables.values():
+        table.to_metadata(migration_metadata)
+    for table_name in WEAVIATE_DENSE_TABLE_ORDER:
+        migration_metadata.tables[table_name].create(connection, checkfirst=True)
+    connection.execute(
+        SchemaMigrationModel.__table__.insert().values(version=WEAVIATE_DENSE_VERSION)
+    )
 
 
 __all__ = [
@@ -216,6 +258,7 @@ __all__ = [
     "MigrationError",
     "MigrationReadiness",
     "SUPPORTED_VERSIONS",
+    "WEAVIATE_DENSE_VERSION",
     "check_database_readiness",
     "upgrade_database",
 ]

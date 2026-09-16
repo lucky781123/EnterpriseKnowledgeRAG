@@ -75,7 +75,7 @@ async def test_schema_readiness_distinguishes_unmigrated_and_ready_database(tmp_
         assert after_migration.ready is True
         assert after_migration.status == "ready"
         assert after_migration.target_version == LATEST_VERSION
-        assert after_migration.applied_versions == (INITIAL_VERSION, EMBEDDING_VERSION)
+        assert after_migration.applied_versions == (INITIAL_VERSION, EMBEDDING_VERSION, LATEST_VERSION)
     finally:
         await database.dispose()
 
@@ -126,7 +126,7 @@ async def test_empty_database_migration_is_repeatable(tmp_path):
             ).scalars().all()
 
         assert table_names == EXPECTED_TABLES
-        assert applied_versions == [INITIAL_VERSION, EMBEDDING_VERSION]
+        assert applied_versions == [INITIAL_VERSION, EMBEDDING_VERSION, LATEST_VERSION]
     finally:
         await database.dispose()
 
@@ -162,7 +162,28 @@ async def test_database_can_upgrade_from_initial_schema_to_embedding_schema(tmp_
             ).scalars().all()
 
         assert upgraded_tables == EXPECTED_TABLES
-        assert upgraded_versions == [INITIAL_VERSION, EMBEDDING_VERSION]
+        assert upgraded_versions == [INITIAL_VERSION, EMBEDDING_VERSION, LATEST_VERSION]
+    finally:
+        await database.dispose()
+
+
+@pytest.mark.asyncio
+async def test_database_can_stop_at_embedding_schema_without_dense_tables(tmp_path):
+    """显式目标 0002 时不得提前创建 0003 Dense generation 表。"""
+
+    database = Database(f"sqlite+aiosqlite:///{tmp_path / 'embedding-only.db'}")
+    try:
+        await upgrade_database(database.engine, target_version=EMBEDDING_VERSION)
+        async with database.engine.connect() as connection:
+            table_names = await connection.run_sync(
+                lambda sync_connection: set(inspect(sync_connection).get_table_names())
+            )
+        assert "embedding_records" in table_names
+        assert not {
+            "tenant_dense_collections",
+            "dense_generations",
+            "dense_generation_pointers",
+        } & table_names
     finally:
         await database.dispose()
 

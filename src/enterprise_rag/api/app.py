@@ -178,6 +178,7 @@ def create_app(
     provider_registry: ProviderRegistry | None = None,
     embedding_provider: OllamaEmbeddingProvider | None = None,
     vector_repository: PostgresVectorRepository | None = None,
+    weaviate_vector_repository: Any | None = None,
 ) -> FastAPI:
     """创建应用并装配共享 Chat、Embedding、检索和数据库依赖。"""
 
@@ -224,7 +225,9 @@ def create_app(
         )
 
     resolved_embedding_provider = embedding_provider
-    resolved_vector_repository = vector_repository
+    # Weaviate repository 只允许通过显式依赖注入启用；未注入时保留 PostgreSQL
+    # 默认读取路径，避免配置字段出现就悄然改变线上查询后端。
+    resolved_vector_repository = weaviate_vector_repository or vector_repository
     if database is not None:
         if resolved_embedding_provider is None:
             # 默认路径复用 Chat Provider 的 HTTP client；注入自定义 Chat Registry
@@ -292,6 +295,7 @@ def create_app(
     app.state.database = database
     app.state.embedding_provider = resolved_embedding_provider
     app.state.vector_repository = resolved_vector_repository
+    app.state.weaviate_vector_repository = weaviate_vector_repository
     app.state.provider_registry = registry
     app.state.provider_readiness = provider_readiness
     app.state.schedulers = schedulers

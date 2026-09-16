@@ -30,6 +30,7 @@ from enterprise_rag.domain.entities import (
     ACLPrincipalType,
     ArtifactKind,
     ArtifactStatus,
+    DenseGenerationStatus,
     DocumentStatus,
     JobStatus,
     VersionStatus,
@@ -289,6 +290,155 @@ class EmbeddingRecordModel(Base):
     )
 
 
+class TenantDenseCollectionModel(Base):
+    """租户到 Weaviate Dense collection 的稳定注册表。"""
+
+    __tablename__ = "tenant_dense_collections"
+
+    tenant_id: Mapped[str] = mapped_column(
+        ForeignKey("tenants.id", ondelete="CASCADE"), primary_key=True
+    )
+    collection_name: Mapped[str] = mapped_column(String(128), nullable=False, unique=True)
+    schema_version: Mapped[str] = mapped_column(String(128), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utc_now, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=_utc_now,
+        onupdate=_utc_now,
+        server_default=func.now(),
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "tenant_id", "collection_name", name="uq_tenant_dense_collections_scope"
+        ),
+        CheckConstraint(
+            "length(trim(collection_name)) > 0",
+            name="ck_tenant_dense_collections_name_not_blank",
+        ),
+        CheckConstraint(
+            "length(trim(schema_version)) > 0",
+            name="ck_tenant_dense_collections_schema_not_blank",
+        ),
+    )
+
+
+class DenseGenerationModel(Base):
+    """Weaviate Dense generation 的构建、完整性和发布事实。"""
+
+    __tablename__ = "dense_generations"
+
+    generation_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    tenant_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    document_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    version_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    index_profile_key: Mapped[str] = mapped_column(String(512), nullable=False)
+    collection_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    manifest_hash: Mapped[str] = mapped_column(String(128), nullable=False)
+    model_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    dimension: Mapped[int] = mapped_column(Integer, nullable=False)
+    chunking_version: Mapped[str] = mapped_column(String(128), nullable=False)
+    schema_version: Mapped[str] = mapped_column(String(128), nullable=False)
+    expected_item_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    actual_item_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    checkpoint: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    build_attempt: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    worker_lease: Mapped[str] = mapped_column(String(255), nullable=False)
+    status: Mapped[DenseGenerationStatus] = mapped_column(
+        _enum_type(DenseGenerationStatus, "dense_generation_status"),
+        nullable=False,
+        default=DenseGenerationStatus.BUILDING,
+        server_default=DenseGenerationStatus.BUILDING.value,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utc_now, server_default=func.now()
+    )
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    retired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    failure_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["tenant_id", "document_id", "version_id"],
+            [
+                "document_versions.tenant_id",
+                "document_versions.document_id",
+                "document_versions.id",
+            ],
+            ondelete="CASCADE",
+            name="fk_dense_generations_version_tenant",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "collection_name"],
+            ["tenant_dense_collections.tenant_id", "tenant_dense_collections.collection_name"],
+            ondelete="RESTRICT",
+            name="fk_dense_generations_collection_tenant",
+        ),
+        UniqueConstraint(
+            "tenant_id",
+            "document_id",
+            "version_id",
+            "index_profile_key",
+            "generation_id",
+            name="uq_dense_generations_scope_id",
+        ),
+        CheckConstraint("dimension > 0", name="ck_dense_generations_dimension_positive"),
+        CheckConstraint(
+            "expected_item_count >= 0", name="ck_dense_generations_expected_nonnegative"
+        ),
+        CheckConstraint(
+            "actual_item_count >= 0", name="ck_dense_generations_actual_nonnegative"
+        ),
+        CheckConstraint("checkpoint >= 0", name="ck_dense_generations_checkpoint_nonnegative"),
+        CheckConstraint("build_attempt > 0", name="ck_dense_generations_attempt_positive"),
+        CheckConstraint(
+            "status != 'failed' OR length(trim(failure_reason)) > 0",
+            name="ck_dense_generations_failed_requires_reason",
+        ),
+    )
+
+
+class DenseGenerationPointerModel(Base):
+    """按 generation scope 保存 active/previous 发布指针。"""
+
+    __tablename__ = "dense_generation_pointers"
+
+    tenant_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    document_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    version_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    index_profile_key: Mapped[str] = mapped_column(String(512), primary_key=True)
+    active_generation_id: Mapped[str | None] = mapped_column(
+        ForeignKey("dense_generations.generation_id", ondelete="RESTRICT"), nullable=True
+    )
+    previous_generation_id: Mapped[str | None] = mapped_column(
+        ForeignKey("dense_generations.generation_id", ondelete="RESTRICT"), nullable=True
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utc_now, onupdate=_utc_now, server_default=func.now()
+    )
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["tenant_id", "document_id", "version_id"],
+            [
+                "document_versions.tenant_id",
+                "document_versions.document_id",
+                "document_versions.id",
+            ],
+            ondelete="CASCADE",
+            name="fk_dense_generation_pointers_version_tenant",
+        ),
+        CheckConstraint(
+            "active_generation_id IS NULL OR active_generation_id != previous_generation_id",
+            name="ck_dense_generation_pointers_distinct_generations",
+        ),
+    )
+
+
 class DocumentACLModel(Base):
     """文档级 allow ACL；首期只支持 READ，缺失授权由上层 fail closed。"""
 
@@ -396,5 +546,8 @@ __all__ = [
     "TenantModel",
     "VersionArtifactModel",
     "EmbeddingRecordModel",
+    "DenseGenerationModel",
+    "DenseGenerationPointerModel",
+    "TenantDenseCollectionModel",
     "VersionStatus",
 ]

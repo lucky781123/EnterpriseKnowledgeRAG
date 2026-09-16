@@ -16,6 +16,15 @@
   → SSE、引用、审计、指标
 ```
 
+## 1.1 当前 Dense 迁移切片状态（2026-09-16）
+
+- **已实现：** 每个 tenant 独立 Weaviate collection 映射；generation scope 固定为
+  `(tenant_id, document_id, version_id, index_profile_key)`；PostgreSQL 保存 generation、active/previous pointer 和状态事实。
+- **已实现：** generation 构建、checkpoint、失败续跑、完整性校验、发布、回滚、retire 和 cleanup 的 contract/SQLite 证据。
+- **已验证：** transport、indexer、generation、回填和显式 Weaviate repository 注入测试；默认 API 仍使用 PostgreSQL repository。
+- **待实验：** 真实 Weaviate 服务联调、真实跨系统发布/回滚、分页/版本差异和规模化性能。
+- **非目标：** BM25F、RRF、reranker、ACL/OIDC 请求闭环和生产容量结论。
+
 ## 2. 数据权威性
 
 1. PostgreSQL 是文档版本、ACL、任务状态和发布状态的权威来源。
@@ -26,7 +35,7 @@
 
 ## 3. 文档发布语义
 
-文档新版本先解析、切块、Embedding、写索引并完成完整性检查，再由 PostgreSQL 发布为可见版本。未发布产物不得作为有效证据。删除或撤权先撤销业务可见性，再异步清理索引、缓存、引用和原文派生物。
+文档新版本先解析、切块、Embedding、写索引并完成完整性检查，再由 PostgreSQL 发布为可见版本。当前 Weaviate Dense generation 只作为可重建派生索引，未发布产物不得作为有效证据。删除或撤权先撤销业务可见性，再异步清理索引、缓存、引用和原文派生物。
 
 查询必须固定本次回答使用的文档版本，不跨版本拼接冲突证据。Parent 回溯、引用详情和 Checkpoint 恢复都要重新执行授权和版本检查。
 
