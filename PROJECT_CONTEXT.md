@@ -45,6 +45,7 @@
 - 方案 B 当前边界：向量检索仍是 PostgreSQL JSON + 应用层 cosine 的演示路径；未实现 Weaviate Dense 迁移、BM25F/RRF、reranker、ACL/OIDC 请求闭环、可重建发布、生产容量或检索质量评测。
 - Weaviate Dense 迁移切片已实现：每个 tenant 独立 collection、generation scope、PostgreSQL active/previous pointer、批量 checkpoint、完整性校验、回填、retire、cleanup 和显式 repository 注入；默认 API 读取路径仍保持 PostgreSQL。
 - Weaviate Dense 当前验证边界：transport/indexer/generation/发布回滚/cleanup contract 已有离线测试；真实 smoke runner 已生成 `skipped` 脱敏产物，因为当前运行未启用真实 Weaviate。真实 collection、批量写入、查询、删除、版本差异和性能仍是待实验。
+- BM25F Spike 已实现确定性字段投影：从 `ParsedManifest` child 生成 `title`、`section_title`、`api_symbols`、`body` 和稳定 object identity；仅有 fake transport/离线测试证据，未新增数据库、未接入默认 API，也未验证真实 Weaviate BM25F 查询或检索质量。
 
 ## 3. 已确认技术边界
 
