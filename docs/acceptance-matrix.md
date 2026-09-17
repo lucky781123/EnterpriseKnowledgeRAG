@@ -2,12 +2,12 @@
 
 ## P0：可运行闭环
 
-| 能力 | 验收条件 | 证据 | 当前状态（2026-09-15） |
+| 能力 | 验收条件 | 证据 | 当前状态（2026-09-17） |
 |---|---|---|---|
 | 文档摄取 | Markdown/HTML 可上传或 Git 同步；受控 PDF 可明确成功/失败 | 集成测试、失败样本 | 受控解析和状态编排已验证；上传/Git 同步入口未实现 |
 | 解析切块 | Parent/Child、标题路径、版本和来源元数据正确 | 单测、样本快照 | 已验证 |
-| 索引 | Embedding、BM25F、版本发布可完成 | 索引检查、查询测试 | Dense generation/发布 contract 已实现；真实 Weaviate smoke、BM25F 后续切片 |
-| 检索 | Dense + BM25F + RRF + Reranker 可返回证据 | API 测试、引用样例 | 后续切片 |
+| 索引 | Embedding、BM25F、版本发布可完成 | 索引检查、查询测试 | Dense generation/发布 contract、真实 Dense/BM25F transport smoke 和 tokenizer schema 对照已验证；Sparse Generation 和跨系统发布仍待实现 |
+| 检索 | Dense + BM25F + RRF + Reranker 可返回证据 | API 测试、引用样例 | 固定小数据集 Dense/BM25F/RRF 与中文预处理对照已验证；默认 profile、API 编排和 Reranker 仍为后续切片 |
 | 问答 | Linear 能回答、无答案、引用和版本冲突 | 端到端测试 | F2-G 摘录问答已验证；完整检索问答后续实现 |
 | 鉴权 | OIDC、租户、RBAC、文档 ACL 生效 | 越权测试 | 后续切片 |
 | 异步任务 | 失败、重试、幂等、人工重放路径可见 | 任务状态测试 | 摄取幂等/replay 已验证；队列 Worker 后续实现 |

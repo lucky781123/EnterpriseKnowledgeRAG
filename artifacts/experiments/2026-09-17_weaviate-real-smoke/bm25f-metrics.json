@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "experiment": "weaviate_bm25f_smoke",
+  "started_at": "2026-09-17T14:58:48.019629+00:00",
+  "finished_at": "2026-09-17T14:58:48.262569+00:00",
+  "run_status": "passed",
+  "sparse_backend": "weaviate_bm25f",
+  "collection_strategy": "isolated_smoke_collection",
+  "retrieval_quality_claim": false,
+  "production_performance_claim": false,
+  "stages": {
+    "collection": {
+      "status": "passed"
+    },
+    "projection": {
+      "status": "passed",
+      "object_count": 1
+    },
+    "generation_write": {
+      "status": "passed",
+      "accepted": 1
+    },
+    "query_correct_scope": {
+      "status": "passed",
+      "result_count": 1
+    },
+    "query_wrong_tenant": {
+      "status": "passed",
+      "result_count": 0
+    },
+    "query_wrong_version": {
+      "status": "passed",
+      "result_count": 0
+    },
+    "cleanup": {
+      "status": "passed",
+      "deleted": 1,
+      "collection_deleted": true
+    }
+  },
+  "observations": {
+    "projected_object_count": 1,
+    "accepted_object_count": 1,
+    "correct_scope_result_count": 1,
+    "wrong_tenant_result_count": 0,
+    "wrong_version_result_count": 0,
+    "deleted_object_count": 1,
+    "field_weights": {
+      "title": 2.0,
+      "section_title": 2.0,
+      "api_symbols": 3.0,
+      "body": 1.0
+    }
+  },
+  "environment": {
+    "weaviate_enabled": true,
+    "endpoint_configured": true
+  }
+}

@@ -1,4 +1,29 @@
 services:
+  weaviate:
+    # 固定 Weaviate 版本，避免 latest 漂移破坏当前 /v1 REST 与 GraphQL 契约。
+    image: semitechnologies/weaviate:1.27.10
+    ports:
+      - "${WEAVIATE_PORT:-8080}:8080"
+    environment:
+      # 本地开发实例由宿主机隔离，不配置真实 API key；生产环境必须改为认证模式。
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
+      PERSISTENCE_DATA_PATH: /var/lib/weaviate
+      DEFAULT_VECTORIZER_MODULE: none
+      # 固定 schema 由 transport 显式创建；关闭自动推断可尽早暴露字段漂移。
+      AUTOSCHEMA_ENABLED: "false"
+      ENABLE_MODULES: ""
+      CLUSTER_HOSTNAME: enterprise-rag-weaviate
+    volumes:
+      - weaviate_data:/var/lib/weaviate
+    healthcheck:
+      # readiness 只证明当前进程可接收请求，不代表 schema/query smoke 已通过。
+      test: ["CMD-SHELL", "wget --spider --quiet http://127.0.0.1:8080/v1/.well-known/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+
   migration:
     build: .
     extra_hosts:
@@ -25,6 +50,8 @@ services:
     depends_on:
       migration:
         condition: service_completed_successfully
+      weaviate:
+        condition: service_healthy
     ports:
       - "${API_PORT:-8000}:8000"
     environment:
@@ -38,9 +65,17 @@ services:
       POSTGRES_POOL_RECYCLE_SECONDS: ${POSTGRES_POOL_RECYCLE_SECONDS:-1800}
       POSTGRES_STATEMENT_TIMEOUT_MS: ${POSTGRES_STATEMENT_TIMEOUT_MS:-30000}
       POSTGRES_LOCK_TIMEOUT_MS: ${POSTGRES_LOCK_TIMEOUT_MS:-5000}
+      # 配置可用 endpoint，但默认不切换读取路径；只有显式 repository 注入才使用 Weaviate。
+      WEAVIATE_ENABLED: "false"
+      WEAVIATE_BASE_URL: http://weaviate:8080
+      WEAVIATE_SCHEMA_VERSION: ${WEAVIATE_SCHEMA_VERSION:-dense-v1}
     healthcheck:
       test:
         ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready')"]
       interval: 10s
       timeout: 3s
       retries: 5
+
+volumes:
+  # 保留本地开发索引，正常 stop/start 不丢失；不要用 down -v 清理业务验证证据。
+  weaviate_data:

@@ -202,6 +202,7 @@ async def run_transport_smoke() -> dict[str, Any]:
     report["active_generation"] = None
     report["observations"]["dimension"] = 2
     report["observations"]["profile"] = profile
+    current_stage = "collection"
 
     try:
         async with httpx.AsyncClient() as client:
@@ -212,11 +213,13 @@ async def run_transport_smoke() -> dict[str, Any]:
             )
             await transport.ensure_collection(collection_name, "dense-v1")
             report["stages"]["collection"] = {"status": "passed"}
+            current_stage = "generation_write"
             result = await transport.upsert_batch(collection_name, objects)
             report["stages"]["generation_write"] = {
                 "status": "passed",
                 "accepted": result.accepted,
             }
+            current_stage = "integrity"
             count = await transport.count_generation(
                 collection_name,
                 generation_id=generation_id,
@@ -233,6 +236,17 @@ async def run_transport_smoke() -> dict[str, Any]:
                 "object_count": count,
                 "chunk_id_count": len(chunk_ids),
             }
+            # transport-only smoke 不操作 PostgreSQL 发布指针，必须在 query 前固定为 skipped，
+            # 避免后续异常被错误归因到尚未执行的 publish/rollback。
+            report["stages"]["publish"] = {
+                "status": "skipped",
+                "reason": "PostgreSQL active pointer not exercised by transport-only smoke",
+            }
+            report["stages"]["rollback"] = {
+                "status": "skipped",
+                "reason": "PostgreSQL active pointer not exercised by transport-only smoke",
+            }
+            current_stage = "query"
             rows = await transport.search(
                 collection_name,
                 generation_id=generation_id,
@@ -244,14 +258,7 @@ async def run_transport_smoke() -> dict[str, Any]:
                 "status": "passed" if len(rows) == 1 else "failed",
                 "result_count": len(rows),
             }
-            report["stages"]["publish"] = {
-                "status": "skipped",
-                "reason": "PostgreSQL active pointer not exercised by transport-only smoke",
-            }
-            report["stages"]["rollback"] = {
-                "status": "skipped",
-                "reason": "PostgreSQL active pointer not exercised by transport-only smoke",
-            }
+            current_stage = "cleanup"
             deleted = await transport.delete_generation(
                 collection_name,
                 generation_id=generation_id,
@@ -259,22 +266,16 @@ async def run_transport_smoke() -> dict[str, Any]:
             )
             report["stages"]["cleanup"] = {"status": "passed", "deleted": deleted}
     except WeaviateTransportError as exc:
-        for name in _STAGE_NAMES:
-            if report["stages"][name]["status"] == "pending":
-                report["stages"][name] = {
-                    "status": "blocked",
-                    "error_kind": _safe_error_kind(exc),
-                }
-                break
+        report["stages"][current_stage] = {
+            "status": "blocked",
+            "error_kind": _safe_error_kind(exc),
+        }
         return finalize_smoke_report(report, run_status="blocked")
     except (httpx.HTTPError, ValueError):
-        for name in _STAGE_NAMES:
-            if report["stages"][name]["status"] == "pending":
-                report["stages"][name] = {
-                    "status": "blocked",
-                    "error_kind": "protocol",
-                }
-                break
+        report["stages"][current_stage] = {
+            "status": "blocked",
+            "error_kind": "protocol",
+        }
         return finalize_smoke_report(report, run_status="blocked")
 
     return finalize_smoke_report(report, run_status="passed")

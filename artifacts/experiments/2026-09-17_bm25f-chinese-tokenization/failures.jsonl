@@ -1,0 +1,5 @@
+{"profile": "word_identity", "query_id": "q-sem-idempotency", "category": "semantic", "channel": "bm25f", "cutoff": 3, "relevant_chunk_ids": ["chunk-idempotency"], "retrieved_chunk_ids": []}
+{"profile": "word_identity", "query_id": "q-sem-revocation", "category": "semantic", "channel": "bm25f", "cutoff": 3, "relevant_chunk_ids": ["chunk-acl-cache-revocation"], "retrieved_chunk_ids": []}
+{"profile": "word_identity", "query_id": "q-sem-circuit", "category": "semantic", "channel": "bm25f", "cutoff": 3, "relevant_chunk_ids": ["chunk-circuit-breaker"], "retrieved_chunk_ids": []}
+{"profile": "trigram_identity", "query_id": "q-sem-idempotency", "category": "semantic", "channel": "bm25f", "cutoff": 3, "relevant_chunk_ids": ["chunk-idempotency"], "retrieved_chunk_ids": []}
+{"profile": "trigram_identity", "query_id": "q-sem-revocation", "category": "semantic", "channel": "bm25f", "cutoff": 3, "relevant_chunk_ids": ["chunk-acl-cache-revocation"], "retrieved_chunk_ids": []}

@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "experiment": "weaviate_dense_smoke",
+  "started_at": "2026-09-17T14:58:47.641423+00:00",
+  "finished_at": "2026-09-17T14:58:47.876726+00:00",
+  "run_status": "passed",
+  "vector_backend": "weaviate_dense",
+  "collection_strategy": "tenant_isolated",
+  "generation_scope": [
+    "tenant_id",
+    "document_id",
+    "version_id",
+    "index_profile_key"
+  ],
+  "active_generation": null,
+  "previous_generation": null,
+  "production_performance_claim": false,
+  "retrieval_quality_claim": false,
+  "stages": {
+    "collection": {
+      "status": "passed"
+    },
+    "generation_write": {
+      "status": "passed",
+      "accepted": 2
+    },
+    "integrity": {
+      "status": "passed",
+      "object_count": 2,
+      "chunk_id_count": 2
+    },
+    "publish": {
+      "status": "skipped",
+      "reason": "PostgreSQL active pointer not exercised by transport-only smoke"
+    },
+    "query": {
+      "status": "passed",
+      "result_count": 1
+    },
+    "rollback": {
+      "status": "skipped",
+      "reason": "PostgreSQL active pointer not exercised by transport-only smoke"
+    },
+    "cleanup": {
+      "status": "passed",
+      "deleted": 2
+    }
+  },
+  "observations": {
+    "object_count": 2,
+    "dimension": 2,
+    "model": null,
+    "profile": "smoke-embedding:2:parent-child-v1:dense-v1",
+    "http_status_classes": []
+  },
+  "environment": {
+    "weaviate_enabled": true,
+    "endpoint_configured": true
+  }
+}

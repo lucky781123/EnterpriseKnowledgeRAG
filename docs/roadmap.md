@@ -7,12 +7,14 @@
 - 评测集草案：已生成 40 条，待抽样确认。
 - 第 1 轮代码骨架：已完成第一批基础件。
 - Phase 3 PostgreSQL 基础切片：数据模型、显式事务、migration、发布约束、连接池、事务级超时、Compose migration job、CI PostgreSQL job 和 schema readiness 已完成并取得真实验证证据。
-- 历史基线已验证：离线 `126 passed, 11 skipped`，有效开发 DSN `137 passed`；加入 Weaviate Dense contract/smoke 后的最新离线全量为 `171 passed, 11 skipped`。本轮 PostgreSQL 集成因未注入 DSN 明确跳过。
+- 历史基线已验证：离线 `126 passed, 11 skipped`，有效开发 DSN `137 passed`；完成 BM25F 中文对照实验后的最新离线全量为 `200 passed, 11 skipped`。本轮 PostgreSQL 集成因未注入 DSN 明确跳过。
 - 已完成：配置契约、Provider 协议/错误分类、Fake LLM、有界本地 LLM 调度器、本地对象存储适配器、领域实体、最小 API，以及 BGE Reranker 的统一异步 Adapter。
 - 已完成：LM Studio OpenAI-compatible Provider、JSON/SSE 摘录问答、取消/超时清理、评测与 benchmark、精简工作台，以及 Markdown/HTML/受控文本 PDF 的真实摄取基础。
-- 当前已实现但未取得真实 Weaviate 证据：tenant 独立 collection、Dense generation、checkpoint、发布/回滚/清理 contract，以及显式 Weaviate repository 注入。
-- 当前待处理：真实 Weaviate 联调、BM25F、RRF、Dense+sparse 检索、请求级 ACL/OIDC、上传/Git 同步、队列 Worker、在线 Provider 和完整 RAG 问答链；PostgreSQL 生产容量、备份恢复和故障转移也未验证。
-- 当前下一步：先取得真实 Weaviate 开发环境 smoke，再设计稀疏索引和完整检索闭环；不把 parsed manifest 当作检索索引，也不把单机 Compose 或本地模型结果写成生产容量结论。
+- 当前已取得真实 Weaviate `1.27.10` 证据：Dense collection/batch/integrity/nearVector/delete，以及 BM25F schema/weighted query/tenant-version filter/cleanup 均通过；默认读取路径仍是 PostgreSQL。
+- 固定小数据集 BM25F/RRF 质量实验已完成：Dense、BM25F、RRF `k=20/60/100` 的 Recall@K、MRR、nDCG、独有命中和 p50/p95 延迟均已记录；RRF 在 top 3 补足双相关查询，但三个 `k` 无法区分。
+- BM25F 中文 tokenizer/预处理对照已完成：baseline `word + identity` @3 为 `0.625/0.625/0.625`，`trigram + identity` 为 `0.75/0.75/0.75`，`word + cjk_bigram` 为 `1.0/1.0/1.0`；这些结果仅来自 10 个合成 chunk 和 8 条查询。
+- 当前待处理：Sparse Generation、默认 Dense+sparse 检索编排、Reranker、请求级 ACL/OIDC、上传/Git 同步、队列 Worker、在线 Provider 和完整 RAG 问答链；人工确认数据集、中文 profile 泛化、生产容量、备份恢复和故障转移也未验证。
+- 当前下一步：先审阅中文对照证据；若继续质量线，优先扩大人工确认的 development/frozen 数据集再选择 profile；若进入工程线，再设计轻量 Sparse Generation。不得把合成小样本满分写成默认参数或生产效果。
 
 ## 目标版本
 

@@ -2,7 +2,7 @@
 
 面向研发技术文档的企业级 RAG 学习与验证项目。
 
-> 当前状态（2026-09-16）：PostgreSQL 基础切片、F2-G/F2-I 服务切片、真实摄取基础和 Weaviate Dense 迁移 contract 已实现；真实 Weaviate smoke、BM25F、检索、请求级 ACL 和完整 RAG 闭环仍在后续阶段实施。
+> 当前状态（2026-09-17）：PostgreSQL 基础切片、F2-G/F2-I、真实摄取、Weaviate Dense 迁移 contract、真实 Dense/BM25F smoke、固定小数据集 BM25F/RRF 质量实验及中文 tokenizer/预处理对照已完成；默认 Dense+BM25F+RRF 检索、请求级 ACL 和完整 RAG 闭环仍在后续阶段实施。
 
 仓库级 `.agents/skills/` 已提供 5 个经过自动验证的 RAG 开发 Skill、共享契约和压力场景。它们用于约束后续开发与评审，不代表对应的业务 RAG 能力已经实现。
 
@@ -35,6 +35,8 @@
 - F2-G 原文摘录问答：调用方提供 `question + evidence`，服务执行 evidence identity 校验并返回结构化答案状态。
 - Markdown、HTML 和受控文本型 PDF 的校验、解析、确定性 Parent/Child chunk、lineage、对象产物和 PostgreSQL 摄取状态编排。
 - 摄取幂等、内容冲突、FAILED replay、同内容 version 复用和共享 version 并发 parser owner 协调。
+- 真实 Ollama + Weaviate 的固定小数据集 Dense/BM25F/RRF 对照，包含 Recall@K、MRR、nDCG、独有命中和 p50/p95 延迟证据。
+- BM25F 中文对照实验：固定 Dense、字段权重和 RRF，比较 `word + identity`、`trigram + identity` 与 `word + cjk_bigram`。
 
 详细状态见 [PROJECT_CONTEXT.md](./PROJECT_CONTEXT.md) 和 [docs/preflight-checklist.md](./docs/preflight-checklist.md)。
 
@@ -93,7 +95,7 @@ curl http://127.0.0.1:8000/api/v1/meta
 docker compose up --build
 ```
 
-当前 Compose 默认复用已运行的 `enterprise-rag-postgres` 容器（本机 `54329`），启动 one-shot migration job 和 API。API 依赖 migration 成功且 `/health/ready` 检查目标 schema 版本；若使用其他 DSN，请在 `.env` 中覆盖 `POSTGRES_DSN`。Redis、RabbitMQ、Weaviate、Keycloak、Embedding/索引和完整检索问答链仍未接入。
+当前 Compose 默认复用已运行的 `enterprise-rag-postgres` 容器（本机 `54329`），并启动固定版本 Weaviate、one-shot migration job 和 API。API 依赖 migration 成功与 Weaviate healthy，但默认读取路径仍是 PostgreSQL；若使用其他 DSN，请在 `.env` 中覆盖 `POSTGRES_DSN`。Redis、RabbitMQ、Keycloak、默认 Weaviate 检索编排和完整检索问答链仍未接入。
 
 ## 配置文件
 
@@ -125,7 +127,8 @@ compose.yaml          PostgreSQL、migration job 和 API 的本地 Compose 配�
 
 - 首期不承诺复杂扫描 PDF、复杂表格和版面完全还原。
 - Fake Provider、本地模型和单机 Compose 不能代表生产容量或企业真实效果。
-- 当前版本已完成真实摄取基础、F2-G/F2-I 摘录式 JSON/SSE 闭环和 Weaviate Dense 的离线迁移 contract，但尚未完成真实 Weaviate 联调、BM25F、完整 Dense/BM25F 检索、请求级 ACL 和完整 RAG 问答链。
+- 当前版本已完成真实摄取基础、F2-G/F2-I 摘录式 JSON/SSE、Weaviate Dense 迁移 contract、真实 Dense/BM25F transport smoke 和固定合成小数据集质量实验，但尚未完成 Sparse Generation、默认 Dense/BM25F+RRF 检索编排、请求级 ACL 和完整 RAG 问答链。
+- 中文对照中 `word + cjk_bigram` 在 8 条合成查询上达到 BM25F @3 满分，但该结果可能受小样本和字符重叠影响；人工确认数据集、泛化、索引体积和生产容量仍待验证，不能据此冻结默认 profile。
 - 当前摄取入口是受控服务调用和测试编排，不包含上传/Git 同步 API、OCR、队列 Worker 或自动发布。
 
 ## 安全

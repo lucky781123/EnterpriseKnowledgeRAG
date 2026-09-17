@@ -5,6 +5,7 @@ from __future__ import annotations
 import httpx
 import pytest
 import json
+from uuid import UUID
 
 from enterprise_rag.retrieval.contracts import WeaviateObject
 from enterprise_rag.retrieval.weaviate import (
@@ -55,6 +56,16 @@ async def test_collection_schema_and_batch_upsert_are_stable():
                 "chunk_id",
                 "text",
             }
+            locator_property = next(
+                item for item in payload["properties"] if item["name"] == "source_locators"
+            )
+            assert {item["name"] for item in locator_property["nestedProperties"]} == {
+                "kind",
+                "start",
+                "end",
+                "page",
+                "line",
+            }
             return httpx.Response(200, json=payload, request=request)
         if request.url.path == "/v1/batch/objects":
             objects = json.loads(request.content)["objects"]
@@ -73,9 +84,12 @@ async def test_collection_schema_and_batch_upsert_are_stable():
 
     assert first.accepted == second.accepted == 1
     batch_requests = [request for request in requests if request.url.path == "/v1/batch/objects"]
-    assert json.loads(batch_requests[0].content)["objects"][0]["id"] == json.loads(
+    first_object_id = json.loads(batch_requests[0].content)["objects"][0]["id"]
+    assert first_object_id == json.loads(
         batch_requests[1].content
     )["objects"][0]["id"]
+    # Weaviate 接受 UUID；业务 identity 仍由 transport 做确定性映射并保持重试稳定。
+    assert str(UUID(first_object_id)) == first_object_id
 
 
 @pytest.mark.asyncio
@@ -176,3 +190,94 @@ async def test_list_objects_encodes_query_parameters_and_parses_response():
     assert observed[0].url.params["class"] == "DenseTenant_demo"
     assert "generation/1" in observed[0].url.params["where"]
     assert "version 1" in observed[0].url.params["where"]
+
+
+@pytest.mark.asyncio
+async def test_search_expands_nested_source_locator_fields() -> None:
+    """GraphQL 必须展开 locator，并避开 Weaviate 1.27 的 Int variable 缺陷。"""
+
+    observed_payload: dict[str, object] = {}
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        """记录 GraphQL 请求并返回带 line locator 的最小真实响应形状。"""
+
+        observed_payload.update(json.loads(request.content))
+        return httpx.Response(
+            200,
+            json={
+                "data": {
+                    "Get": {
+                        "DenseTenant_demo": [
+                            {
+                                "tenant_id": "tenant-a",
+                                "document_id": "doc-1",
+                                "version_id": "version-1",
+                                "generation_id": "generation-1",
+                                "chunk_id": "chunk-1",
+                                "parent_id": "parent-1",
+                                "text": "正文",
+                                "parent_text": "父正文",
+                                "heading_path": ["标题"],
+                                "source_locators": [
+                                    {"kind": "line", "start": 1, "end": 2, "line": 1}
+                                ],
+                                "_additional": {"distance": 0.1},
+                            }
+                        ]
+                    }
+                }
+            },
+            request=request,
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        transport = WeaviateHTTPXTransport(client, "http://weaviate.test")
+        results = await transport.search(
+            "DenseTenant_demo",
+            generation_id="generation-1",
+            version_id="version-1",
+            query=(0.1, 0.2),
+            top_k=1,
+        )
+
+    assert "source_locators { kind start end page line }" in str(observed_payload["query"])
+    assert "GetObjectsDenseTenant_demoWhereInpObj!" in str(observed_payload["query"])
+    assert "WhereFilter" not in str(observed_payload["query"])
+    assert "$limit" not in str(observed_payload["query"])
+    assert "limit: 1" in str(observed_payload["query"])
+    assert "limit" not in observed_payload["variables"]
+    assert results[0].source_locators == (
+        {"kind": "line", "start": 1, "end": 2, "line": 1},
+    )
+
+
+@pytest.mark.asyncio
+async def test_delete_generation_reads_weaviate_127_successful_count() -> None:
+    """批量删除必须读取 Weaviate 1.27 的 results.successful 真实计数。"""
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        """返回真实服务的 minimal 批量删除响应形状。"""
+
+        assert request.method == "DELETE"
+        return httpx.Response(
+            200,
+            json={
+                "output": "minimal",
+                "results": {
+                    "failed": 0,
+                    "matches": 2,
+                    "successful": 2,
+                },
+            },
+            request=request,
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        transport = WeaviateHTTPXTransport(client, "http://weaviate.test")
+        deleted = await transport.delete_generation(
+            "DenseTenant_demo",
+            generation_id="generation-1",
+            version_id="version-1",
+        )
+
+    assert deleted == 2

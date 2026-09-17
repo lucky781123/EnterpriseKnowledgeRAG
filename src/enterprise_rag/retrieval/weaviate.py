@@ -11,6 +11,7 @@ import json
 import re
 from collections.abc import Sequence
 from typing import Any
+from uuid import NAMESPACE_URL, uuid5
 
 import httpx
 
@@ -87,6 +88,12 @@ class WeaviateHTTPXTransport:
         """把固定 API 相对路径拼接到服务端配置地址。"""
 
         return f"{self._base_url}{path}"
+
+    @staticmethod
+    def _object_uuid(object_id: str) -> str:
+        """把业务稳定 identity 映射成 Weaviate 接受的确定性 UUID。"""
+
+        return str(uuid5(NAMESPACE_URL, f"enterprise-rag:{object_id}"))
 
     @staticmethod
     def _status_error(status_code: int) -> WeaviateTransportError:
@@ -186,12 +193,27 @@ class WeaviateHTTPXTransport:
                 {"name": "version_id", "dataType": ["text"]},
                 {"name": "generation_id", "dataType": ["text"]},
                 {"name": "index_profile", "dataType": ["text"]},
+                {"name": "manifest_hash", "dataType": ["text"]},
+                {"name": "model_name", "dataType": ["text"]},
+                {"name": "dimension", "dataType": ["int"]},
                 {"name": "chunk_id", "dataType": ["text"]},
                 {"name": "parent_id", "dataType": ["text"]},
                 {"name": "text", "dataType": ["text"]},
                 {"name": "parent_text", "dataType": ["text"]},
                 {"name": "heading_path", "dataType": ["text[]"]},
-                {"name": "source_locators", "dataType": ["object[]"]},
+                {
+                    "name": "source_locators",
+                    "dataType": ["object[]"],
+                    # Weaviate 1.27 要求 object/object[] 显式声明至少一个子字段。
+                    # 当前解析器只生成 line/page 两类 locator，因此固定覆盖这些字段。
+                    "nestedProperties": [
+                        {"name": "kind", "dataType": ["text"]},
+                        {"name": "start", "dataType": ["int"]},
+                        {"name": "end", "dataType": ["int"]},
+                        {"name": "page", "dataType": ["int"]},
+                        {"name": "line", "dataType": ["int"]},
+                    ],
+                },
             ],
         }
         await self._request("POST", "/v1/schema", json=schema)
@@ -208,7 +230,8 @@ class WeaviateHTTPXTransport:
             "objects": [
                 {
                     "class": collection_name,
-                    "id": item.object_id,
+                    # 上层保留自己的稳定 identity；transport 负责满足 Weaviate UUID 约束。
+                    "id": self._object_uuid(item.object_id),
                     "vector": list(item.vector),
                     "properties": item.properties,
                 }
@@ -314,12 +337,18 @@ class WeaviateHTTPXTransport:
         selection = " ".join(
             (
                 "tenant_id document_id version_id generation_id chunk_id parent_id",
-                "text parent_text heading_path source_locators _additional { distance }",
+                "text parent_text heading_path",
+                "source_locators { kind start end page line } _additional { distance }",
             )
         )
+        # Weaviate 1.27 的 where 输入类型按 collection 动态生成，没有通用 WhereFilter。
+        where_type = f"GetObjects{collection_name}WhereInpObj!"
+        # Weaviate 1.27 会把 JSON variables 中的 Int 解码为 Go int64，而 limit resolver
+        # 断言为 int，最终触发 ``interface {} is int64, not int``。top_k 已在本方法中
+        # 校验为正整数，因此把它作为受控数字字面量内联，其他复杂值继续使用 variables。
         query_text = (
-            "query($vector: [Float!]!, $where: WhereFilter!, $limit: Int!) { "
-            f"Get {{ {collection_name}(nearVector: {{vector: $vector}}, where: $where, limit: $limit) {{ "
+            f"query($vector: [Float!]!, $where: {where_type}) {{ "
+            f"Get {{ {collection_name}(nearVector: {{vector: $vector}}, where: $where, limit: {top_k}) {{ "
             f"{selection} }} }} }}"
         )
         payload = {
@@ -327,7 +356,6 @@ class WeaviateHTTPXTransport:
             "variables": {
                 "vector": list(query),
                 "where": self._where(generation_id, version_id),
-                "limit": top_k,
             },
         }
         data = self._json(await self._request("POST", "/v1/graphql", json=payload))
@@ -374,6 +402,12 @@ class WeaviateHTTPXTransport:
         }
         data = self._json(await self._request("DELETE", "/v1/batch/objects", json=payload))
         if isinstance(data, dict):
+            # Weaviate 1.27 的 minimal 响应把实际删除数放在 results.successful。
+            results = data.get("results")
+            successful = results.get("successful") if isinstance(results, dict) else None
+            if isinstance(successful, int):
+                return successful
+            # 保留对旧响应形状的兼容，避免 transport 与单一小版本强绑定。
             deleted = data.get("objects", data.get("matches", 0))
             if isinstance(deleted, int):
                 return deleted

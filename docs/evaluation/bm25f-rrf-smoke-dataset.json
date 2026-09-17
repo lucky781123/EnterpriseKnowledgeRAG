@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "dataset_id": "bm25f-rrf-smoke-v1",
+  "language": "zh-CN",
+  "tenant_id": "quality-tenant-v1",
+  "version_id": "quality-version-v1",
+  "documents": [
+    {
+      "chunk_id": "chunk-retry-429",
+      "document_id": "doc-reliability",
+      "title": "请求重试",
+      "section_title": "可靠性 > 限流退避",
+      "api_symbols": "HTTP_429 Retry-After exponential_backoff",
+      "body": "服务返回 429 Too Many Requests 时，客户端应优先读取 Retry-After，并使用带抖动的指数退避，避免立即重试形成流量尖峰。"
+    },
+    {
+      "chunk_id": "chunk-create-user-auth",
+      "document_id": "doc-user-api",
+      "title": "创建用户鉴权",
+      "section_title": "用户 API > CreateUser",
+      "api_symbols": "CreateUser ERR_401 /v1/users Authorization",
+      "body": "调用 CreateUser 的 POST /v1/users 接口时，缺少 Authorization header 会返回 ERR_401。"
+    },
+    {
+      "chunk_id": "chunk-db-pool-timeout",
+      "document_id": "doc-database",
+      "title": "数据库连接池",
+      "section_title": "PostgreSQL > 连接池超时",
+      "api_symbols": "pool_timeout max_overflow QueuePool",
+      "body": "当连接池已满且 max_overflow 用尽时，调用方最多等待 pool_timeout 秒；超时后应记录池使用率并快速失败。"
+    },
+    {
+      "chunk_id": "chunk-acl-cache-revocation",
+      "document_id": "doc-security",
+      "title": "权限撤销",
+      "section_title": "安全 > 缓存失效",
+      "api_symbols": "ACL revocation cache_invalidation",
+      "body": "员工权限被撤销后，必须使该主体的授权缓存立即失效，并在返回证据前重新检查文档权限，不能继续返回旧缓存内容。"
+    },
+    {
+      "chunk_id": "chunk-deploy-rollback",
+      "document_id": "doc-deployment",
+      "title": "部署回滚",
+      "section_title": "发布 > 健康检查失败",
+      "api_symbols": "health_check rollback previous_version",
+      "body": "新版本上线后若 readiness 健康检查持续失败，应停止放量，将流量切回 previous_version，并保留失败版本用于诊断。"
+    },
+    {
+      "chunk_id": "chunk-idempotency",
+      "document_id": "doc-jobs",
+      "title": "任务幂等",
+      "section_title": "异步任务 > 重复提交",
+      "api_symbols": "Idempotency-Key idempotency_key request_hash",
+      "body": "客户端因网络抖动重复提交任务时，服务端使用稳定幂等键和请求哈希复用已有任务，避免同一业务操作执行两次。"
+    },
+    {
+      "chunk_id": "chunk-trace-correlation",
+      "document_id": "doc-observability",
+      "title": "链路关联",
+      "section_title": "可观测性 > 请求追踪",
+      "api_symbols": "request_id trace_id X-Request-ID",
+      "body": "跨服务排查请求时，应在日志和 trace 中传播 request_id 与 trace_id，使一次用户调用可以关联到所有下游阶段。"
+    },
+    {
+      "chunk_id": "chunk-pdf-ocr",
+      "document_id": "doc-ingestion",
+      "title": "PDF 摄取限制",
+      "section_title": "解析 > OCR 边界",
+      "api_symbols": "PDF OCR scanned_document",
+      "body": "首期 PDF 解析只支持文本型文档。扫描件没有可提取文本时需要 OCR，当前流程应拒绝处理并给出明确原因。"
+    },
+    {
+      "chunk_id": "chunk-webhook-signature",
+      "document_id": "doc-webhook",
+      "title": "Webhook 签名",
+      "section_title": "集成 > HMAC 校验",
+      "api_symbols": "X-Signature HMAC SHA256 webhook_secret",
+      "body": "接收 webhook 时，使用 webhook_secret 对原始请求体计算 HMAC-SHA256，并与 X-Signature 做恒定时间比较。"
+    },
+    {
+      "chunk_id": "chunk-circuit-breaker",
+      "document_id": "doc-reliability",
+      "title": "熔断与降级",
+      "section_title": "可靠性 > 下游故障",
+      "api_symbols": "circuit_breaker fallback open_state",
+      "body": "下游依赖连续失败达到阈值后，circuit breaker 进入 open 状态，暂时停止请求并执行有界 fallback，恢复探测成功后再关闭熔断。"
+    }
+  ],
+  "queries": [
+    {
+      "query_id": "q-sem-idempotency",
+      "category": "semantic",
+      "text": "网络不稳定让用户把同一个任务提交了两遍，怎样保证业务只执行一次？",
+      "relevant_chunk_ids": ["chunk-idempotency"]
+    },
+    {
+      "query_id": "q-sem-revocation",
+      "category": "semantic",
+      "text": "员工离职收回访问权以后，怎样防止他从之前的缓存继续看到资料？",
+      "relevant_chunk_ids": ["chunk-acl-cache-revocation"]
+    },
+    {
+      "query_id": "q-sem-circuit",
+      "category": "semantic",
+      "text": "外部依赖连续不可用时，系统如何暂时停止调用并提供受控替代行为？",
+      "relevant_chunk_ids": ["chunk-circuit-breaker"]
+    },
+    {
+      "query_id": "q-lex-auth",
+      "category": "lexical",
+      "text": "CreateUser ERR_401 POST /v1/users Authorization",
+      "relevant_chunk_ids": ["chunk-create-user-auth"]
+    },
+    {
+      "query_id": "q-lex-pool",
+      "category": "lexical",
+      "text": "QueuePool pool_timeout max_overflow",
+      "relevant_chunk_ids": ["chunk-db-pool-timeout"]
+    },
+    {
+      "query_id": "q-lex-webhook",
+      "category": "lexical",
+      "text": "X-Signature HMAC SHA256 webhook_secret",
+      "relevant_chunk_ids": ["chunk-webhook-signature"]
+    },
+    {
+      "query_id": "q-mix-retry",
+      "category": "mixed",
+      "text": "遇到 HTTP 429 限流后，Retry-After 和指数等待策略应该怎么配合？",
+      "relevant_chunk_ids": ["chunk-retry-429"]
+    },
+    {
+      "query_id": "q-mix-release-trace",
+      "category": "mixed",
+      "text": "新版本 health check 失败时怎样回退，同时用 request_id 关联排障日志？",
+      "relevant_chunk_ids": ["chunk-deploy-rollback", "chunk-trace-correlation"]
+    }
+  ]
+}

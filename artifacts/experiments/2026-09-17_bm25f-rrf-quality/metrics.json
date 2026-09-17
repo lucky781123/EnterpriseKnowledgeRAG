@@ -1,0 +1,1469 @@
+{
+  "schema_version": 1,
+  "experiment": "weaviate_bm25f_rrf_quality",
+  "run_status": "passed",
+  "started_at": "2026-09-17T15:16:28.825374+00:00",
+  "finished_at": "2026-09-17T15:16:31.307145+00:00",
+  "dataset": {
+    "dataset_id": "bm25f-rrf-smoke-v1",
+    "sha256": "3a13a8e0c769c0c41a0999a33b86c8985c68f4b2458dc6df71bb8d1f3a66363d",
+    "document_count": 10,
+    "query_count": 8,
+    "language": "zh-CN"
+  },
+  "stages": {
+    "environment": {
+      "status": "passed",
+      "weaviate_version": "1.27.10",
+      "embedding_model": "hardcore_aryabhata_598/qwen3-embedding:8b",
+      "embedding_model_digest": "64b933495768fbd3b87c20583d379728a07471e0c66733a9df87cd1901b3c44b"
+    },
+    "embedding": {
+      "status": "passed",
+      "input_count": 18,
+      "dimension": 4096,
+      "elapsed_ms": 1887.081
+    },
+    "collections": {
+      "status": "passed",
+      "count": 2
+    },
+    "indexing": {
+      "status": "passed",
+      "dense_accepted": 10,
+      "sparse_accepted": 10
+    },
+    "queries": {
+      "status": "passed",
+      "query_count": 8
+    }
+  },
+  "channels": {
+    "dense": {
+      "at_1": {
+        "recall_at_k": 0.9375,
+        "mrr": 1.0,
+        "ndcg_at_k": 1.0,
+        "query_count": 8,
+        "hit_query_count": 8
+      },
+      "at_3": {
+        "recall_at_k": 0.9375,
+        "mrr": 1.0,
+        "ndcg_at_k": 0.9516433990956823,
+        "query_count": 8,
+        "hit_query_count": 8
+      },
+      "at_5": {
+        "recall_at_k": 1.0,
+        "mrr": 1.0,
+        "ndcg_at_k": 0.9846519144172562,
+        "query_count": 8,
+        "hit_query_count": 8
+      }
+    },
+    "bm25f": {
+      "at_1": {
+        "recall_at_k": 0.5625,
+        "mrr": 0.625,
+        "ndcg_at_k": 0.625,
+        "query_count": 8,
+        "hit_query_count": 5
+      },
+      "at_3": {
+        "recall_at_k": 0.625,
+        "mrr": 0.625,
+        "ndcg_at_k": 0.625,
+        "query_count": 8,
+        "hit_query_count": 5
+      },
+      "at_5": {
+        "recall_at_k": 0.625,
+        "mrr": 0.625,
+        "ndcg_at_k": 0.625,
+        "query_count": 8,
+        "hit_query_count": 5
+      }
+    },
+    "rrf": {
+      "20": {
+        "at_1": {
+          "recall_at_k": 0.9375,
+          "mrr": 1.0,
+          "ndcg_at_k": 1.0,
+          "query_count": 8,
+          "hit_query_count": 8
+        },
+        "at_3": {
+          "recall_at_k": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_k": 1.0,
+          "query_count": 8,
+          "hit_query_count": 8
+        },
+        "at_5": {
+          "recall_at_k": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_k": 1.0,
+          "query_count": 8,
+          "hit_query_count": 8
+        }
+      },
+      "60": {
+        "at_1": {
+          "recall_at_k": 0.9375,
+          "mrr": 1.0,
+          "ndcg_at_k": 1.0,
+          "query_count": 8,
+          "hit_query_count": 8
+        },
+        "at_3": {
+          "recall_at_k": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_k": 1.0,
+          "query_count": 8,
+          "hit_query_count": 8
+        },
+        "at_5": {
+          "recall_at_k": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_k": 1.0,
+          "query_count": 8,
+          "hit_query_count": 8
+        }
+      },
+      "100": {
+        "at_1": {
+          "recall_at_k": 0.9375,
+          "mrr": 1.0,
+          "ndcg_at_k": 1.0,
+          "query_count": 8,
+          "hit_query_count": 8
+        },
+        "at_3": {
+          "recall_at_k": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_k": 1.0,
+          "query_count": 8,
+          "hit_query_count": 8
+        },
+        "at_5": {
+          "recall_at_k": 1.0,
+          "mrr": 1.0,
+          "ndcg_at_k": 1.0,
+          "query_count": 8,
+          "hit_query_count": 8
+        }
+      }
+    }
+  },
+  "exclusive_relevant_hits_at_3": {
+    "dense_only_query_ids": [
+      "q-sem-idempotency",
+      "q-sem-revocation",
+      "q-sem-circuit"
+    ],
+    "sparse_only_query_ids": [],
+    "both_query_ids": [
+      "q-lex-auth",
+      "q-lex-pool",
+      "q-lex-webhook",
+      "q-mix-retry",
+      "q-mix-release-trace"
+    ],
+    "neither_query_ids": []
+  },
+  "latency": {
+    "dense": {
+      "p50_ms": 5.527,
+      "p95_ms": 6.298
+    },
+    "bm25f": {
+      "p50_ms": 3.262,
+      "p95_ms": 3.616
+    },
+    "rrf": {
+      "20": {
+        "p50_ms": 0.018,
+        "p95_ms": 0.028
+      },
+      "60": {
+        "p50_ms": 0.007,
+        "p95_ms": 0.014
+      },
+      "100": {
+        "p50_ms": 0.006,
+        "p95_ms": 0.015
+      }
+    }
+  },
+  "per_query": {
+    "q-sem-idempotency": {
+      "category": "semantic",
+      "relevant_chunk_ids": [
+        "chunk-idempotency"
+      ],
+      "dense": [
+        {
+          "chunk_id": "chunk-idempotency",
+          "rank": 1,
+          "score": 0.7017007
+        },
+        {
+          "chunk_id": "chunk-retry-429",
+          "rank": 2,
+          "score": 0.48285160000000005
+        },
+        {
+          "chunk_id": "chunk-webhook-signature",
+          "rank": 3,
+          "score": 0.41087514
+        },
+        {
+          "chunk_id": "chunk-acl-cache-revocation",
+          "rank": 4,
+          "score": 0.4058771
+        },
+        {
+          "chunk_id": "chunk-circuit-breaker",
+          "rank": 5,
+          "score": 0.40207803
+        }
+      ],
+      "bm25f": [],
+      "latency_ms": {
+        "dense": 5.671,
+        "bm25f": 3.243
+      },
+      "rrf": {
+        "20": [
+          {
+            "chunk_id": "chunk-idempotency",
+            "rank": 1,
+            "score": 0.047619047619047616,
+            "dense_rank": 1,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-retry-429",
+            "rank": 2,
+            "score": 0.045454545454545456,
+            "dense_rank": 2,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-webhook-signature",
+            "rank": 3,
+            "score": 0.043478260869565216,
+            "dense_rank": 3,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-acl-cache-revocation",
+            "rank": 4,
+            "score": 0.041666666666666664,
+            "dense_rank": 4,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-circuit-breaker",
+            "rank": 5,
+            "score": 0.04,
+            "dense_rank": 5,
+            "sparse_rank": null
+          }
+        ],
+        "60": [
+          {
+            "chunk_id": "chunk-idempotency",
+            "rank": 1,
+            "score": 0.01639344262295082,
+            "dense_rank": 1,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-retry-429",
+            "rank": 2,
+            "score": 0.016129032258064516,
+            "dense_rank": 2,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-webhook-signature",
+            "rank": 3,
+            "score": 0.015873015873015872,
+            "dense_rank": 3,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-acl-cache-revocation",
+            "rank": 4,
+            "score": 0.015625,
+            "dense_rank": 4,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-circuit-breaker",
+            "rank": 5,
+            "score": 0.015384615384615385,
+            "dense_rank": 5,
+            "sparse_rank": null
+          }
+        ],
+        "100": [
+          {
+            "chunk_id": "chunk-idempotency",
+            "rank": 1,
+            "score": 0.009900990099009901,
+            "dense_rank": 1,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-retry-429",
+            "rank": 2,
+            "score": 0.00980392156862745,
+            "dense_rank": 2,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-webhook-signature",
+            "rank": 3,
+            "score": 0.009708737864077669,
+            "dense_rank": 3,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-acl-cache-revocation",
+            "rank": 4,
+            "score": 0.009615384615384616,
+            "dense_rank": 4,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-circuit-breaker",
+            "rank": 5,
+            "score": 0.009523809523809525,
+            "dense_rank": 5,
+            "sparse_rank": null
+          }
+        ]
+      }
+    },
+    "q-sem-revocation": {
+      "category": "semantic",
+      "relevant_chunk_ids": [
+        "chunk-acl-cache-revocation"
+      ],
+      "dense": [
+        {
+          "chunk_id": "chunk-acl-cache-revocation",
+          "rank": 1,
+          "score": 0.7173535799999999
+        },
+        {
+          "chunk_id": "chunk-retry-429",
+          "rank": 2,
+          "score": 0.45136493
+        },
+        {
+          "chunk_id": "chunk-deploy-rollback",
+          "rank": 3,
+          "score": 0.4212823
+        },
+        {
+          "chunk_id": "chunk-idempotency",
+          "rank": 4,
+          "score": 0.40282700000000005
+        },
+        {
+          "chunk_id": "chunk-create-user-auth",
+          "rank": 5,
+          "score": 0.39716470000000004
+        }
+      ],
+      "bm25f": [],
+      "latency_ms": {
+        "dense": 5.843,
+        "bm25f": 2.861
+      },
+      "rrf": {
+        "20": [
+          {
+            "chunk_id": "chunk-acl-cache-revocation",
+            "rank": 1,
+            "score": 0.047619047619047616,
+            "dense_rank": 1,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-retry-429",
+            "rank": 2,
+            "score": 0.045454545454545456,
+            "dense_rank": 2,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-deploy-rollback",
+            "rank": 3,
+            "score": 0.043478260869565216,
+            "dense_rank": 3,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-idempotency",
+            "rank": 4,
+            "score": 0.041666666666666664,
+            "dense_rank": 4,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-create-user-auth",
+            "rank": 5,
+            "score": 0.04,
+            "dense_rank": 5,
+            "sparse_rank": null
+          }
+        ],
+        "60": [
+          {
+            "chunk_id": "chunk-acl-cache-revocation",
+            "rank": 1,
+            "score": 0.01639344262295082,
+            "dense_rank": 1,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-retry-429",
+            "rank": 2,
+            "score": 0.016129032258064516,
+            "dense_rank": 2,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-deploy-rollback",
+            "rank": 3,
+            "score": 0.015873015873015872,
+            "dense_rank": 3,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-idempotency",
+            "rank": 4,
+            "score": 0.015625,
+            "dense_rank": 4,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-create-user-auth",
+            "rank": 5,
+            "score": 0.015384615384615385,
+            "dense_rank": 5,
+            "sparse_rank": null
+          }
+        ],
+        "100": [
+          {
+            "chunk_id": "chunk-acl-cache-revocation",
+            "rank": 1,
+            "score": 0.009900990099009901,
+            "dense_rank": 1,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-retry-429",
+            "rank": 2,
+            "score": 0.00980392156862745,
+            "dense_rank": 2,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-deploy-rollback",
+            "rank": 3,
+            "score": 0.009708737864077669,
+            "dense_rank": 3,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-idempotency",
+            "rank": 4,
+            "score": 0.009615384615384616,
+            "dense_rank": 4,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-create-user-auth",
+            "rank": 5,
+            "score": 0.009523809523809525,
+            "dense_rank": 5,
+            "sparse_rank": null
+          }
+        ]
+      }
+    },
+    "q-sem-circuit": {
+      "category": "semantic",
+      "relevant_chunk_ids": [
+        "chunk-circuit-breaker"
+      ],
+      "dense": [
+        {
+          "chunk_id": "chunk-circuit-breaker",
+          "rank": 1,
+          "score": 0.5856303
+        },
+        {
+          "chunk_id": "chunk-retry-429",
+          "rank": 2,
+          "score": 0.47720914999999997
+        },
+        {
+          "chunk_id": "chunk-deploy-rollback",
+          "rank": 3,
+          "score": 0.47053239999999996
+        },
+        {
+          "chunk_id": "chunk-idempotency",
+          "rank": 4,
+          "score": 0.40897819999999996
+        },
+        {
+          "chunk_id": "chunk-acl-cache-revocation",
+          "rank": 5,
+          "score": 0.3897488
+        }
+      ],
+      "bm25f": [],
+      "latency_ms": {
+        "dense": 6.315,
+        "bm25f": 3.109
+      },
+      "rrf": {
+        "20": [
+          {
+            "chunk_id": "chunk-circuit-breaker",
+            "rank": 1,
+            "score": 0.047619047619047616,
+            "dense_rank": 1,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-retry-429",
+            "rank": 2,
+            "score": 0.045454545454545456,
+            "dense_rank": 2,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-deploy-rollback",
+            "rank": 3,
+            "score": 0.043478260869565216,
+            "dense_rank": 3,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-idempotency",
+            "rank": 4,
+            "score": 0.041666666666666664,
+            "dense_rank": 4,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-acl-cache-revocation",
+            "rank": 5,
+            "score": 0.04,
+            "dense_rank": 5,
+            "sparse_rank": null
+          }
+        ],
+        "60": [
+          {
+            "chunk_id": "chunk-circuit-breaker",
+            "rank": 1,
+            "score": 0.01639344262295082,
+            "dense_rank": 1,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-retry-429",
+            "rank": 2,
+            "score": 0.016129032258064516,
+            "dense_rank": 2,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-deploy-rollback",
+            "rank": 3,
+            "score": 0.015873015873015872,
+            "dense_rank": 3,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-idempotency",
+            "rank": 4,
+            "score": 0.015625,
+            "dense_rank": 4,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-acl-cache-revocation",
+            "rank": 5,
+            "score": 0.015384615384615385,
+            "dense_rank": 5,
+            "sparse_rank": null
+          }
+        ],
+        "100": [
+          {
+            "chunk_id": "chunk-circuit-breaker",
+            "rank": 1,
+            "score": 0.009900990099009901,
+            "dense_rank": 1,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-retry-429",
+            "rank": 2,
+            "score": 0.00980392156862745,
+            "dense_rank": 2,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-deploy-rollback",
+            "rank": 3,
+            "score": 0.009708737864077669,
+            "dense_rank": 3,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-idempotency",
+            "rank": 4,
+            "score": 0.009615384615384616,
+            "dense_rank": 4,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-acl-cache-revocation",
+            "rank": 5,
+            "score": 0.009523809523809525,
+            "dense_rank": 5,
+            "sparse_rank": null
+          }
+        ]
+      }
+    },
+    "q-lex-auth": {
+      "category": "lexical",
+      "relevant_chunk_ids": [
+        "chunk-create-user-auth"
+      ],
+      "dense": [
+        {
+          "chunk_id": "chunk-create-user-auth",
+          "rank": 1,
+          "score": 0.60941315
+        },
+        {
+          "chunk_id": "chunk-webhook-signature",
+          "rank": 2,
+          "score": 0.39743019999999996
+        },
+        {
+          "chunk_id": "chunk-idempotency",
+          "rank": 3,
+          "score": 0.35473030000000005
+        },
+        {
+          "chunk_id": "chunk-acl-cache-revocation",
+          "rank": 4,
+          "score": 0.3166365
+        },
+        {
+          "chunk_id": "chunk-trace-correlation",
+          "rank": 5,
+          "score": 0.29320383000000005
+        }
+      ],
+      "bm25f": [
+        {
+          "chunk_id": "chunk-create-user-auth",
+          "rank": 1,
+          "score": 6.3145204
+        }
+      ],
+      "latency_ms": {
+        "dense": 5.383,
+        "bm25f": 3.634
+      },
+      "rrf": {
+        "20": [
+          {
+            "chunk_id": "chunk-create-user-auth",
+            "rank": 1,
+            "score": 0.09523809523809523,
+            "dense_rank": 1,
+            "sparse_rank": 1
+          },
+          {
+            "chunk_id": "chunk-webhook-signature",
+            "rank": 2,
+            "score": 0.045454545454545456,
+            "dense_rank": 2,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-idempotency",
+            "rank": 3,
+            "score": 0.043478260869565216,
+            "dense_rank": 3,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-acl-cache-revocation",
+            "rank": 4,
+            "score": 0.041666666666666664,
+            "dense_rank": 4,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-trace-correlation",
+            "rank": 5,
+            "score": 0.04,
+            "dense_rank": 5,
+            "sparse_rank": null
+          }
+        ],
+        "60": [
+          {
+            "chunk_id": "chunk-create-user-auth",
+            "rank": 1,
+            "score": 0.03278688524590164,
+            "dense_rank": 1,
+            "sparse_rank": 1
+          },
+          {
+            "chunk_id": "chunk-webhook-signature",
+            "rank": 2,
+            "score": 0.016129032258064516,
+            "dense_rank": 2,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-idempotency",
+            "rank": 3,
+            "score": 0.015873015873015872,
+            "dense_rank": 3,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-acl-cache-revocation",
+            "rank": 4,
+            "score": 0.015625,
+            "dense_rank": 4,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-trace-correlation",
+            "rank": 5,
+            "score": 0.015384615384615385,
+            "dense_rank": 5,
+            "sparse_rank": null
+          }
+        ],
+        "100": [
+          {
+            "chunk_id": "chunk-create-user-auth",
+            "rank": 1,
+            "score": 0.019801980198019802,
+            "dense_rank": 1,
+            "sparse_rank": 1
+          },
+          {
+            "chunk_id": "chunk-webhook-signature",
+            "rank": 2,
+            "score": 0.00980392156862745,
+            "dense_rank": 2,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-idempotency",
+            "rank": 3,
+            "score": 0.009708737864077669,
+            "dense_rank": 3,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-acl-cache-revocation",
+            "rank": 4,
+            "score": 0.009615384615384616,
+            "dense_rank": 4,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-trace-correlation",
+            "rank": 5,
+            "score": 0.009523809523809525,
+            "dense_rank": 5,
+            "sparse_rank": null
+          }
+        ]
+      }
+    },
+    "q-lex-pool": {
+      "category": "lexical",
+      "relevant_chunk_ids": [
+        "chunk-db-pool-timeout"
+      ],
+      "dense": [
+        {
+          "chunk_id": "chunk-db-pool-timeout",
+          "rank": 1,
+          "score": 0.7517184
+        },
+        {
+          "chunk_id": "chunk-retry-429",
+          "rank": 2,
+          "score": 0.40765065
+        },
+        {
+          "chunk_id": "chunk-idempotency",
+          "rank": 3,
+          "score": 0.34791099999999997
+        },
+        {
+          "chunk_id": "chunk-webhook-signature",
+          "rank": 4,
+          "score": 0.34468109999999996
+        },
+        {
+          "chunk_id": "chunk-circuit-breaker",
+          "rank": 5,
+          "score": 0.31965195999999996
+        }
+      ],
+      "bm25f": [
+        {
+          "chunk_id": "chunk-db-pool-timeout",
+          "rank": 1,
+          "score": 5.7216005
+        }
+      ],
+      "latency_ms": {
+        "dense": 5.362,
+        "bm25f": 3.544
+      },
+      "rrf": {
+        "20": [
+          {
+            "chunk_id": "chunk-db-pool-timeout",
+            "rank": 1,
+            "score": 0.09523809523809523,
+            "dense_rank": 1,
+            "sparse_rank": 1
+          },
+          {
+            "chunk_id": "chunk-retry-429",
+            "rank": 2,
+            "score": 0.045454545454545456,
+            "dense_rank": 2,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-idempotency",
+            "rank": 3,
+            "score": 0.043478260869565216,
+            "dense_rank": 3,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-webhook-signature",
+            "rank": 4,
+            "score": 0.041666666666666664,
+            "dense_rank": 4,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-circuit-breaker",
+            "rank": 5,
+            "score": 0.04,
+            "dense_rank": 5,
+            "sparse_rank": null
+          }
+        ],
+        "60": [
+          {
+            "chunk_id": "chunk-db-pool-timeout",
+            "rank": 1,
+            "score": 0.03278688524590164,
+            "dense_rank": 1,
+            "sparse_rank": 1
+          },
+          {
+            "chunk_id": "chunk-retry-429",
+            "rank": 2,
+            "score": 0.016129032258064516,
+            "dense_rank": 2,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-idempotency",
+            "rank": 3,
+            "score": 0.015873015873015872,
+            "dense_rank": 3,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-webhook-signature",
+            "rank": 4,
+            "score": 0.015625,
+            "dense_rank": 4,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-circuit-breaker",
+            "rank": 5,
+            "score": 0.015384615384615385,
+            "dense_rank": 5,
+            "sparse_rank": null
+          }
+        ],
+        "100": [
+          {
+            "chunk_id": "chunk-db-pool-timeout",
+            "rank": 1,
+            "score": 0.019801980198019802,
+            "dense_rank": 1,
+            "sparse_rank": 1
+          },
+          {
+            "chunk_id": "chunk-retry-429",
+            "rank": 2,
+            "score": 0.00980392156862745,
+            "dense_rank": 2,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-idempotency",
+            "rank": 3,
+            "score": 0.009708737864077669,
+            "dense_rank": 3,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-webhook-signature",
+            "rank": 4,
+            "score": 0.009615384615384616,
+            "dense_rank": 4,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-circuit-breaker",
+            "rank": 5,
+            "score": 0.009523809523809525,
+            "dense_rank": 5,
+            "sparse_rank": null
+          }
+        ]
+      }
+    },
+    "q-lex-webhook": {
+      "category": "lexical",
+      "relevant_chunk_ids": [
+        "chunk-webhook-signature"
+      ],
+      "dense": [
+        {
+          "chunk_id": "chunk-webhook-signature",
+          "rank": 1,
+          "score": 0.77679515
+        },
+        {
+          "chunk_id": "chunk-idempotency",
+          "rank": 2,
+          "score": 0.5107261000000001
+        },
+        {
+          "chunk_id": "chunk-create-user-auth",
+          "rank": 3,
+          "score": 0.49202274999999995
+        },
+        {
+          "chunk_id": "chunk-retry-429",
+          "rank": 4,
+          "score": 0.4165263
+        },
+        {
+          "chunk_id": "chunk-trace-correlation",
+          "rank": 5,
+          "score": 0.40856230000000004
+        }
+      ],
+      "bm25f": [
+        {
+          "chunk_id": "chunk-webhook-signature",
+          "rank": 1,
+          "score": 5.9525757
+        },
+        {
+          "chunk_id": "chunk-trace-correlation",
+          "rank": 2,
+          "score": 1.0678807
+        }
+      ],
+      "latency_ms": {
+        "dense": 5.049,
+        "bm25f": 3.281
+      },
+      "rrf": {
+        "20": [
+          {
+            "chunk_id": "chunk-webhook-signature",
+            "rank": 1,
+            "score": 0.09523809523809523,
+            "dense_rank": 1,
+            "sparse_rank": 1
+          },
+          {
+            "chunk_id": "chunk-trace-correlation",
+            "rank": 2,
+            "score": 0.08545454545454545,
+            "dense_rank": 5,
+            "sparse_rank": 2
+          },
+          {
+            "chunk_id": "chunk-idempotency",
+            "rank": 3,
+            "score": 0.045454545454545456,
+            "dense_rank": 2,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-create-user-auth",
+            "rank": 4,
+            "score": 0.043478260869565216,
+            "dense_rank": 3,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-retry-429",
+            "rank": 5,
+            "score": 0.041666666666666664,
+            "dense_rank": 4,
+            "sparse_rank": null
+          }
+        ],
+        "60": [
+          {
+            "chunk_id": "chunk-webhook-signature",
+            "rank": 1,
+            "score": 0.03278688524590164,
+            "dense_rank": 1,
+            "sparse_rank": 1
+          },
+          {
+            "chunk_id": "chunk-trace-correlation",
+            "rank": 2,
+            "score": 0.0315136476426799,
+            "dense_rank": 5,
+            "sparse_rank": 2
+          },
+          {
+            "chunk_id": "chunk-idempotency",
+            "rank": 3,
+            "score": 0.016129032258064516,
+            "dense_rank": 2,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-create-user-auth",
+            "rank": 4,
+            "score": 0.015873015873015872,
+            "dense_rank": 3,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-retry-429",
+            "rank": 5,
+            "score": 0.015625,
+            "dense_rank": 4,
+            "sparse_rank": null
+          }
+        ],
+        "100": [
+          {
+            "chunk_id": "chunk-webhook-signature",
+            "rank": 1,
+            "score": 0.019801980198019802,
+            "dense_rank": 1,
+            "sparse_rank": 1
+          },
+          {
+            "chunk_id": "chunk-trace-correlation",
+            "rank": 2,
+            "score": 0.019327731092436976,
+            "dense_rank": 5,
+            "sparse_rank": 2
+          },
+          {
+            "chunk_id": "chunk-idempotency",
+            "rank": 3,
+            "score": 0.00980392156862745,
+            "dense_rank": 2,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-create-user-auth",
+            "rank": 4,
+            "score": 0.009708737864077669,
+            "dense_rank": 3,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-retry-429",
+            "rank": 5,
+            "score": 0.009615384615384616,
+            "dense_rank": 4,
+            "sparse_rank": null
+          }
+        ]
+      }
+    },
+    "q-mix-retry": {
+      "category": "mixed",
+      "relevant_chunk_ids": [
+        "chunk-retry-429"
+      ],
+      "dense": [
+        {
+          "chunk_id": "chunk-retry-429",
+          "rank": 1,
+          "score": 0.86354399
+        },
+        {
+          "chunk_id": "chunk-idempotency",
+          "rank": 2,
+          "score": 0.52856696
+        },
+        {
+          "chunk_id": "chunk-circuit-breaker",
+          "rank": 3,
+          "score": 0.5197997
+        },
+        {
+          "chunk_id": "chunk-db-pool-timeout",
+          "rank": 4,
+          "score": 0.4993451
+        },
+        {
+          "chunk_id": "chunk-deploy-rollback",
+          "rank": 5,
+          "score": 0.4753459
+        }
+      ],
+      "bm25f": [
+        {
+          "chunk_id": "chunk-retry-429",
+          "rank": 1,
+          "score": 4.3031764
+        }
+      ],
+      "latency_ms": {
+        "dense": 6.267,
+        "bm25f": 3.582
+      },
+      "rrf": {
+        "20": [
+          {
+            "chunk_id": "chunk-retry-429",
+            "rank": 1,
+            "score": 0.09523809523809523,
+            "dense_rank": 1,
+            "sparse_rank": 1
+          },
+          {
+            "chunk_id": "chunk-idempotency",
+            "rank": 2,
+            "score": 0.045454545454545456,
+            "dense_rank": 2,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-circuit-breaker",
+            "rank": 3,
+            "score": 0.043478260869565216,
+            "dense_rank": 3,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-db-pool-timeout",
+            "rank": 4,
+            "score": 0.041666666666666664,
+            "dense_rank": 4,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-deploy-rollback",
+            "rank": 5,
+            "score": 0.04,
+            "dense_rank": 5,
+            "sparse_rank": null
+          }
+        ],
+        "60": [
+          {
+            "chunk_id": "chunk-retry-429",
+            "rank": 1,
+            "score": 0.03278688524590164,
+            "dense_rank": 1,
+            "sparse_rank": 1
+          },
+          {
+            "chunk_id": "chunk-idempotency",
+            "rank": 2,
+            "score": 0.016129032258064516,
+            "dense_rank": 2,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-circuit-breaker",
+            "rank": 3,
+            "score": 0.015873015873015872,
+            "dense_rank": 3,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-db-pool-timeout",
+            "rank": 4,
+            "score": 0.015625,
+            "dense_rank": 4,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-deploy-rollback",
+            "rank": 5,
+            "score": 0.015384615384615385,
+            "dense_rank": 5,
+            "sparse_rank": null
+          }
+        ],
+        "100": [
+          {
+            "chunk_id": "chunk-retry-429",
+            "rank": 1,
+            "score": 0.019801980198019802,
+            "dense_rank": 1,
+            "sparse_rank": 1
+          },
+          {
+            "chunk_id": "chunk-idempotency",
+            "rank": 2,
+            "score": 0.00980392156862745,
+            "dense_rank": 2,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-circuit-breaker",
+            "rank": 3,
+            "score": 0.009708737864077669,
+            "dense_rank": 3,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-db-pool-timeout",
+            "rank": 4,
+            "score": 0.009615384615384616,
+            "dense_rank": 4,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-deploy-rollback",
+            "rank": 5,
+            "score": 0.009523809523809525,
+            "dense_rank": 5,
+            "sparse_rank": null
+          }
+        ]
+      }
+    },
+    "q-mix-release-trace": {
+      "category": "mixed",
+      "relevant_chunk_ids": [
+        "chunk-deploy-rollback",
+        "chunk-trace-correlation"
+      ],
+      "dense": [
+        {
+          "chunk_id": "chunk-deploy-rollback",
+          "rank": 1,
+          "score": 0.78454024
+        },
+        {
+          "chunk_id": "chunk-retry-429",
+          "rank": 2,
+          "score": 0.5625595999999999
+        },
+        {
+          "chunk_id": "chunk-circuit-breaker",
+          "rank": 3,
+          "score": 0.56184208
+        },
+        {
+          "chunk_id": "chunk-trace-correlation",
+          "rank": 4,
+          "score": 0.5042687
+        },
+        {
+          "chunk_id": "chunk-idempotency",
+          "rank": 5,
+          "score": 0.49213903999999997
+        }
+      ],
+      "bm25f": [
+        {
+          "chunk_id": "chunk-deploy-rollback",
+          "rank": 1,
+          "score": 2.7307003
+        },
+        {
+          "chunk_id": "chunk-trace-correlation",
+          "rank": 2,
+          "score": 2.627234
+        },
+        {
+          "chunk_id": "chunk-idempotency",
+          "rank": 3,
+          "score": 1.0678807
+        }
+      ],
+      "latency_ms": {
+        "dense": 5.299,
+        "bm25f": 2.948
+      },
+      "rrf": {
+        "20": [
+          {
+            "chunk_id": "chunk-deploy-rollback",
+            "rank": 1,
+            "score": 0.09523809523809523,
+            "dense_rank": 1,
+            "sparse_rank": 1
+          },
+          {
+            "chunk_id": "chunk-trace-correlation",
+            "rank": 2,
+            "score": 0.08712121212121213,
+            "dense_rank": 4,
+            "sparse_rank": 2
+          },
+          {
+            "chunk_id": "chunk-idempotency",
+            "rank": 3,
+            "score": 0.08347826086956522,
+            "dense_rank": 5,
+            "sparse_rank": 3
+          },
+          {
+            "chunk_id": "chunk-retry-429",
+            "rank": 4,
+            "score": 0.045454545454545456,
+            "dense_rank": 2,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-circuit-breaker",
+            "rank": 5,
+            "score": 0.043478260869565216,
+            "dense_rank": 3,
+            "sparse_rank": null
+          }
+        ],
+        "60": [
+          {
+            "chunk_id": "chunk-deploy-rollback",
+            "rank": 1,
+            "score": 0.03278688524590164,
+            "dense_rank": 1,
+            "sparse_rank": 1
+          },
+          {
+            "chunk_id": "chunk-trace-correlation",
+            "rank": 2,
+            "score": 0.031754032258064516,
+            "dense_rank": 4,
+            "sparse_rank": 2
+          },
+          {
+            "chunk_id": "chunk-idempotency",
+            "rank": 3,
+            "score": 0.03125763125763126,
+            "dense_rank": 5,
+            "sparse_rank": 3
+          },
+          {
+            "chunk_id": "chunk-retry-429",
+            "rank": 4,
+            "score": 0.016129032258064516,
+            "dense_rank": 2,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-circuit-breaker",
+            "rank": 5,
+            "score": 0.015873015873015872,
+            "dense_rank": 3,
+            "sparse_rank": null
+          }
+        ],
+        "100": [
+          {
+            "chunk_id": "chunk-deploy-rollback",
+            "rank": 1,
+            "score": 0.019801980198019802,
+            "dense_rank": 1,
+            "sparse_rank": 1
+          },
+          {
+            "chunk_id": "chunk-trace-correlation",
+            "rank": 2,
+            "score": 0.019419306184012067,
+            "dense_rank": 4,
+            "sparse_rank": 2
+          },
+          {
+            "chunk_id": "chunk-idempotency",
+            "rank": 3,
+            "score": 0.019232547387887194,
+            "dense_rank": 5,
+            "sparse_rank": 3
+          },
+          {
+            "chunk_id": "chunk-retry-429",
+            "rank": 4,
+            "score": 0.00980392156862745,
+            "dense_rank": 2,
+            "sparse_rank": null
+          },
+          {
+            "chunk_id": "chunk-circuit-breaker",
+            "rank": 5,
+            "score": 0.009708737864077669,
+            "dense_rank": 3,
+            "sparse_rank": null
+          }
+        ]
+      }
+    }
+  },
+  "cleanup": {
+    "dense_collection_deleted": true,
+    "sparse_collection_deleted": true
+  },
+  "runtime": {
+    "python": "3.11.15",
+    "httpx": "0.28.1"
+  },
+  "claims": {
+    "fixed_synthetic_dataset_quality": true,
+    "production_quality": false,
+    "production_capacity": false
+  }
+}
