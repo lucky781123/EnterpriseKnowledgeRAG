@@ -37,18 +37,19 @@
 - F2-G Provider/API 已实现：LM Studio OpenAI-compatible adapter、JSON complete、统一 SSE stream、模型 readiness、共享 `httpx` client 生命周期、按 alias 的 `LocalLLMScheduler`、队列/总 deadline、错误归一化、主动取消和清理路径均有对应测试。
 - F2-G 评测与实验已实现：摘录 evaluator、Fake/mock/真实 LM Studio 分层证据、可复现 benchmark runner、并发 1/2、`max_tokens=128/256`、usage 缺失和取消清理结果均已写入 `artifacts/experiments/2026-09-14_f2-g/`；精简 F2-I 本地工作台已接入同一服务入口。
 - F2-G 专项和真实摄取基础的历史证据保持不变；当前最新离线全量为 `200 passed, 11 skipped`。真实 LM Studio/F2-G 观测仍按原实验产物解释，不外推为生产质量或容量。
-- F2-G 当前边界仍明确：尚未接入完整 Dense+BM25F+RRF 默认检索链、ACL/OIDC 闭环、在线 Provider 网络适配器或生产容量验证；真实本地 benchmark 不代表语义质量、成本、SLO、GPU 行为或生产吞吐。
+- F2-G 当前边界仍明确：F2-G 入口本身仍是 caller-supplied evidence 的摘录问答，不代表检索、授权或事实真实性；方案 C 产品入口已另行接入 Dense+BM25F+RRF+BGE、开发身份 ACL 和引用复核。真实本地 benchmark 不代表语义质量、成本、SLO、GPU 行为或生产吞吐。
 - 真实摄取基础已实现：支持 Markdown、HTML 和受控文本型 PDF 的校验与统一解析，生成带标题路径/locator 的 `ParsedBlock` 以及确定性 Parent/Child chunk；原文和 parsed manifest 写入本地对象存储，PostgreSQL 保存 job/version/artifact 状态。
 - 摄取可靠性已验证：同租户幂等键复用、内容冲突、FAILED 显式 replay、同内容 version 复用和共享 version 并发成功/失败均有测试；真实 PostgreSQL 并发失败证据证明 parser 只执行一次。摄取成功不会自动设置 `documents.current_version_id`。
-- 真实摄取基础边界：不包含上传/Git 同步 API、OCR、Embedding、BM25F/Weaviate、ACL/OIDC、队列 Worker、自动发布或完整检索问答链；parsed manifest 不是检索索引。
+- 真实摄取基础边界：该独立基础切片不包含 Git 同步、OCR、队列 Worker 或完整生产异步链；方案 C 产品上传会复用其受控解析能力，并在同步请求内继续执行后续索引与发布。parsed manifest 本身仍不是检索索引。
 - 方案 B 最小检索闭环已通过真实 smoke：固定 Markdown 经 Ollama Embedding 写入 PostgreSQL JSON，应用层执行 cosine，按 tenant/version 过滤并回溯 Parent，再通过 FastAPI 调用 LM Studio；证据见 `artifacts/experiments/2026-09-16_retrieval-smoke/`。
-- 方案 B 当前边界：默认向量检索仍是 PostgreSQL JSON + 应用层 cosine 的演示路径；Weaviate Dense/BM25F 已有独立真实 smoke 和固定小数据集质量实验，但尚未接入默认 Dense+BM25F+RRF 链、ACL/OIDC 请求闭环或生产容量验证。
+- 方案 B 当前边界：旧 `/api/v1/retrieval/query` 仍是 PostgreSQL JSON + 应用层 cosine 的演示路径；方案 C 产品入口另行使用 Weaviate Dense/BM25F、RRF、BGE 和开发身份 ACL。两条路径都不代表生产容量、OIDC 或高可用证据。
 - Weaviate Dense 迁移切片已实现：每个 tenant 独立 collection、generation scope、PostgreSQL active/previous pointer、批量 checkpoint、完整性校验、回填、retire、cleanup 和显式 repository 注入；默认 API 读取路径仍保持 PostgreSQL。
 - Weaviate Dense 已在 Compose `1.27.10` 取得真实 transport smoke：collection、批量写入、完整性、nearVector 查询和删除均通过；GraphQL `limit` variable 与 minimal 删除计数的 1.27 兼容差异已修复。PostgreSQL active pointer 发布/回滚未纳入本次 transport-only smoke，默认读取路径仍未切换。
-- BM25F Spike 已实现确定性字段投影和最小真实 transport：`title`、`section_title`、`api_symbols`、`body` 带权查询在真实 Weaviate 命中，错误 tenant/version 均返回 0；尚未新增 Sparse Generation 数据库状态机或接入默认 API。证据见 `artifacts/experiments/2026-09-17_weaviate-real-smoke/`。
+- BM25F Spike 已实现确定性字段投影和最小真实 transport：`title`、`section_title`、`api_symbols`、`body` 带权查询在真实 Weaviate 命中，错误 tenant/version 均返回 0；方案 C 已在本地产品服务中复用该 transport，但通用 Sparse Generation 状态机和生产级发布编排仍未冻结。证据见 `artifacts/experiments/2026-09-17_weaviate-real-smoke/`。
 - BM25F/RRF 固定小数据集质量实验已完成：真实 Ollama `qwen3-embedding:8b` + Weaviate `1.27.10` 上，10 个合成 chunk、8 条查询的 Dense @3 Recall/MRR/nDCG 为 `0.9375/1.0/0.9516`，BM25F 为 `0.625/0.625/0.625`，RRF `k=20/60/100` 均为 `1.0/1.0/1.0`；Dense 独有命中 3 条语义改写，BM25F 在双相关查询中补足一个 Dense rank 4 证据。证据见 `artifacts/experiments/2026-09-17_bm25f-rrf-quality/`。
 - BM25F 中文 tokenizer/预处理对照已完成：保持 Dense、字段权重、candidate K 和 RRF 不变，`word + identity` BM25F @3=`0.625/0.625/0.625`，`trigram + identity`=`0.75/0.75/0.75`，`word + cjk_bigram`=`1.0/1.0/1.0`；对应产物见 `artifacts/experiments/2026-09-17_bm25f-chinese-tokenization/`。
 - 中文对照只证明当前 10 个合成 chunk、8 条查询上的字符重叠收益：`trigram` 仍漏掉 2 条语义改写并引入低分噪声，`cjk_bigram` 满分可能过拟合。生产默认 profile、人工确认 development/frozen 数据集、索引体积、容量和 SLO 仍待实验。
+- 方案 C 本地 P0 产品闭环已实现：同步上传、开发 HMAC Bearer token、文档状态/ACL 管理、Dense+BM25F+RRF+BGE 查询和引用前复核均有离线契约证据；真实上传到引用 smoke 尚未在专用 PostgreSQL/Weaviate/Ollama/BGE/LM Studio 环境完成。
 
 ## 3. 已确认技术边界
 

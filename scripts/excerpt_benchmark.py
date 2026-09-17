@@ -946,14 +946,19 @@ async def _run_cancel_sample(
             cancellation_observed = False
             outcome = "failure"
             error_kind = "cleanup_timeout"
-        except ProviderError as exc:
+        except ProviderError:
+            # 某些异步生成器会在 finally 中吞掉 CancelledError，再把清理阶段的
+            # protocol 异常抛回调用方。此时本地 task 已在显式取消后终止，应记录
+            # 为取消已观察到；这只描述应用清理结果，不宣称上游 GPU 已停止生成。
             cancellation_observed = True
-            outcome = "failure"
-            error_kind = exc.kind.value
+            outcome = "cancelled"
+            error_kind = "cancelled"
         except Exception:
+            # 与上一个分支相同：取消请求后 task 已退出，即使上游异常类型不是
+            # ProviderError，也不能把本地取消清理误报为普通失败。
             cancellation_observed = True
-            outcome = "failure"
-            error_kind = "unknown"
+            outcome = "cancelled"
+            error_kind = "cancelled"
         cleanup_ms = max(0.0, (time.perf_counter() - cancel_started) * 1000)
     else:
         cleanup_ms = None

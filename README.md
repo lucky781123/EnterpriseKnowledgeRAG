@@ -2,7 +2,7 @@
 
 面向研发技术文档的企业级 RAG 学习与验证项目。
 
-> 当前状态（2026-09-17）：PostgreSQL 基础切片、F2-G/F2-I、真实摄取、Weaviate Dense 迁移 contract、真实 Dense/BM25F smoke、固定小数据集 BM25F/RRF 质量实验及中文 tokenizer/预处理对照已完成；默认 Dense+BM25F+RRF 检索、请求级 ACL 和完整 RAG 闭环仍在后续阶段实施。
+> 当前状态（2026-09-17）：方案 C 的本地 P0 产品代码闭环已完成，覆盖同步上传、双路 generation 发布、开发身份 ACL、Dense+BM25F+RRF+BGE 检索、Parent/引用复核、状态/ACL 管理和产品 readiness；真实 PostgreSQL/Weaviate/Ollama/BGE/LM Studio 的上传到引用 smoke 仍待在专用开发环境执行。
 
 仓库级 `.agents/skills/` 已提供 5 个经过自动验证的 RAG 开发 Skill、共享契约和压力场景。它们用于约束后续开发与评审，不代表对应的业务 RAG 能力已经实现。
 
@@ -37,6 +37,7 @@
 - 摄取幂等、内容冲突、FAILED replay、同内容 version 复用和共享 version 并发 parser owner 协调。
 - 真实 Ollama + Weaviate 的固定小数据集 Dense/BM25F/RRF 对照，包含 Recall@K、MRR、nDCG、独有命中和 p50/p95 延迟证据。
 - BM25F 中文对照实验：固定 Dense、字段权重和 RRF，比较 `word + identity`、`trigram + identity` 与 `word + cjk_bigram`。
+- 本地 P0 产品闭环：`POST /api/v1/documents` 同步上传、双路 generation 发布、开发 Bearer token、文档状态/ACL 管理、`POST /api/v1/rag/query` 混合检索问答，以及 `/health/product/ready`。
 
 详细状态见 [PROJECT_CONTEXT.md](./PROJECT_CONTEXT.md) 和 [docs/preflight-checklist.md](./docs/preflight-checklist.md)。
 
@@ -95,7 +96,7 @@ curl http://127.0.0.1:8000/api/v1/meta
 docker compose up --build
 ```
 
-当前 Compose 默认复用已运行的 `enterprise-rag-postgres` 容器（本机 `54329`），并启动固定版本 Weaviate、one-shot migration job 和 API。API 依赖 migration 成功与 Weaviate healthy，但默认读取路径仍是 PostgreSQL；若使用其他 DSN，请在 `.env` 中覆盖 `POSTGRES_DSN`。Redis、RabbitMQ、Keycloak、默认 Weaviate 检索编排和完整检索问答链仍未接入。
+当前 Compose 默认复用已运行的 `enterprise-rag-postgres` 容器（本机 `54329`），并启动固定版本 Weaviate、one-shot migration job 和 API。API 依赖 migration 成功与 Weaviate healthy，但产品链的真实上传到引用 smoke 仍需要显式注入专用开发依赖；旧 `/api/v1/retrieval/query` 仍保持 PostgreSQL JSON demo 路径。若使用其他 DSN，请在 `.env` 中覆盖 `POSTGRES_DSN`。Redis、RabbitMQ、Keycloak、Git 同步、OCR 和生产容量验证仍未接入。
 
 ## 配置文件
 

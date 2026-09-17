@@ -13,8 +13,9 @@
 - 当前已取得真实 Weaviate `1.27.10` 证据：Dense collection/batch/integrity/nearVector/delete，以及 BM25F schema/weighted query/tenant-version filter/cleanup 均通过；默认读取路径仍是 PostgreSQL。
 - 固定小数据集 BM25F/RRF 质量实验已完成：Dense、BM25F、RRF `k=20/60/100` 的 Recall@K、MRR、nDCG、独有命中和 p50/p95 延迟均已记录；RRF 在 top 3 补足双相关查询，但三个 `k` 无法区分。
 - BM25F 中文 tokenizer/预处理对照已完成：baseline `word + identity` @3 为 `0.625/0.625/0.625`，`trigram + identity` 为 `0.75/0.75/0.75`，`word + cjk_bigram` 为 `1.0/1.0/1.0`；这些结果仅来自 10 个合成 chunk 和 8 条查询。
-- 当前待处理：Sparse Generation、默认 Dense+sparse 检索编排、Reranker、请求级 ACL/OIDC、上传/Git 同步、队列 Worker、在线 Provider 和完整 RAG 问答链；人工确认数据集、中文 profile 泛化、生产容量、备份恢复和故障转移也未验证。
-- 当前下一步：先审阅中文对照证据；若继续质量线，优先扩大人工确认的 development/frozen 数据集再选择 profile；若进入工程线，再设计轻量 Sparse Generation。不得把合成小样本满分写成默认参数或生产效果。
+- 当前已完成：方案 C 本地 P0 产品代码闭环，包括同步上传、双路 generation 发布、开发身份 ACL、Dense+BM25F+RRF+BGE 查询、Parent/引用复核、状态/ACL 管理、产品 readiness 和请求体预算。
+- 当前待处理：在专用开发环境执行真实上传到引用 smoke，并同步脱敏实验产物；真实依赖证据、人工确认数据集、中文 profile 泛化、生产容量、备份恢复和故障转移仍未验证。
+- 当前非目标：Keycloak/OIDC、Celery/RabbitMQ、Redis、Git 同步、OCR、Minikube、在线 Provider fallback 和生产容量结论继续后置；不得把离线/SQLite 或合成小样本结果写成真实生产证据。
 
 ## 目标版本
 
@@ -31,7 +32,7 @@
 | 5 | Parent/Child 与索引 | Dense、BM25F、版本发布、可重建性 |
 | 6 | 双路检索与排序 | RRF、Reranker、Parent 回溯、检索消融 |
 | 7 | Linear 问答与 SSE | Prompt、引用、无答案、断连、取消、超时 |
-| 8 | Keycloak、租户、ACL | 召回前过滤、返回后复核、缓存和引用安全 |
+| 8 | 开发身份、租户、ACL | 召回前过滤、返回后复核、引用安全；Keycloak/OIDC 后置 |
 | 9 | 可靠性与恢复 | Outbox/等价机制、幂等、重放、Checkpoint、故障注入 |
 | 10 | 有界 Agentic | Router、Grade、Rewrite、一次重检索、deadline、降级 |
 | 11 | 评测与质量门禁 | 检索、生成、引用、安全、回归和消融 |

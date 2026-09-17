@@ -157,6 +157,15 @@ class WeaviateHTTPXTransport:
             raise self._status_error(response.status_code)
         return response
 
+    async def health_check(self) -> bool:
+        """只读检查 Weaviate readiness endpoint，不返回服务端响应正文。"""
+
+        try:
+            await self._request("GET", "/v1/.well-known/ready")
+        except WeaviateTransportError:
+            return False
+        return True
+
     @staticmethod
     def _json(response: httpx.Response) -> Any:
         """解析 JSON；解析失败时只抛出固定协议错误。"""

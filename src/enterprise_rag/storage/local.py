@@ -7,7 +7,11 @@ from pathlib import Path
 
 
 class LocalObjectStorage:
+    """本地对象存储实现，并提供只读 readiness 探针。"""
+
     def __init__(self, root: str | Path) -> None:
+        """保存解析后的根目录；所有 key 都会经过路径边界检查。"""
+
         self.root = Path(root).resolve()
 
     def _path(self, key: str) -> Path:
@@ -32,3 +36,8 @@ class LocalObjectStorage:
 
     async def exists(self, key: str) -> bool:
         return await asyncio.to_thread(self._path(key).exists)
+
+    async def health_check(self) -> bool:
+        """只读检查对象存储根目录存在且为目录。"""
+
+        return await asyncio.to_thread(self.root.is_dir)

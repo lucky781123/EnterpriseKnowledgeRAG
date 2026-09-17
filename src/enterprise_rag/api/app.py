@@ -21,8 +21,18 @@ from uuid import uuid4
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, Response, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, StreamingResponse
+from sqlalchemy import select
 
 from enterprise_rag.config.settings import Settings
+from enterprise_rag.db.models import (
+    ACLPrincipalType,
+    ArtifactKind,
+    DenseGenerationModel,
+    DocumentModel,
+    DocumentVersionModel,
+    IngestionJobModel,
+    VersionArtifactModel,
+)
 from enterprise_rag.db.session import Database
 from enterprise_rag.embedding.ollama import OllamaEmbeddingProvider
 from enterprise_rag.excerpts.service import ExcerptAnswerService, VisibleStreamSanitizer
@@ -48,11 +58,20 @@ from enterprise_rag.security.dev_token import DevTokenCodec
 
 from .dependencies import build_request_context_dependency
 from .middleware import RequestBodyLimitMiddleware
+from .product_readiness import ProductReadinessManager
 from .product_schemas import (
+    ProductACLGrantResponse,
+    ProductACLRevokeResponse,
+    ProductArtifactStatusResponse,
+    ProductDocumentStatusResponse,
+    ProductGenerationStatusResponse,
+    ProductJobStatusResponse,
     ProductRagQueryRequest,
     ProductRagQueryResponse,
+    ProductReadinessResponse,
     ProductRetrievalTraceResponse,
     ProductUploadResponse,
+    ProductVersionStatusResponse,
 )
 from .schemas import (
     CitationResponse,
@@ -194,6 +213,7 @@ async def _close_async_iterator(iterator: Any) -> None:
 def create_app(
     settings: Settings | None = None,
     provider_registry: ProviderRegistry | None = None,
+    database: Database | None = None,
     embedding_provider: OllamaEmbeddingProvider | None = None,
     vector_repository: PostgresVectorRepository | None = None,
     weaviate_vector_repository: Any | None = None,
@@ -201,6 +221,7 @@ def create_app(
     product_retrieval_service: Any | None = None,
     authorization_service: AuthorizationService | None = None,
     dev_token_codec: DevTokenCodec | None = None,
+    product_readiness_manager: ProductReadinessManager | Any | None = None,
 ) -> FastAPI:
     """创建应用并装配共享 Chat、Embedding、检索和产品上传依赖。"""
 
@@ -214,9 +235,10 @@ def create_app(
             ttl_seconds=resolved_settings.dev_auth_token_ttl_seconds,
         )
     shared_http_client = None
-    database = None
-    if resolved_settings.postgres_dsn:
-        database = Database(
+    resolved_database = database
+    owns_database = False
+    if resolved_database is None and resolved_settings.postgres_dsn:
+        resolved_database = Database(
             resolved_settings.postgres_dsn,
             pool_size=resolved_settings.postgres_pool_size,
             max_overflow=resolved_settings.postgres_max_overflow,
@@ -225,6 +247,7 @@ def create_app(
             statement_timeout_ms=resolved_settings.postgres_statement_timeout_ms,
             lock_timeout_ms=resolved_settings.postgres_lock_timeout_ms,
         )
+        owns_database = True
 
     registry = provider_registry or ProviderRegistry()
     if provider_registry is None:
@@ -258,7 +281,7 @@ def create_app(
     # Weaviate repository 只允许通过显式依赖注入启用；未注入时保留 PostgreSQL
     # 默认读取路径，避免配置字段出现就悄然改变线上查询后端。
     resolved_vector_repository = weaviate_vector_repository or vector_repository
-    if database is not None:
+    if resolved_database is not None:
         if resolved_embedding_provider is None:
             # 默认路径复用 Chat Provider 的 HTTP client；注入自定义 Chat Registry
             # 时才创建独立 client，并仍由统一 lifespan 负责关闭。
@@ -313,16 +336,20 @@ def create_app(
                 closed_clients.add(id(client))
                 await close()
 
-            if database is not None:
-                await database.dispose()
+            if owns_database and resolved_database is not None:
+                await resolved_database.dispose()
 
     app = FastAPI(title="EnterpriseKnowledgeRAG", version="0.1.0", lifespan=lifespan)
     # 请求体预算必须位于 FastAPI/Pydantic 解析之前。这样即使攻击者不提供
     # Content-Length，分片正文累计超过 128 KiB 时也会在业务路由前得到稳定
     # 的 413；未超限的正文由 middleware 只重放一次，避免下游看到空 body。
-    app.add_middleware(RequestBodyLimitMiddleware, max_bytes=128 * 1024)
+    app.add_middleware(
+        RequestBodyLimitMiddleware,
+        max_bytes=resolved_settings.api_request_body_max_bytes,
+        path_limits={"/api/v1/documents": resolved_settings.product_upload_max_bytes},
+    )
     app.state.settings = resolved_settings
-    app.state.database = database
+    app.state.database = resolved_database
     app.state.embedding_provider = resolved_embedding_provider
     app.state.vector_repository = resolved_vector_repository
     app.state.weaviate_vector_repository = weaviate_vector_repository
@@ -333,6 +360,15 @@ def create_app(
     app.state.product_retrieval_service = product_retrieval_service
     app.state.authorization_service = authorization_service or AuthorizationService()
     app.state.dev_token_codec = resolved_dev_token_codec
+    app.state.product_readiness_manager = product_readiness_manager or ProductReadinessManager(
+        settings=resolved_settings,
+        database=resolved_database,
+        provider_registry=registry,
+        dev_token_codec=resolved_dev_token_codec,
+        embedding_provider=resolved_embedding_provider,
+        product_ingestion_service=product_ingestion_service,
+        product_retrieval_service=product_retrieval_service,
+    )
 
     def provider_error_response(error: ProviderError) -> JSONResponse:
         """将领域错误映射为稳定 HTTP 响应，并丢弃未经信任的原始异常文本。"""
@@ -412,16 +448,12 @@ def create_app(
             "provider": provider_payload,
         }
 
-    @app.get("/api/v1/meta")
-    async def meta() -> dict[str, str]:
-        return {"name": "EnterpriseKnowledgeRAG", "version": "0.1.0"}
-
     if resolved_dev_token_codec is not None:
         product_context_dependency = build_request_context_dependency(resolved_dev_token_codec)
     else:
 
         async def product_context_dependency() -> Any:
-            """未显式配置开发身份时，产品写入入口保持 fail closed。"""
+            """未显式配置开发身份时，产品入口保持 fail closed。"""
 
             raise HTTPException(
                 status_code=503,
@@ -430,6 +462,280 @@ def create_app(
                     "message": "开发身份未配置",
                 },
             )
+
+    @app.get("/health/product/ready", response_model=ProductReadinessResponse)
+    async def product_ready(response: Response) -> ProductReadinessResponse:
+        """返回本地 P0 产品逐项 readiness；未就绪时稳定返回 503。"""
+
+        readiness = await app.state.product_readiness_manager.check()
+        response.status_code = 200 if readiness.status == "ready" else 503
+        return ProductReadinessResponse(
+            status=readiness.status,
+            dependencies={
+                name: {"status": status}
+                for name, status in readiness.dependencies.items()
+            },
+        )
+
+    @app.get(
+        "/api/v1/documents/{document_id}/status",
+        response_model=ProductDocumentStatusResponse,
+    )
+    async def document_status(
+        document_id: str,
+        context=Depends(product_context_dependency),  # noqa: B008
+    ) -> ProductDocumentStatusResponse:
+        """返回授权文档的安全状态摘要，不暴露正文和外部索引内部字段。"""
+
+        database_dependency = app.state.database
+        if database_dependency is None:
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "kind": "product_unavailable",
+                    "message": "产品数据库未配置",
+                },
+            )
+
+        try:
+            async with database_dependency.session() as session:
+                authorized = await app.state.authorization_service.require_document_read(
+                    session,
+                    context,
+                    document_id,
+                )
+                document = (
+                    await session.execute(
+                        select(DocumentModel).where(
+                            DocumentModel.tenant_id == context.tenant_id,
+                            DocumentModel.id == document_id,
+                        )
+                    )
+                ).scalar_one()
+                versions = list(
+                    (
+                        await session.execute(
+                            select(DocumentVersionModel)
+                            .where(
+                                DocumentVersionModel.tenant_id == context.tenant_id,
+                                DocumentVersionModel.document_id == document_id,
+                            )
+                            .order_by(DocumentVersionModel.created_at.desc())
+                        )
+                    ).scalars()
+                )
+                jobs = list(
+                    (
+                        await session.execute(
+                            select(IngestionJobModel)
+                            .where(
+                                IngestionJobModel.tenant_id == context.tenant_id,
+                                IngestionJobModel.document_id == document_id,
+                            )
+                            .order_by(IngestionJobModel.created_at.desc())
+                        )
+                    ).scalars()
+                )
+                current_version = next(
+                    (item for item in versions if item.id == authorized.version_id),
+                    None,
+                )
+                latest_version = versions[0] if versions else None
+                latest_job = jobs[0] if jobs else None
+                artifacts = list(
+                    (
+                        await session.execute(
+                            select(VersionArtifactModel).where(
+                                VersionArtifactModel.tenant_id == context.tenant_id,
+                                VersionArtifactModel.document_id == document_id,
+                                VersionArtifactModel.version_id == authorized.version_id,
+                            )
+                        )
+                    ).scalars()
+                )
+                generation = (
+                    await session.execute(
+                        select(DenseGenerationModel)
+                        .where(
+                            DenseGenerationModel.tenant_id == context.tenant_id,
+                            DenseGenerationModel.document_id == document_id,
+                            DenseGenerationModel.version_id == authorized.version_id,
+                            DenseGenerationModel.status == "active",
+                        )
+                        .order_by(DenseGenerationModel.created_at.desc())
+                    )
+                ).scalars().first()
+        except ResourceNotFound as exc:
+            raise HTTPException(
+                status_code=404,
+                detail={"kind": "resource_not_found", "message": "资源不存在"},
+            ) from exc
+
+        def version_payload(version: Any | None) -> ProductVersionStatusResponse | None:
+            """把 ORM 版本映射为不包含 content hash 的安全响应。"""
+
+            if version is None:
+                return None
+            return ProductVersionStatusResponse(
+                version_id=version.id,
+                status=version.status.value,
+                created_at=version.created_at,
+                published_at=version.published_at,
+            )
+
+        return ProductDocumentStatusResponse(
+            document_id=document.id,
+            document_status=document.status.value,
+            current_version=version_payload(current_version),
+            latest_version=version_payload(latest_version),
+            latest_job=(
+                ProductJobStatusResponse(
+                    job_id=latest_job.id,
+                    status=latest_job.status.value,
+                    attempt=latest_job.attempt,
+                    created_at=latest_job.created_at,
+                    updated_at=latest_job.updated_at,
+                )
+                if latest_job is not None
+                else None
+            ),
+            generation=(
+                ProductGenerationStatusResponse(
+                    generation_id=generation.generation_id,
+                    status=generation.status.value,
+                    expected_item_count=generation.expected_item_count,
+                    actual_item_count=generation.actual_item_count,
+                    checkpoint=generation.checkpoint,
+                )
+                if generation is not None
+                else None
+            ),
+            artifacts={
+                kind.value: ProductArtifactStatusResponse(
+                    status=next(
+                        (
+                            artifact.status.value
+                            for artifact in artifacts
+                            if artifact.kind == kind
+                        ),
+                        "pending",
+                    ),
+                    item_count=next(
+                        (
+                            artifact.item_count
+                            for artifact in artifacts
+                            if artifact.kind == kind
+                        ),
+                        0,
+                    ),
+                )
+                for kind in ArtifactKind
+            },
+        )
+
+    @app.put(
+        "/api/v1/documents/{document_id}/acl/{principal_type}/{principal_id}",
+        response_model=ProductACLGrantResponse,
+    )
+    async def grant_document_acl(
+        document_id: str,
+        principal_type: ACLPrincipalType,
+        principal_id: str,
+        context=Depends(product_context_dependency),  # noqa: B008
+    ) -> ProductACLGrantResponse:
+        """由同 tenant admin 幂等授予 USER/ROLE READ ACL。"""
+
+        database_dependency = app.state.database
+        if database_dependency is None:
+            raise HTTPException(
+                status_code=503,
+                detail={"kind": "product_unavailable", "message": "产品数据库未配置"},
+            )
+        try:
+            async with database_dependency.transaction() as session:
+                await app.state.authorization_service.grant_read(
+                    session,
+                    context,
+                    document_id=document_id,
+                    principal_type=principal_type,
+                    principal_id=principal_id,
+                )
+        except AuthorizationDenied as exc:
+            raise HTTPException(
+                status_code=403,
+                detail={"kind": "forbidden", "message": "当前身份无权管理 ACL"},
+            ) from exc
+        except ResourceNotFound as exc:
+            raise HTTPException(
+                status_code=404,
+                detail={"kind": "resource_not_found", "message": "资源不存在"},
+            ) from exc
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=422,
+                detail={"kind": "invalid_request", "message": str(exc)},
+            ) from exc
+        return ProductACLGrantResponse(
+            document_id=document_id,
+            principal_type=principal_type.value,
+            principal_id=principal_id.strip(),
+            permission="read",
+            granted=True,
+        )
+
+    @app.delete(
+        "/api/v1/documents/{document_id}/acl/{principal_type}/{principal_id}",
+        response_model=ProductACLRevokeResponse,
+    )
+    async def revoke_document_acl(
+        document_id: str,
+        principal_type: ACLPrincipalType,
+        principal_id: str,
+        context=Depends(product_context_dependency),  # noqa: B008
+    ) -> ProductACLRevokeResponse:
+        """由同 tenant admin 幂等撤销 USER/ROLE READ ACL。"""
+
+        database_dependency = app.state.database
+        if database_dependency is None:
+            raise HTTPException(
+                status_code=503,
+                detail={"kind": "product_unavailable", "message": "产品数据库未配置"},
+            )
+        try:
+            async with database_dependency.transaction() as session:
+                revoked = await app.state.authorization_service.revoke_read(
+                    session,
+                    context,
+                    document_id=document_id,
+                    principal_type=principal_type,
+                    principal_id=principal_id,
+                )
+        except AuthorizationDenied as exc:
+            raise HTTPException(
+                status_code=403,
+                detail={"kind": "forbidden", "message": "当前身份无权管理 ACL"},
+            ) from exc
+        except ResourceNotFound as exc:
+            raise HTTPException(
+                status_code=404,
+                detail={"kind": "resource_not_found", "message": "资源不存在"},
+            ) from exc
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=422,
+                detail={"kind": "invalid_request", "message": str(exc)},
+            ) from exc
+        return ProductACLRevokeResponse(
+            document_id=document_id,
+            principal_type=principal_type.value,
+            principal_id=principal_id.strip(),
+            permission="read",
+            revoked=revoked,
+        )
+
+    @app.get("/api/v1/meta")
+    async def meta() -> dict[str, str]:
+        return {"name": "EnterpriseKnowledgeRAG", "version": "0.1.0"}
 
     @app.post("/api/v1/documents", response_model=ProductUploadResponse, status_code=201)
     async def upload_document(

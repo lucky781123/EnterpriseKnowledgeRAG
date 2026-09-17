@@ -64,6 +64,8 @@ class Settings:
     dev_auth_enabled: bool = False
     dev_auth_secret: str | None = None
     dev_auth_token_ttl_seconds: int = 3600
+    api_request_body_max_bytes: int = 128 * 1024
+    product_upload_max_bytes: int = 10 * 1024 * 1024
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -103,6 +105,11 @@ class Settings:
             dev_auth_enabled=_env_bool("DEV_AUTH_ENABLED", False),
             dev_auth_secret=_env("DEV_AUTH_SECRET"),
             dev_auth_token_ttl_seconds=_env_int("DEV_AUTH_TOKEN_TTL_SECONDS", 3600),
+            # 普通 API 保持较小预算；产品 multipart 上传与摄取校验共享 10 MiB 默认值。
+            api_request_body_max_bytes=_env_int("API_REQUEST_BODY_MAX_BYTES", 128 * 1024),
+            product_upload_max_bytes=_env_int(
+                "PRODUCT_UPLOAD_MAX_BYTES", 10 * 1024 * 1024
+            ),
         )
         settings.validate()
         return settings
@@ -123,3 +130,5 @@ class Settings:
                 raise ValueError("开发身份模式只允许在 development 环境启用")
             if self.dev_auth_secret is None or len(self.dev_auth_secret.encode("utf-8")) < 32:
                 raise ValueError("DEV_AUTH_ENABLED=true 时 DEV_AUTH_SECRET 至少需要 32 字节")
+        if self.product_upload_max_bytes < self.api_request_body_max_bytes:
+            raise ValueError("PRODUCT_UPLOAD_MAX_BYTES 不能小于 API_REQUEST_BODY_MAX_BYTES")

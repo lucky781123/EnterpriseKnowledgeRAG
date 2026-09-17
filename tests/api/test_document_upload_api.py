@@ -136,3 +136,25 @@ def test_document_upload_rejects_unknown_identity_fields_and_reader() -> None:
     assert extra_response.status_code == 422
     assert reader_response.status_code == 403
     assert service.calls == []
+
+
+def test_document_upload_accepts_product_budget_larger_than_default_api_budget() -> None:
+    """产品上传预算应与摄取默认 10 MiB 一致，而不是被普通 API 预算提前截断。"""
+
+    service = _ProductService(calls=[])
+    client, codec = _client(service)
+    content = b"# Install\n" + (b"x" * (256 * 1024))
+
+    response = client.post(
+        "/api/v1/documents",
+        headers={"Authorization": f"Bearer {_token(codec, 'editor')}"},
+        data={
+            "source_id": "upload:large-guide",
+            "title": "大文档",
+            "idempotency_key": "upload-large-1",
+        },
+        files={"file": ("large-guide.md", content, "text/markdown")},
+    )
+
+    assert response.status_code == 201
+    assert service.calls[0]["content"] == content

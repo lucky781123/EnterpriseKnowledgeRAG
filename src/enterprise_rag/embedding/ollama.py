@@ -36,6 +36,25 @@ class OllamaEmbeddingProvider:
         self.validate_dimension(normalized)
         return normalized
 
+    async def health_check(self) -> bool:
+        """只读检查 Ollama 服务和配置模型是否可发现。"""
+
+        try:
+            response = await self.client.get(f"{self.base_url}/api/tags", timeout=2.0)
+            response.raise_for_status()
+            payload = response.json()
+        except (httpx.HTTPError, ValueError):
+            return False
+        models = payload.get("models") if isinstance(payload, dict) else None
+        if not isinstance(models, list):
+            return False
+        names = {
+            item.get("name")
+            for item in models
+            if isinstance(item, dict) and isinstance(item.get("name"), str)
+        }
+        return self.model in names
+
     @staticmethod
     def validate_dimension(vectors: Sequence[Sequence[float]]) -> int:
         """确保批次内所有向量维度一致，并返回维度。"""
