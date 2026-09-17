@@ -75,7 +75,12 @@ async def test_schema_readiness_distinguishes_unmigrated_and_ready_database(tmp_
         assert after_migration.ready is True
         assert after_migration.status == "ready"
         assert after_migration.target_version == LATEST_VERSION
-        assert after_migration.applied_versions == (INITIAL_VERSION, EMBEDDING_VERSION, LATEST_VERSION)
+        assert after_migration.applied_versions == (
+            INITIAL_VERSION,
+            EMBEDDING_VERSION,
+            "0003_weaviate_dense_generations",
+            LATEST_VERSION,
+        )
     finally:
         await database.dispose()
 
@@ -126,7 +131,12 @@ async def test_empty_database_migration_is_repeatable(tmp_path):
             ).scalars().all()
 
         assert table_names == EXPECTED_TABLES
-        assert applied_versions == [INITIAL_VERSION, EMBEDDING_VERSION, LATEST_VERSION]
+        assert applied_versions == [
+            INITIAL_VERSION,
+            EMBEDDING_VERSION,
+            "0003_weaviate_dense_generations",
+            LATEST_VERSION,
+        ]
     finally:
         await database.dispose()
 
@@ -162,7 +172,12 @@ async def test_database_can_upgrade_from_initial_schema_to_embedding_schema(tmp_
             ).scalars().all()
 
         assert upgraded_tables == EXPECTED_TABLES
-        assert upgraded_versions == [INITIAL_VERSION, EMBEDDING_VERSION, LATEST_VERSION]
+        assert upgraded_versions == [
+            INITIAL_VERSION,
+            EMBEDDING_VERSION,
+            "0003_weaviate_dense_generations",
+            LATEST_VERSION,
+        ]
     finally:
         await database.dispose()
 

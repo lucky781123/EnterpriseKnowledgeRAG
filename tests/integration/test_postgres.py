@@ -18,7 +18,13 @@ from sqlalchemy.engine import make_url
 from sqlalchemy import inspect, select, text
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
-from enterprise_rag.db.migrations import EXPECTED_TABLES
+from enterprise_rag.db.migrations import (
+    EMBEDDING_VERSION,
+    EXPECTED_TABLES,
+    INITIAL_VERSION,
+    WEAVIATE_DENSE_VERSION,
+    WEAVIATE_HYBRID_VERSION,
+)
 from enterprise_rag.db.models import (
     ACLPermission,
     ACLPrincipalType,
@@ -169,7 +175,12 @@ async def test_postgres_migration_is_repeatable_and_schema_is_expected(
         ).mappings().all()
 
     assert table_names == EXPECTED_TABLES
-    assert migration_versions == ["0001_initial"]
+    assert migration_versions == [
+        INITIAL_VERSION,
+        EMBEDDING_VERSION,
+        WEAVIATE_DENSE_VERSION,
+        WEAVIATE_HYBRID_VERSION,
+    ]
 
     constraints = {row["conname"]: row for row in constraint_rows}
     assert set(constraints) == {

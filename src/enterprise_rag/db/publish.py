@@ -13,19 +13,27 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from enterprise_rag.db.models import (
+    ACLPermission,
     ArtifactKind,
     ArtifactStatus,
     DenseGenerationModel,
     DenseGenerationPointerModel,
+    DenseGenerationStatus,
+    DocumentACLModel,
     DocumentModel,
     DocumentStatus,
     DocumentVersionModel,
-    DenseGenerationStatus,
+    TenantDenseCollectionModel,
     VersionArtifactModel,
     VersionStatus,
-    TenantDenseCollectionModel,
 )
-from enterprise_rag.retrieval.contracts import GenerationScope, IndexProfile, collection_name_for_tenant
+from enterprise_rag.retrieval.contracts import (
+    GenerationScope,
+    IndexProfile,
+    collection_name_for_tenant,
+    sparse_collection_name_for_tenant,
+)
+from enterprise_rag.retrieval.sparse import SparseProfile
 
 
 class PublishPreconditionError(ValueError):
@@ -45,8 +53,9 @@ async def create_generation(
     expected_item_count: int,
     build_attempt: int,
     worker_lease: str,
+    sparse_profile: SparseProfile | None = None,
 ) -> DenseGenerationModel:
-    """创建一个 BUILDING generation，并确保租户 collection 注册事实存在。"""
+    """创建 BUILDING generation，并可选绑定产品 Sparse collection/profile。"""
 
     if not manifest_hash.strip():
         raise DenseGenerationPublishError("manifest_hash 不能为空")
@@ -104,6 +113,15 @@ async def create_generation(
         dimension=profile.dimension,
         chunking_version=profile.chunking_version,
         schema_version=profile.schema_version,
+        sparse_collection_name=(
+            sparse_collection_name_for_tenant(scope.tenant_id)
+            if sparse_profile is not None
+            else None
+        ),
+        sparse_profile_key=(sparse_profile.key if sparse_profile is not None else None),
+        sparse_schema_version=(
+            sparse_profile.schema_version if sparse_profile is not None else None
+        ),
         expected_item_count=expected_item_count,
         actual_item_count=0,
         checkpoint=0,
@@ -112,6 +130,69 @@ async def create_generation(
         status=DenseGenerationStatus.BUILDING,
     )
     session.add(generation)
+    await session.flush()
+    return generation
+
+
+async def mark_product_generation_ready(
+    session: AsyncSession,
+    generation_id: str,
+    *,
+    dense_item_count: int,
+    sparse_item_count: int,
+) -> DenseGenerationModel:
+    """在双路数量一致后原子标记 EMBEDDING、SPARSE 和 generation READY。"""
+
+    generation = await session.scalar(
+        select(DenseGenerationModel)
+        .where(DenseGenerationModel.generation_id == generation_id)
+        .with_for_update()
+    )
+    if generation is None:
+        raise DenseGenerationPublishError("generation 不存在")
+    if generation.status is not DenseGenerationStatus.BUILDING:
+        raise DenseGenerationPublishError("只有 BUILDING generation 可以完成双路校验")
+    if not all(
+        (
+            generation.sparse_collection_name,
+            generation.sparse_profile_key,
+            generation.sparse_schema_version,
+        )
+    ):
+        raise DenseGenerationPublishError("generation 缺少 Sparse 发布元数据")
+    if dense_item_count != generation.expected_item_count:
+        raise DenseGenerationPublishError("Dense 实际条数与预期不一致")
+    if sparse_item_count != generation.expected_item_count:
+        raise DenseGenerationPublishError("Sparse 实际条数与预期不一致")
+
+    artifacts = (
+        await session.scalars(
+            select(VersionArtifactModel)
+            .where(
+                VersionArtifactModel.tenant_id == generation.tenant_id,
+                VersionArtifactModel.document_id == generation.document_id,
+                VersionArtifactModel.version_id == generation.version_id,
+            )
+            .with_for_update()
+        )
+    ).all()
+    artifact_by_kind = {artifact.kind: artifact for artifact in artifacts}
+    for required_kind in ArtifactKind:
+        if required_kind not in artifact_by_kind:
+            raise DenseGenerationPublishError("version 缺少完整 artifact 事实")
+    for prerequisite in (ArtifactKind.RAW, ArtifactKind.PARSED):
+        if artifact_by_kind[prerequisite].status is not ArtifactStatus.READY:
+            raise DenseGenerationPublishError("RAW/PARSED 尚未 READY")
+
+    artifact_by_kind[ArtifactKind.EMBEDDING].status = ArtifactStatus.READY
+    artifact_by_kind[ArtifactKind.EMBEDDING].item_count = dense_item_count
+    artifact_by_kind[ArtifactKind.EMBEDDING].failure_reason = None
+    artifact_by_kind[ArtifactKind.SPARSE].status = ArtifactStatus.READY
+    artifact_by_kind[ArtifactKind.SPARSE].item_count = sparse_item_count
+    artifact_by_kind[ArtifactKind.SPARSE].failure_reason = None
+    generation.actual_item_count = dense_item_count
+    generation.checkpoint = dense_item_count
+    generation.status = DenseGenerationStatus.READY
     await session.flush()
     return generation
 
@@ -348,12 +429,68 @@ async def publish_version(
     document.updated_at = now
 
 
+async def publish_product_generation(
+    session: AsyncSession,
+    generation_id: str,
+    *,
+    now: datetime | None = None,
+) -> DenseGenerationPointerModel:
+    """在同一事务中校验 ACL，并原子发布文档版本与双路 generation 指针。"""
+
+    now = now or datetime.now(UTC)
+    generation = await session.scalar(
+        select(DenseGenerationModel)
+        .where(DenseGenerationModel.generation_id == generation_id)
+        .with_for_update()
+    )
+    if generation is None:
+        raise DenseGenerationPublishError("generation 不存在")
+    if generation.status is not DenseGenerationStatus.READY:
+        raise DenseGenerationPublishError("产品 generation 尚未 READY")
+    if not all(
+        (
+            generation.sparse_collection_name,
+            generation.sparse_profile_key,
+            generation.sparse_schema_version,
+        )
+    ):
+        raise DenseGenerationPublishError("产品 generation 缺少 Sparse 发布元数据")
+
+    acl_exists = (
+        await session.execute(
+            select(DocumentACLModel.tenant_id)
+            .where(
+                DocumentACLModel.tenant_id == generation.tenant_id,
+                DocumentACLModel.document_id == generation.document_id,
+                DocumentACLModel.permission == ACLPermission.READ,
+            )
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    if acl_exists is None:
+        raise DenseGenerationPublishError("文档缺少 READ ACL，不能发布")
+
+    # 先按 document -> version 的既有锁顺序发布版本，再刷新同一事务中的状态；
+    # 随后的 generation pointer 切换若失败，调用方事务会回滚全部修改。
+    await publish_version(
+        session,
+        tenant_id=generation.tenant_id,
+        document_id=generation.document_id,
+        version_id=generation.version_id,
+        now=now,
+    )
+    await session.flush()
+    return await publish_dense_generation(session, generation_id, now=now)
+
+
 __all__ = [
     "DenseGenerationPublishError",
     "PublishPreconditionError",
     "create_generation",
     "mark_generation_ready",
+    "mark_product_generation_ready",
     "publish_dense_generation",
+    "publish_product_generation",
     "publish_version",
     "rollback_dense_generation",
 ]

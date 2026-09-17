@@ -185,3 +185,74 @@ async def test_bm25f_query_uses_weights_and_tenant_version_filter() -> None:
         "version-1",
     ]
     assert rows[0]["chunk_id"] == "child-1"
+
+
+@pytest.mark.asyncio
+async def test_sparse_generation_inspection_and_delete_use_full_product_scope() -> None:
+    """完整性检查和清理必须同时约束 tenant、generation、version 与 profile。"""
+
+    observed_requests: list[httpx.Request] = []
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        """返回两个对象，并记录列表与批量删除使用的完整 where 条件。"""
+
+        observed_requests.append(request)
+        if request.method == "GET":
+            return httpx.Response(
+                200,
+                json={
+                    "objects": [
+                        {
+                            "properties": {
+                                "tenant_id": "tenant-a",
+                                "version_id": "version-1",
+                                "generation_id": "generation-1",
+                                "sparse_profile": _profile().key,
+                                "chunk_id": "child-1",
+                            }
+                        },
+                        {
+                            "properties": {
+                                "tenant_id": "tenant-a",
+                                "version_id": "version-1",
+                                "generation_id": "generation-1",
+                                "sparse_profile": _profile().key,
+                                "chunk_id": "child-2",
+                            }
+                        },
+                    ]
+                },
+                request=request,
+            )
+        return httpx.Response(
+            200,
+            json={"results": {"matches": 2, "successful": 2, "failed": 0}},
+            request=request,
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        transport = WeaviateBM25FTransport(client, "http://weaviate.test")
+        snapshot = await transport.inspect_generation(
+            "SparseTenant_demo",
+            tenant_id="tenant-a",
+            generation_id="generation-1",
+            version_id="version-1",
+            sparse_profile_key=_profile().key,
+        )
+        deleted = await transport.delete_generation(
+            "SparseTenant_demo",
+            tenant_id="tenant-a",
+            generation_id="generation-1",
+            version_id="version-1",
+            sparse_profile_key=_profile().key,
+        )
+
+    list_where = json.loads(observed_requests[0].url.params["where"])
+    delete_where = json.loads(observed_requests[1].content)["match"]["where"]
+    expected_values = ["tenant-a", "generation-1", "version-1", _profile().key]
+    assert [item["valueText"] for item in list_where["operands"]] == expected_values
+    assert [item["valueText"] for item in delete_where["operands"]] == expected_values
+    assert snapshot.item_count == 2
+    assert snapshot.chunk_ids == frozenset({"child-1", "child-2"})
+    assert snapshot.sparse_profile_key == _profile().key
+    assert deleted == 2

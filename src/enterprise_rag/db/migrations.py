@@ -9,8 +9,9 @@ from __future__ import annotations
 from collections.abc import Collection
 from dataclasses import dataclass
 
-from sqlalchemy import MetaData, inspect, select
+from sqlalchemy import MetaData, inspect, select, text
 from sqlalchemy.engine import Connection
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from enterprise_rag.db.models import Base, SchemaMigrationModel
@@ -18,7 +19,8 @@ from enterprise_rag.db.models import Base, SchemaMigrationModel
 INITIAL_VERSION = "0001_initial"
 EMBEDDING_VERSION = "0002_embedding_records"
 WEAVIATE_DENSE_VERSION = "0003_weaviate_dense_generations"
-LATEST_VERSION = WEAVIATE_DENSE_VERSION
+WEAVIATE_HYBRID_VERSION = "0004_weaviate_hybrid_generations"
+LATEST_VERSION = WEAVIATE_HYBRID_VERSION
 EXPECTED_TABLES = frozenset(
     {
         "document_acl",
@@ -42,7 +44,14 @@ WEAVIATE_DENSE_TABLE_ORDER = (
     "dense_generations",
     "dense_generation_pointers",
 )
-SUPPORTED_VERSIONS = frozenset({INITIAL_VERSION, EMBEDDING_VERSION, WEAVIATE_DENSE_VERSION})
+SUPPORTED_VERSIONS = frozenset(
+    {
+        INITIAL_VERSION,
+        EMBEDDING_VERSION,
+        WEAVIATE_DENSE_VERSION,
+        WEAVIATE_HYBRID_VERSION,
+    }
+)
 INITIAL_TABLES = EXPECTED_TABLES - {"embedding_records"} - WEAVIATE_DENSE_TABLES
 EMBEDDING_TABLES = INITIAL_TABLES | {"embedding_records"}
 
@@ -124,6 +133,7 @@ def _inspect_schema_readiness(
         INITIAL_VERSION: INITIAL_TABLES,
         EMBEDDING_VERSION: EMBEDDING_TABLES,
         WEAVIATE_DENSE_VERSION: EXPECTED_TABLES,
+        WEAVIATE_HYBRID_VERSION: EXPECTED_TABLES,
     }
     required_tables = required_tables_by_version[target_version]
     missing_tables = tuple(sorted(required_tables - table_names))
@@ -164,7 +174,7 @@ async def check_database_readiness(
                     sync_connection, target_version
                 )
             )
-    except Exception:
+    except SQLAlchemyError:
         # readiness 只需要给编排层一个稳定的非就绪结果，不把 DSN、密码或驱动堆栈
         # 直接写入 HTTP 响应；详细异常仍由应用日志和部署任务负责记录。
         return MigrationReadiness(
@@ -221,10 +231,16 @@ async def upgrade_database(engine: AsyncEngine, target_version: str = LATEST_VER
             raise ValueError(f"不支持的 migration 目标版本: {target_version}")
         async with engine.begin() as connection:
             await connection.run_sync(_apply_initial_schema)
-            if target_version in {EMBEDDING_VERSION, WEAVIATE_DENSE_VERSION}:
+            if target_version in {
+                EMBEDDING_VERSION,
+                WEAVIATE_DENSE_VERSION,
+                WEAVIATE_HYBRID_VERSION,
+            }:
                 await connection.run_sync(_apply_embedding_schema)
-            if target_version == WEAVIATE_DENSE_VERSION:
+            if target_version in {WEAVIATE_DENSE_VERSION, WEAVIATE_HYBRID_VERSION}:
                 await connection.run_sync(_apply_weaviate_dense_schema)
+            if target_version == WEAVIATE_HYBRID_VERSION:
+                await connection.run_sync(_apply_weaviate_hybrid_schema)
     except Exception as exc:
         raise MigrationError(target_version, exc) from exc
 
@@ -250,15 +266,49 @@ def _apply_weaviate_dense_schema(connection: Connection) -> None:
     )
 
 
+def _apply_weaviate_hybrid_schema(connection: Connection) -> None:
+    """为既有 generation 锚点补充 Sparse collection 与 profile 元数据。"""
+
+    applied_versions = _read_applied_versions(connection)
+    _validate_applied_versions(applied_versions)
+    if WEAVIATE_HYBRID_VERSION in applied_versions:
+        return
+    if WEAVIATE_DENSE_VERSION not in applied_versions:
+        raise RuntimeError("应用 0004 前必须先完成 0003")
+
+    existing_columns = {
+        item["name"] for item in inspect(connection).get_columns("dense_generations")
+    }
+    additions = {
+        "sparse_collection_name": "VARCHAR(128)",
+        "sparse_profile_key": "VARCHAR(1024)",
+        "sparse_schema_version": "VARCHAR(128)",
+    }
+    for column_name, column_type in additions.items():
+        if column_name in existing_columns:
+            continue
+        # 三列保持 nullable，兼容 0003 已存在的 Dense-only 历史 generation；
+        # 产品发布路径会在服务层要求它们全部存在且与本次 profile 一致。
+        connection.execute(
+            text(
+                f"ALTER TABLE dense_generations ADD COLUMN {column_name} {column_type}"
+            )
+        )
+    connection.execute(
+        SchemaMigrationModel.__table__.insert().values(version=WEAVIATE_HYBRID_VERSION)
+    )
+
+
 __all__ = [
-    "EXPECTED_TABLES",
     "EMBEDDING_VERSION",
+    "EXPECTED_TABLES",
     "INITIAL_VERSION",
     "LATEST_VERSION",
-    "MigrationError",
-    "MigrationReadiness",
     "SUPPORTED_VERSIONS",
     "WEAVIATE_DENSE_VERSION",
+    "WEAVIATE_HYBRID_VERSION",
+    "MigrationError",
+    "MigrationReadiness",
     "check_database_readiness",
     "upgrade_database",
 ]

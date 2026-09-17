@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Protocol, Sequence, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Protocol
 
 from enterprise_rag.domain.entities import DenseGenerationStatus
 
@@ -70,6 +71,15 @@ def collection_name_for_tenant(tenant_id: str) -> str:
     return f"DenseTenant_{digest}"
 
 
+def sparse_collection_name_for_tenant(tenant_id: str) -> str:
+    """把租户 ID 映射成稳定且不暴露原始标识的 Sparse collection 名。"""
+
+    if not tenant_id.strip():
+        raise ValueError("tenant_id 不能为空")
+    digest = hashlib.sha256(tenant_id.encode("utf-8")).hexdigest()[:24]
+    return f"SparseTenant_{digest}"
+
+
 @dataclass(frozen=True, slots=True)
 class CollectionRegistryRecord:
     """描述 PostgreSQL 中 tenant 到 Weaviate collection 的稳定映射。"""
@@ -114,6 +124,36 @@ class ActiveGenerationPointer:
     active_generation_id: str | None
     previous_generation_id: str | None
     updated_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
+class SparseGenerationSnapshot:
+    """描述 Weaviate 中一个 Sparse generation 的完整性检查结果。"""
+
+    tenant_id: str
+    version_id: str
+    generation_id: str
+    sparse_profile_key: str
+    item_count: int
+    chunk_ids: frozenset[str]
+
+    def __post_init__(self) -> None:
+        """拒绝空 scope、负数量和重复导致的数量不一致。"""
+
+        if any(
+            not value.strip()
+            for value in (
+                self.tenant_id,
+                self.version_id,
+                self.generation_id,
+                self.sparse_profile_key,
+            )
+        ):
+            raise ValueError("Sparse generation snapshot scope 不能为空")
+        if self.item_count < 0:
+            raise ValueError("Sparse generation item_count 不能为负数")
+        if len(self.chunk_ids) != self.item_count:
+            raise ValueError("Sparse generation chunk identity 数量不一致")
 
 
 @dataclass(frozen=True, slots=True)
@@ -172,7 +212,7 @@ class WeaviateTransport(Protocol):
         version_id: str,
         query: Sequence[float],
         top_k: int,
-    ) -> list["RetrievalResult"]:
+    ) -> list[RetrievalResult]:
         """在指定 collection 和 generation 范围内执行向量查询。"""
 
     async def delete_generation(
@@ -181,14 +221,43 @@ class WeaviateTransport(Protocol):
         """删除指定 generation/version 的派生对象。"""
 
 
+class SparseGenerationTransport(Protocol):
+    """定义产品双路发布所需的最小 Sparse generation transport。"""
+
+    async def inspect_generation(
+        self,
+        collection_name: str,
+        *,
+        tenant_id: str,
+        generation_id: str,
+        version_id: str,
+        sparse_profile_key: str,
+    ) -> SparseGenerationSnapshot:
+        """读取完整 scope 下的数量、chunk identity 和 Sparse profile。"""
+
+    async def delete_generation(
+        self,
+        collection_name: str,
+        *,
+        tenant_id: str,
+        generation_id: str,
+        version_id: str,
+        sparse_profile_key: str,
+    ) -> int:
+        """删除完整 scope 下的 Sparse 派生对象。"""
+
+
 __all__ = [
     "ActiveGenerationPointer",
     "CollectionRegistryRecord",
     "DenseGenerationRecord",
     "GenerationScope",
     "IndexProfile",
+    "SparseGenerationSnapshot",
+    "SparseGenerationTransport",
     "WeaviateBatchResult",
     "WeaviateObject",
     "WeaviateTransport",
     "collection_name_for_tenant",
+    "sparse_collection_name_for_tenant",
 ]

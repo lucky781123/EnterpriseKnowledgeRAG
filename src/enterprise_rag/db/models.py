@@ -9,6 +9,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     CheckConstraint,
     DateTime,
@@ -19,7 +20,6 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
-    JSON,
     UniqueConstraint,
     func,
 )
@@ -328,7 +328,7 @@ class TenantDenseCollectionModel(Base):
 
 
 class DenseGenerationModel(Base):
-    """Weaviate Dense generation 的构建、完整性和发布事实。"""
+    """以 Dense 历史名称保存产品双路 generation 的构建和发布事实。"""
 
     __tablename__ = "dense_generations"
 
@@ -343,6 +343,9 @@ class DenseGenerationModel(Base):
     dimension: Mapped[int] = mapped_column(Integer, nullable=False)
     chunking_version: Mapped[str] = mapped_column(String(128), nullable=False)
     schema_version: Mapped[str] = mapped_column(String(128), nullable=False)
+    sparse_collection_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    sparse_profile_key: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    sparse_schema_version: Mapped[str | None] = mapped_column(String(128), nullable=True)
     expected_item_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     actual_item_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     checkpoint: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
@@ -536,18 +539,18 @@ __all__ = [
     "ArtifactKind",
     "ArtifactStatus",
     "Base",
+    "DenseGenerationModel",
+    "DenseGenerationPointerModel",
     "DocumentACLModel",
     "DocumentModel",
     "DocumentStatus",
     "DocumentVersionModel",
+    "EmbeddingRecordModel",
     "IngestionJobModel",
     "JobStatus",
     "SchemaMigrationModel",
+    "TenantDenseCollectionModel",
     "TenantModel",
     "VersionArtifactModel",
-    "EmbeddingRecordModel",
-    "DenseGenerationModel",
-    "DenseGenerationPointerModel",
-    "TenantDenseCollectionModel",
     "VersionStatus",
 ]

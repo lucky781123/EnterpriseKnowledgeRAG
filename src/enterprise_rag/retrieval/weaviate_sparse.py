@@ -11,12 +11,14 @@ import json
 from collections.abc import Sequence
 from typing import Any
 
+import httpx
+
+from enterprise_rag.retrieval.contracts import SparseGenerationSnapshot
 from enterprise_rag.retrieval.sparse import SparseObject, SparseProfile
 from enterprise_rag.retrieval.weaviate import (
     WeaviateHTTPXTransport,
     WeaviateTransportError,
 )
-
 
 _BM25F_FIELDS = ("title", "section_title", "api_symbols", "body")
 
@@ -52,6 +54,26 @@ class WeaviateBM25FTransport(WeaviateHTTPXTransport):
         return [
             f"{field}^{profile.field_weights[field]:g}" for field in _BM25F_FIELDS
         ]
+
+    @classmethod
+    def _product_scope_where(
+        cls,
+        tenant_id: str,
+        generation_id: str,
+        version_id: str,
+        sparse_profile_key: str,
+    ) -> dict[str, Any]:
+        """构造产品完整性检查使用的 tenant/generation/version/profile 过滤器。"""
+
+        scope = cls._scope_where(tenant_id, generation_id, version_id)
+        scope["operands"].append(
+            {
+                "path": ["sparse_profile"],
+                "operator": "Equal",
+                "valueText": sparse_profile_key,
+            }
+        )
+        return scope
 
     async def ensure_collection(
         self,
@@ -229,6 +251,141 @@ class WeaviateBM25FTransport(WeaviateHTTPXTransport):
                 safe_message="Weaviate BM25F 查询结果格式非法",
             )
         return rows
+
+    async def _list_generation_objects(
+        self,
+        collection_name: str,
+        *,
+        tenant_id: str,
+        generation_id: str,
+        version_id: str,
+        sparse_profile_key: str,
+    ) -> list[dict[str, Any]]:
+        """读取完整产品 scope 下的 Sparse 对象，供发布完整性检查使用。"""
+
+        collection_name = self._validate_collection_name(collection_name)
+        if any(
+            not value.strip()
+            for value in (tenant_id, generation_id, version_id, sparse_profile_key)
+        ):
+            raise ValueError("Sparse generation scope 不能为空")
+        params = httpx.QueryParams(
+            {
+                "class": collection_name,
+                "where": json.dumps(
+                    self._product_scope_where(
+                        tenant_id,
+                        generation_id,
+                        version_id,
+                        sparse_profile_key,
+                    ),
+                    separators=(",", ":"),
+                ),
+                "limit": "10000",
+            }
+        )
+        data = self._json(await self._request("GET", f"/v1/objects?{params}"))
+        objects = data.get("objects") if isinstance(data, dict) else None
+        if not isinstance(objects, list):
+            raise WeaviateTransportError(
+                "protocol",
+                retryable=False,
+                safe_message="Weaviate Sparse 对象列表格式非法",
+            )
+        return [item for item in objects if isinstance(item, dict)]
+
+    async def inspect_generation(
+        self,
+        collection_name: str,
+        *,
+        tenant_id: str,
+        generation_id: str,
+        version_id: str,
+        sparse_profile_key: str,
+    ) -> SparseGenerationSnapshot:
+        """读取并校验 Sparse generation 的数量、chunk identity 和 profile。"""
+
+        objects = await self._list_generation_objects(
+            collection_name,
+            tenant_id=tenant_id,
+            generation_id=generation_id,
+            version_id=version_id,
+            sparse_profile_key=sparse_profile_key,
+        )
+        chunk_ids: set[str] = set()
+        observed_profiles: set[str] = set()
+        for item in objects:
+            properties = item.get("properties")
+            if not isinstance(properties, dict):
+                raise WeaviateTransportError(
+                    "protocol",
+                    retryable=False,
+                    safe_message="Weaviate Sparse 对象属性格式非法",
+                )
+            chunk_id = properties.get("chunk_id")
+            observed_profile = properties.get("sparse_profile")
+            if not isinstance(chunk_id, str) or not chunk_id.strip():
+                raise WeaviateTransportError(
+                    "protocol",
+                    retryable=False,
+                    safe_message="Weaviate Sparse chunk identity 非法",
+                )
+            if not isinstance(observed_profile, str) or not observed_profile.strip():
+                raise WeaviateTransportError(
+                    "protocol",
+                    retryable=False,
+                    safe_message="Weaviate Sparse profile 非法",
+                )
+            chunk_ids.add(chunk_id)
+            observed_profiles.add(observed_profile)
+        if observed_profiles and observed_profiles != {sparse_profile_key}:
+            raise WeaviateTransportError(
+                "protocol",
+                retryable=False,
+                safe_message="Weaviate Sparse profile 与发布事实不一致",
+            )
+        return SparseGenerationSnapshot(
+            tenant_id=tenant_id,
+            version_id=version_id,
+            generation_id=generation_id,
+            sparse_profile_key=sparse_profile_key,
+            item_count=len(objects),
+            chunk_ids=frozenset(chunk_ids),
+        )
+
+    async def delete_generation(
+        self,
+        collection_name: str,
+        *,
+        tenant_id: str,
+        generation_id: str,
+        version_id: str,
+        sparse_profile_key: str,
+    ) -> int:
+        """删除完整产品 scope 下的 Sparse 对象，并返回成功删除数量。"""
+
+        collection_name = self._validate_collection_name(collection_name)
+        payload = {
+            "match": {
+                "class": collection_name,
+                "where": self._product_scope_where(
+                    tenant_id,
+                    generation_id,
+                    version_id,
+                    sparse_profile_key,
+                ),
+            },
+            "output": "minimal",
+        }
+        data = self._json(
+            await self._request("DELETE", "/v1/batch/objects", json=payload)
+        )
+        if isinstance(data, dict):
+            results = data.get("results")
+            successful = results.get("successful") if isinstance(results, dict) else None
+            if isinstance(successful, int):
+                return successful
+        return 0
 
     async def delete_collection(self, collection_name: str) -> None:
         """删除本次隔离 smoke collection，避免重复实验累积空 schema。"""

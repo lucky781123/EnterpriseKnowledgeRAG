@@ -61,6 +61,9 @@ class Settings:
     weaviate_base_url: str = "http://127.0.0.1:8080"
     weaviate_api_key: str | None = None
     weaviate_schema_version: str = "dense-v1"
+    dev_auth_enabled: bool = False
+    dev_auth_secret: str | None = None
+    dev_auth_token_ttl_seconds: int = 3600
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -96,6 +99,10 @@ class Settings:
             weaviate_base_url=_env("WEAVIATE_BASE_URL", "http://127.0.0.1:8080") or "",
             weaviate_api_key=_env("WEAVIATE_API_KEY"),
             weaviate_schema_version=_env("WEAVIATE_SCHEMA_VERSION", "dense-v1") or "",
+            # 开发身份默认关闭，且只允许由未跟踪的环境变量注入 secret。
+            dev_auth_enabled=_env_bool("DEV_AUTH_ENABLED", False),
+            dev_auth_secret=_env("DEV_AUTH_SECRET"),
+            dev_auth_token_ttl_seconds=_env_int("DEV_AUTH_TOKEN_TTL_SECONDS", 3600),
         )
         settings.validate()
         return settings
@@ -111,3 +118,8 @@ class Settings:
             raise ValueError("WEAVIATE_ENABLED=true 时 WEAVIATE_BASE_URL 不能为空")
         if not self.weaviate_schema_version:
             raise ValueError("WEAVIATE_SCHEMA_VERSION 不能为空")
+        if self.dev_auth_enabled:
+            if self.app_env != "development":
+                raise ValueError("开发身份模式只允许在 development 环境启用")
+            if self.dev_auth_secret is None or len(self.dev_auth_secret.encode("utf-8")) < 32:
+                raise ValueError("DEV_AUTH_ENABLED=true 时 DEV_AUTH_SECRET 至少需要 32 字节")

@@ -15,6 +15,7 @@ from enterprise_rag.db.migrations import (
     EMBEDDING_VERSION,
     INITIAL_VERSION,
     WEAVIATE_DENSE_VERSION,
+    WEAVIATE_HYBRID_VERSION,
 )
 from enterprise_rag.db.models import (
     DenseGenerationPointerModel,
@@ -96,7 +97,12 @@ async def test_generation_tables_and_pointer_are_created_after_0003(tmp_path):
             "dense_generations",
             "dense_generation_pointers",
         } <= tables
-        assert versions == [INITIAL_VERSION, EMBEDDING_VERSION, WEAVIATE_DENSE_VERSION]
+        assert versions == [
+            INITIAL_VERSION,
+            EMBEDDING_VERSION,
+            WEAVIATE_DENSE_VERSION,
+            WEAVIATE_HYBRID_VERSION,
+        ]
     finally:
         await database.dispose()
 

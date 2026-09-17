@@ -134,8 +134,9 @@ class WeaviateDenseIndexer:
         profile: IndexProfile,
         parsed_object_key: str,
         batch_size: int = 32,
+        finalize: bool = True,
     ):
-        """分批构建 generation；批次成功后推进 checkpoint，失败保留 BUILDING。"""
+        """分批构建 generation；可延迟最终校验以等待 Sparse 路完成。"""
 
         if batch_size <= 0:
             raise ValueError("batch_size 必须大于 0")
@@ -232,6 +233,8 @@ class WeaviateDenseIndexer:
         expected_ids = {child.get("chunk_id") for child in children}
         if actual_ids != expected_ids:
             raise ValueError("generation chunk identity 完整性检查失败")
+        if not finalize:
+            return await self.generation_service.get_generation(session, generation_id)
         return await self.generation_service.validate_generation(
             session, generation_id, self.transport
         )

@@ -1,3 +1,5 @@
+import pytest
+
 from enterprise_rag.config.settings import Settings
 
 
@@ -15,6 +17,9 @@ def test_settings_uses_confirmed_local_models(monkeypatch):
     assert settings.postgres_pool_recycle_seconds == 1800
     assert settings.postgres_statement_timeout_ms == 30_000
     assert settings.postgres_lock_timeout_ms == 5_000
+    assert settings.dev_auth_enabled is False
+    assert settings.dev_auth_secret is None
+    assert settings.dev_auth_token_ttl_seconds == 3600
 
 
 def test_online_provider_requires_key(monkeypatch):
@@ -35,3 +40,25 @@ def test_settings_reads_optional_postgres_dsn(monkeypatch):
     settings = Settings.from_env()
 
     assert settings.postgres_dsn == "postgresql://user:pass@localhost/rag"
+
+
+def test_development_auth_requires_secret_when_enabled(monkeypatch):
+    """显式启用开发认证时必须配置至少 32 字节 secret。"""
+
+    monkeypatch.setenv("APP_ENV", "development")
+    monkeypatch.setenv("DEV_AUTH_ENABLED", "true")
+    monkeypatch.delenv("DEV_AUTH_SECRET", raising=False)
+
+    with pytest.raises(ValueError, match="DEV_AUTH_SECRET"):
+        Settings.from_env()
+
+
+def test_development_auth_is_rejected_outside_development(monkeypatch):
+    """开发 token 模式不能在非 development 环境中被意外开启。"""
+
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("DEV_AUTH_ENABLED", "true")
+    monkeypatch.setenv("DEV_AUTH_SECRET", "0123456789abcdef0123456789abcdef")
+
+    with pytest.raises(ValueError, match="development"):
+        Settings.from_env()

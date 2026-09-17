@@ -18,7 +18,7 @@ from contextlib import asynccontextmanager
 from typing import Any
 from uuid import uuid4
 
-from fastapi import FastAPI, Request, Response
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, Response, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, StreamingResponse
 
@@ -27,6 +27,11 @@ from enterprise_rag.db.session import Database
 from enterprise_rag.embedding.ollama import OllamaEmbeddingProvider
 from enterprise_rag.excerpts.service import ExcerptAnswerService, VisibleStreamSanitizer
 from enterprise_rag.excerpts.validation import ExcerptValidationError
+from enterprise_rag.ingestion.product_service import (
+    ProductIndexingError,
+)
+from enterprise_rag.ingestion.service import IdempotencyConflictError, IngestionServiceError
+from enterprise_rag.ingestion.validation import IngestionValidationError
 from enterprise_rag.providers.errors import ProviderError, ProviderErrorKind
 from enterprise_rag.providers.lmstudio import LMStudioChatProvider
 from enterprise_rag.providers.protocols import ChatResponse, ChatStreamEvent, ChatUsage
@@ -34,8 +39,21 @@ from enterprise_rag.providers.readiness import ProviderReadinessManager
 from enterprise_rag.providers.registry import ProviderRegistry, RegisteredProvider
 from enterprise_rag.providers.scheduler import LocalLLMScheduler, SchedulerLease
 from enterprise_rag.retrieval.repository import PostgresVectorRepository
+from enterprise_rag.security.authorization import (
+    AuthorizationDenied,
+    AuthorizationService,
+    ResourceNotFound,
+)
+from enterprise_rag.security.dev_token import DevTokenCodec
 
+from .dependencies import build_request_context_dependency
 from .middleware import RequestBodyLimitMiddleware
+from .product_schemas import (
+    ProductRagQueryRequest,
+    ProductRagQueryResponse,
+    ProductRetrievalTraceResponse,
+    ProductUploadResponse,
+)
 from .schemas import (
     CitationResponse,
     EvidenceRequest,
@@ -179,10 +197,22 @@ def create_app(
     embedding_provider: OllamaEmbeddingProvider | None = None,
     vector_repository: PostgresVectorRepository | None = None,
     weaviate_vector_repository: Any | None = None,
+    product_ingestion_service: Any | None = None,
+    product_retrieval_service: Any | None = None,
+    authorization_service: AuthorizationService | None = None,
+    dev_token_codec: DevTokenCodec | None = None,
 ) -> FastAPI:
-    """创建应用并装配共享 Chat、Embedding、检索和数据库依赖。"""
+    """创建应用并装配共享 Chat、Embedding、检索和产品上传依赖。"""
 
     resolved_settings = settings or Settings.from_env()
+    resolved_dev_token_codec = dev_token_codec
+    if resolved_dev_token_codec is None and resolved_settings.dev_auth_enabled:
+        if resolved_settings.dev_auth_secret is None:
+            raise ValueError("开发身份已启用但缺少 DEV_AUTH_SECRET")
+        resolved_dev_token_codec = DevTokenCodec(
+            resolved_settings.dev_auth_secret,
+            ttl_seconds=resolved_settings.dev_auth_token_ttl_seconds,
+        )
     shared_http_client = None
     database = None
     if resolved_settings.postgres_dsn:
@@ -299,6 +329,10 @@ def create_app(
     app.state.provider_registry = registry
     app.state.provider_readiness = provider_readiness
     app.state.schedulers = schedulers
+    app.state.product_ingestion_service = product_ingestion_service
+    app.state.product_retrieval_service = product_retrieval_service
+    app.state.authorization_service = authorization_service or AuthorizationService()
+    app.state.dev_token_codec = resolved_dev_token_codec
 
     def provider_error_response(error: ProviderError) -> JSONResponse:
         """将领域错误映射为稳定 HTTP 响应，并丢弃未经信任的原始异常文本。"""
@@ -381,6 +415,251 @@ def create_app(
     @app.get("/api/v1/meta")
     async def meta() -> dict[str, str]:
         return {"name": "EnterpriseKnowledgeRAG", "version": "0.1.0"}
+
+    if resolved_dev_token_codec is not None:
+        product_context_dependency = build_request_context_dependency(resolved_dev_token_codec)
+    else:
+
+        async def product_context_dependency() -> Any:
+            """未显式配置开发身份时，产品写入入口保持 fail closed。"""
+
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "kind": "product_unavailable",
+                    "message": "开发身份未配置",
+                },
+            )
+
+    @app.post("/api/v1/documents", response_model=ProductUploadResponse, status_code=201)
+    async def upload_document(
+        request: Request,
+        context=Depends(product_context_dependency),  # noqa: B008
+        file: UploadFile = File(...),  # noqa: B008
+        source_id: str = Form(...),
+        title: str = Form(...),
+        idempotency_key: str = Form(...),
+    ) -> ProductUploadResponse:
+        """接收 multipart 文档并交给同步产品编排服务。"""
+
+        service = app.state.product_ingestion_service
+        if service is None:
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "kind": "product_unavailable",
+                    "message": "产品摄取服务未配置",
+                },
+            )
+
+        # API 入口也执行一次角色门禁，避免测试替身或未来替换的编排服务遗漏
+        # 上传权限检查；领域服务仍会再次校验，形成纵深防御。
+        try:
+            AuthorizationService().require_any_role(context, {"editor", "admin"})
+        except AuthorizationDenied as exc:
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "kind": "forbidden",
+                    "message": "当前身份无权上传文档",
+                },
+            ) from exc
+
+        # FastAPI 默认会忽略未知 multipart 字段；产品入口必须显式拒绝 tenant/actor
+        # 等客户端注入字段，确保身份只能来自已验证 Bearer token。
+        form = await request.form()
+        allowed_fields = {"file", "source_id", "title", "idempotency_key"}
+        if set(form.keys()) - allowed_fields:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "kind": "invalid_request",
+                    "message": "请求包含不支持的字段",
+                },
+            )
+
+        content = await file.read()
+        try:
+            result = await service.upload(
+                context,
+                source_id=source_id,
+                title=title,
+                filename=file.filename or "upload.bin",
+                content=content,
+                content_type=file.content_type,
+                idempotency_key=idempotency_key,
+            )
+        except AuthorizationDenied as exc:
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "kind": "forbidden",
+                    "message": "当前身份无权上传文档",
+                },
+            ) from exc
+        except IdempotencyConflictError as exc:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "kind": "idempotency_conflict",
+                    "message": "幂等键对应的内容不一致",
+                },
+            ) from exc
+        except IngestionValidationError as exc:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "kind": "invalid_document",
+                    "message": str(exc),
+                },
+            ) from exc
+        except (ProductIndexingError, IngestionServiceError) as exc:
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "kind": "product_unavailable",
+                    "message": "文档同步摄取或索引发布失败",
+                },
+            ) from exc
+        return ProductUploadResponse.from_result(result)
+
+    @app.post("/api/v1/rag/query", response_model=ProductRagQueryResponse)
+    async def product_rag_query(
+        request: ProductRagQueryRequest,
+        context=Depends(product_context_dependency),  # noqa: B008
+    ) -> ProductRagQueryResponse | JSONResponse:
+        """执行服务端授权的混合检索、摘录问答和引用复核。"""
+
+        retrieval_service = app.state.product_retrieval_service
+        database_dependency = app.state.database
+        if retrieval_service is None or database_dependency is None:
+            return JSONResponse(
+                status_code=503,
+                content={
+                    "error": {
+                        "kind": "retrieval_unavailable",
+                        "message": "产品检索依赖未就绪",
+                    }
+                },
+            )
+
+        try:
+            async with database_dependency.session() as session:
+                retrieval_result = await retrieval_service.search(
+                    session,
+                    context,
+                    question=request.question,
+                    candidate_k=request.candidate_k,
+                    top_k=request.top_k,
+                )
+        except Exception as exc:
+            # 检索失败只返回稳定类别；不把 collection、SQL、上游响应或模型路径
+            # 写入客户端错误体。RerankerUnavailable 由服务层转换为同一安全边界。
+            from enterprise_rag.retrieval.hybrid import RerankerUnavailable
+
+            if isinstance(exc, RerankerUnavailable):
+                return JSONResponse(
+                    status_code=503,
+                    content={
+                        "error": {
+                            "kind": "reranker_unavailable",
+                            "message": "Reranker 不可用",
+                        }
+                    },
+                )
+            return JSONResponse(
+                status_code=503,
+                content={
+                    "error": {
+                        "kind": "retrieval_unavailable",
+                        "message": "产品检索依赖未就绪",
+                    }
+                },
+            )
+
+        if not retrieval_result.candidates:
+            return JSONResponse(
+                status_code=404,
+                content={
+                    "error": {
+                        "kind": "evidence_not_found",
+                        "message": "未检索到可用于回答的证据",
+                    }
+                },
+            )
+
+        # 只把服务端已经完成授权和 Parent 去重的证据转换为 F2-G evidence；请求体
+        # 中没有 tenant、version 或 evidence 字段，调用方无法越过这一步。
+        candidate_by_evidence_id = {}
+        evidence = []
+        for index, candidate in enumerate(retrieval_result.candidates, start=1):
+            evidence_id = f"retrieved-{index}"
+            candidate_by_evidence_id[evidence_id] = candidate
+            evidence.append(
+                EvidenceRequest(
+                    evidence_id=evidence_id,
+                    text=candidate.text,
+                    source=f"{candidate.result.document_id}#{candidate.chunk_id}",
+                )
+            )
+
+        try:
+            excerpt_request = ExcerptQueryRequest(
+                question=request.question,
+                evidence=evidence,
+                model_alias=request.model_alias,
+                temperature=request.temperature,
+                max_tokens=request.max_tokens,
+                timeout_ms=request.timeout_ms,
+            )
+            response = await query(excerpt_request)
+        except ValueError:
+            return JSONResponse(
+                status_code=503,
+                content={
+                    "error": {
+                        "kind": "retrieval_unavailable",
+                        "message": "产品检索依赖未就绪",
+                    }
+                },
+            )
+
+        if isinstance(response, JSONResponse):
+            return response
+
+        response = response.model_copy(update={"context_source": "retrieved"})
+        if response.citation_validation == "passed":
+            # 模型引用返回前重新打开数据库 session，复核当前版本和 ACL；这一步
+            # 不信任检索阶段缓存的授权结论，撤权后旧 citation 不能继续出站。
+            try:
+                async with database_dependency.session() as session:
+                    for citation in response.citations:
+                        candidate = candidate_by_evidence_id.get(citation.evidence_id)
+                        if candidate is None:
+                            raise ResourceNotFound("资源不存在")
+                        document = await app.state.authorization_service.require_document_read(
+                            session,
+                            context,
+                            candidate.result.document_id,
+                        )
+                        if document.version_id != candidate.result.version_id:
+                            raise ResourceNotFound("资源不存在")
+            except ResourceNotFound:
+                return JSONResponse(
+                    status_code=404,
+                    content={
+                        "error": {
+                            "kind": "evidence_not_found",
+                            "message": "引用对应的资源不可见",
+                        }
+                    },
+                )
+
+        payload = response.model_dump()
+        payload["retrieval_trace"] = ProductRetrievalTraceResponse.from_result(
+            retrieval_result
+        ).model_dump()
+        return ProductRagQueryResponse.model_validate(payload)
 
     @app.post("/api/v1/query", response_model=ExcerptResponse)
     async def query(request: ExcerptQueryRequest) -> ExcerptResponse | JSONResponse:
