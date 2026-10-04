@@ -1,0 +1,15 @@
+{
+  "status": "passed",
+  "pdf_has_extractable_text": true,
+  "pdf_has_real_image": true,
+  "files": {
+    "polaris.txt": {
+      "bytes": 205,
+      "sha256": "af8cad29cca100a4b7ca71eb97b566507d4011a9d1cf8e7ac60458bd1cc8e10f"
+    },
+    "vega.pdf": {
+      "bytes": 308279,
+      "sha256": "6286b9b77009329444431c321d28a18a9f7e495e43781e1dea57df0895d42c5c"
+    }
+  }
+}

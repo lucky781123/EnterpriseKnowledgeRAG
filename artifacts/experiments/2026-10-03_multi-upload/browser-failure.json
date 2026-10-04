@@ -1,0 +1,6 @@
+{
+  "status": "failed",
+  "stage": "query-result",
+  "error_type": "AssertionError",
+  "completed_events": 2
+}

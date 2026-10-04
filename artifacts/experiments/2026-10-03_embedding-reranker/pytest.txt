@@ -1,0 +1,43 @@
+........................................................................ [ 18%]
+...............................ssssssssssss............................. [ 37%]
+........................................................................ [ 56%]
+........................................................................ [ 75%]
+........................................................................ [ 93%]
+.......................                                                  [100%]
+=============================== warnings summary ===============================
+../../../opt/anaconda3/envs/enterprise-rag/lib/python3.11/site-packages/fastapi/testclient.py:1
+  /Users/liuhui/opt/anaconda3/envs/enterprise-rag/lib/python3.11/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+../../../opt/anaconda3/envs/enterprise-rag/lib/python3.11/site-packages/PyPDF2/__init__.py:21
+  /Users/liuhui/opt/anaconda3/envs/enterprise-rag/lib/python3.11/site-packages/PyPDF2/__init__.py:21: DeprecationWarning: PyPDF2 is deprecated. Please move to the pypdf library instead.
+    warnings.warn(
+
+tests/api/test_gradio_upload_budget.py::test_gradio_queue_join_accepts_large_batch_metadata
+tests/api/test_gradio_upload_budget.py::test_gradio_queue_join_accepts_large_batch_metadata
+  /Users/liuhui/opt/anaconda3/envs/enterprise-rag/lib/python3.11/contextlib.py:137: Pandas4Warning: 'future.no_silent_downcasting' is deprecated, please refrain from using it.
+    return next(self.gen)
+
+tests/api/test_gradio_upload_budget.py::test_gradio_queue_join_accepts_large_batch_metadata
+  /Users/liuhui/opt/anaconda3/envs/enterprise-rag/lib/python3.11/site-packages/gradio/queueing.py:178: Pandas4Warning: The copy keyword is deprecated and will be removed in a future version. Copy-on-Write is active in pandas since 3.0 which utilizes a lazy copy mechanism that defers copies until necessary. Use .copy() to make an eager copy if necessary.
+    pd.DataFrame(records).fillna(value=np.nan).infer_objects(copy=False)  # type: ignore
+
+tests/api/test_gradio_upload_budget.py::test_gradio_queue_join_accepts_large_batch_metadata
+  /Users/liuhui/opt/anaconda3/envs/enterprise-rag/lib/python3.11/contextlib.py:144: Pandas4Warning: 'future.no_silent_downcasting' is deprecated, please refrain from using it.
+    next(self.gen)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+SKIPPED [1] tests/integration/test_ingestion_postgres.py:130: 未设置 POSTGRES_DSN，跳过真实 PostgreSQL 摄取集成测试
+SKIPPED [1] tests/integration/test_ingestion_postgres.py:164: 未设置 POSTGRES_DSN，跳过真实 PostgreSQL 摄取集成测试
+SKIPPED [1] tests/integration/test_ingestion_postgres.py:180: 未设置 POSTGRES_DSN，跳过真实 PostgreSQL 摄取集成测试
+SKIPPED [1] tests/integration/test_ingestion_postgres.py:200: 未设置 POSTGRES_DSN，跳过真实 PostgreSQL 摄取集成测试
+SKIPPED [1] tests/integration/test_postgres.py:57: 未设置 POSTGRES_DSN，跳过真实 PostgreSQL 集成测试
+SKIPPED [1] tests/integration/test_postgres.py:130: 未设置 POSTGRES_DSN，跳过真实 PostgreSQL 集成测试
+SKIPPED [1] tests/integration/test_postgres.py:203: 未设置 POSTGRES_DSN，跳过真实 PostgreSQL 集成测试
+SKIPPED [1] tests/integration/test_postgres.py:241: 未设置 POSTGRES_DSN，跳过真实 PostgreSQL 集成测试
+SKIPPED [1] tests/integration/test_postgres.py:344: 未设置 POSTGRES_DSN，跳过真实 PostgreSQL 集成测试
+SKIPPED [1] tests/integration/test_postgres.py:396: 未设置 POSTGRES_DSN，跳过真实 PostgreSQL 集成测试
+SKIPPED [1] tests/integration/test_postgres.py:451: 未设置 POSTGRES_DSN，跳过真实 PostgreSQL 集成测试
+SKIPPED [1] tests/integration/test_product_publish_postgres.py:171: 未设置 POSTGRES_DSN，跳过真实 PostgreSQL 产品发布测试
+371 passed, 12 skipped, 6 warnings in 10.52s

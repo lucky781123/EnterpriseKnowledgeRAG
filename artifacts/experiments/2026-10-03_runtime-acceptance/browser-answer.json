@@ -1,0 +1,82 @@
+{
+  "status_code": 200,
+  "status": "passed",
+  "data": {
+    "request_id": "628d5335-090f-4ef7-9cad-1493c2e23cff",
+    "trace_id": "b34e8c9b-1e92-447c-aa56-a5b2886bf1a7",
+    "context_source": "retrieved",
+    "answer_status": "answered",
+    "citation_validation": "passed",
+    "message": "Aurora 项目的发布冻结窗口是每周三 20:00-22:00，时区为 Asia/Shanghai。",
+    "citations": [
+      {
+        "evidence_id": "retrieved-1",
+        "quote": "Aurora 项目的发布冻结窗口是每周三 20:00-22:00，时区为 Asia/Shanghai。",
+        "start": 8,
+        "end": 59,
+        "source": "doc_cbe571d9700868156516e58ce288f4b33c1226888e0c6d4d94aed409844697fb#child_7423da07ad872ebcd8e1121a5b8cb9597030070f31d94e0f06a93946e40fc735"
+      },
+      {
+        "evidence_id": "retrieved-2",
+        "quote": "Aurora 项目的发布冻结窗口是每周三 20:00-22:00，时区为 Asia/Shanghai。",
+        "start": 7,
+        "end": 58,
+        "source": "doc_05a7448b2b100a756e7e6328ea9a2af3604665c4f7ef85f8acceecdd580f6c1c#child_7751a1bac663760b1bb9ab654570ed1efcacdf1040c8556f1299280e4c6770cd"
+      },
+      {
+        "evidence_id": "retrieved-3",
+        "quote": "Aurora 项目的发布冻结窗口是每周三 20:00-22:00，时区为 Asia/Shanghai。",
+        "start": 7,
+        "end": 58,
+        "source": "doc_5b62d330bd47c29abe05e6ccb5749323efb177494cb3f91f76a43206a2203dc0#child_afb33398c2cf30b892a0c419c9a110d279f53afab6799108d9e963445e9b3e76"
+      },
+      {
+        "evidence_id": "retrieved-4",
+        "quote": "Aurora 项目的发布冻结窗口是每周三 20:00-22:00，时区为 Asia/Shanghai。",
+        "start": 7,
+        "end": 58,
+        "source": "doc_960e805d7ad37f49613e35f25042da0a52a0f3220d70fba9b525bee7135a713c#child_5be53b7457b0366ec057384d05efaa9309c367d1d3df6ace7b6f2fc934b464df"
+      },
+      {
+        "evidence_id": "retrieved-5",
+        "quote": "Aurora 项目的发布冻结窗口是每周三 20:00-22:00，时区为 Asia/Shanghai。",
+        "start": 7,
+        "end": 58,
+        "source": "doc_c381604d2e640378ecb9762cd2f02656eba5c9ad22233140dd39e60ac68645dc#child_556b5fb0f64737f8862c4145a32b08ecf07b13fe330d3ccb17cc0fee43a889d9"
+      }
+    ],
+    "provider_result": {
+      "request_id": "628d5335-090f-4ef7-9cad-1493c2e23cff",
+      "provider": "local_answer",
+      "model": "qwen3.6-35b-a3b-claude-4.7-opus-reasoning-distilled-vlm-mlx-oq6",
+      "status": "success",
+      "latency_ms": 6637.153750001744,
+      "content": null,
+      "finish_reason": "stop",
+      "usage": {
+        "input_tokens": 1084,
+        "output_tokens": 433
+      },
+      "error": null
+    },
+    "timings": {
+      "queue_ms": 0.0029579969123005867,
+      "ttft_ms": null,
+      "generation_ms": 6637.153750001744,
+      "validation_ms": 0.09012499867822044,
+      "completion_ms": 6637.317958000494
+    },
+    "retrieval_trace": {
+      "scopes": 5,
+      "dense_hits": 5,
+      "sparse_hits": 5,
+      "fused_candidates": 5,
+      "reranked_candidates": 5,
+      "parent_candidates": 5,
+      "rrf_k": 60,
+      "reranker_used": true,
+      "mode": "normal",
+      "fallback_reasons": []
+    }
+  }
+}

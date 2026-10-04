@@ -1,0 +1,143 @@
+{
+  "status": "passed",
+  "transport": "asgi_http_fault_injection",
+  "remaining_dependencies": "real",
+  "cases": {
+    "embedding": {
+      "status_code": 200,
+      "status": "passed",
+      "answer_status": "answered",
+      "citation_validation": "passed",
+      "citation_count": 1,
+      "retrieval_trace": {
+        "scopes": 1,
+        "dense_hits": 0,
+        "sparse_hits": 1,
+        "fused_candidates": 1,
+        "reranked_candidates": 1,
+        "parent_candidates": 1,
+        "rrf_k": 60,
+        "reranker_used": true,
+        "mode": "degraded",
+        "fallback_reasons": [
+          "embedding_unavailable"
+        ]
+      },
+      "expected_status_code": 200,
+      "assertions": "passed",
+      "real_llm_calls": 1,
+      "elapsed_ms": 3421.56
+    },
+    "dense": {
+      "status_code": 200,
+      "status": "passed",
+      "answer_status": "answered",
+      "citation_validation": "passed",
+      "citation_count": 1,
+      "retrieval_trace": {
+        "scopes": 1,
+        "dense_hits": 0,
+        "sparse_hits": 1,
+        "fused_candidates": 1,
+        "reranked_candidates": 1,
+        "parent_candidates": 1,
+        "rrf_k": 60,
+        "reranker_used": true,
+        "mode": "degraded",
+        "fallback_reasons": [
+          "dense_unavailable"
+        ]
+      },
+      "expected_status_code": 200,
+      "assertions": "passed",
+      "real_llm_calls": 1,
+      "elapsed_ms": 3477.01
+    },
+    "sparse": {
+      "status_code": 200,
+      "status": "passed",
+      "answer_status": "answered",
+      "citation_validation": "passed",
+      "citation_count": 1,
+      "retrieval_trace": {
+        "scopes": 1,
+        "dense_hits": 1,
+        "sparse_hits": 0,
+        "fused_candidates": 1,
+        "reranked_candidates": 1,
+        "parent_candidates": 1,
+        "rrf_k": 60,
+        "reranker_used": true,
+        "mode": "degraded",
+        "fallback_reasons": [
+          "sparse_unavailable"
+        ]
+      },
+      "expected_status_code": 200,
+      "assertions": "passed",
+      "real_llm_calls": 1,
+      "elapsed_ms": 3497.33
+    },
+    "reranker": {
+      "status_code": 200,
+      "status": "passed",
+      "answer_status": "answered",
+      "citation_validation": "passed",
+      "citation_count": 1,
+      "retrieval_trace": {
+        "scopes": 1,
+        "dense_hits": 1,
+        "sparse_hits": 1,
+        "fused_candidates": 1,
+        "reranked_candidates": 1,
+        "parent_candidates": 1,
+        "rrf_k": 60,
+        "reranker_used": false,
+        "mode": "degraded",
+        "fallback_reasons": [
+          "reranker_unavailable"
+        ]
+      },
+      "expected_status_code": 200,
+      "assertions": "passed",
+      "real_llm_calls": 1,
+      "elapsed_ms": 3436.82
+    },
+    "both_channels": {
+      "status_code": 503,
+      "status": "failed",
+      "error_kind": "retrieval_unavailable",
+      "expected_status_code": 503,
+      "assertions": "passed",
+      "real_llm_calls": 0,
+      "elapsed_ms": 187.87
+    },
+    "authentication": {
+      "status_code": 503,
+      "status": "failed",
+      "error_kind": "retrieval_unavailable",
+      "expected_status_code": 503,
+      "assertions": "passed",
+      "real_llm_calls": 0,
+      "elapsed_ms": 151.42
+    },
+    "model": {
+      "status_code": 503,
+      "status": "failed",
+      "error_kind": "unavailable",
+      "expected_status_code": 503,
+      "assertions": "passed",
+      "real_llm_calls": 0,
+      "elapsed_ms": 265.26
+    },
+    "no_acl": {
+      "status_code": 404,
+      "status": "blocked",
+      "error_kind": "evidence_not_found",
+      "expected_status_code": 404,
+      "assertions": "passed",
+      "real_llm_calls": 0,
+      "elapsed_ms": 5.0
+    }
+  }
+}

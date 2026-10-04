@@ -1,0 +1,51 @@
+{
+  "status": "inspected",
+  "model": "qwen3.6-35b-a3b-claude-4.7-opus-reasoning-distilled-vlm-mlx-oq6",
+  "max_tokens": 2048,
+  "temperature": 0.0,
+  "evidence_count": 5,
+  "distinct_documents": 2,
+  "evidence_sources": [
+    {
+      "evidence_id": "retrieved-1",
+      "document_id": "doc_1285cc2c1c05af9582958c201a5dfd7eb5d4287101efe9d74a7b1eea0551983b",
+      "chars": 800,
+      "title_matches_requested_bank": true,
+      "text_mentions_requested_bank": false,
+      "text_mentions_other_bank": false
+    },
+    {
+      "evidence_id": "retrieved-2",
+      "document_id": "doc_1285cc2c1c05af9582958c201a5dfd7eb5d4287101efe9d74a7b1eea0551983b",
+      "chars": 769,
+      "title_matches_requested_bank": true,
+      "text_mentions_requested_bank": false,
+      "text_mentions_other_bank": false
+    },
+    {
+      "evidence_id": "retrieved-3",
+      "document_id": "doc_315888746e5d5257669217d4928f942e50ef1b34277f388011c850a1f407b09e",
+      "chars": 795,
+      "title_matches_requested_bank": false,
+      "text_mentions_requested_bank": false,
+      "text_mentions_other_bank": false
+    },
+    {
+      "evidence_id": "retrieved-4",
+      "document_id": "doc_315888746e5d5257669217d4928f942e50ef1b34277f388011c850a1f407b09e",
+      "chars": 96,
+      "title_matches_requested_bank": false,
+      "text_mentions_requested_bank": false,
+      "text_mentions_other_bank": false
+    },
+    {
+      "evidence_id": "retrieved-5",
+      "document_id": "doc_1285cc2c1c05af9582958c201a5dfd7eb5d4287101efe9d74a7b1eea0551983b",
+      "chars": 424,
+      "title_matches_requested_bank": true,
+      "text_mentions_requested_bank": false,
+      "text_mentions_other_bank": false
+    }
+  ],
+  "probe": null
+}

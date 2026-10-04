@@ -1,0 +1,198 @@
+{
+  "status": "passed",
+  "transport": "asgi_http_fault_injection",
+  "remaining_dependencies": "real",
+  "cases": {
+    "embedding": {
+      "assertions": "passed",
+      "status_code": 200,
+      "authorization_header_sent": false,
+      "real_local_llm_calls": 1,
+      "message": "Polaris 项目的备份保留期为 37 天，每天凌晨 03:15（时区 Asia/Shanghai）执行备份。",
+      "answer_status": "answered",
+      "citation_validation": "passed",
+      "citations": [
+        {
+          "evidence_id": "retrieved-1",
+          "quote": "Polaris 项目的备份保留期为 37 天，每天凌晨 03:15 执行备份",
+          "start": 16,
+          "end": 54,
+          "source": "doc_1b8f1dd630eeb4681f5cb45955dc415796e9f4a0c003dd7ad5f309a4518535af#child_f5c8e0748abcb4c6951b3addb31bfeece071ef752dab310fca9b4dfcd1309124"
+        }
+      ],
+      "retrieval_trace": {
+        "scopes": 2,
+        "dense_hits": 0,
+        "sparse_hits": 1,
+        "fused_candidates": 1,
+        "reranked_candidates": 1,
+        "parent_candidates": 1,
+        "rrf_k": 60,
+        "reranker_used": true,
+        "mode": "degraded",
+        "fallback_reasons": [
+          "embedding_unavailable"
+        ]
+      },
+      "provider_result": {
+        "request_id": "40dd047c-4d2c-4bca-8660-89d04c75d89f",
+        "provider": "local_answer",
+        "model": "qwen3.6-35b-a3b-claude-4.7-opus-reasoning-distilled-vlm-mlx-oq6",
+        "status": "success",
+        "latency_ms": 32843.018291998305,
+        "content": null,
+        "finish_reason": "stop",
+        "usage": {
+          "input_tokens": 365,
+          "output_tokens": 170
+        },
+        "error": null
+      }
+    },
+    "dense": {
+      "assertions": "passed",
+      "status_code": 200,
+      "authorization_header_sent": false,
+      "real_local_llm_calls": 1,
+      "message": "Polaris 项目的备份保留期为 37 天，每天凌晨 03:15（时区 Asia/Shanghai）执行备份。",
+      "answer_status": "answered",
+      "citation_validation": "passed",
+      "citations": [
+        {
+          "evidence_id": "retrieved-1",
+          "quote": "Polaris 项目的备份保留期为 37 天，每天凌晨 03:15 执行备份",
+          "start": 16,
+          "end": 54,
+          "source": "doc_1b8f1dd630eeb4681f5cb45955dc415796e9f4a0c003dd7ad5f309a4518535af#child_f5c8e0748abcb4c6951b3addb31bfeece071ef752dab310fca9b4dfcd1309124"
+        }
+      ],
+      "retrieval_trace": {
+        "scopes": 2,
+        "dense_hits": 0,
+        "sparse_hits": 1,
+        "fused_candidates": 1,
+        "reranked_candidates": 1,
+        "parent_candidates": 1,
+        "rrf_k": 60,
+        "reranker_used": true,
+        "mode": "degraded",
+        "fallback_reasons": [
+          "dense_unavailable"
+        ]
+      },
+      "provider_result": {
+        "request_id": "17e46fcb-230a-44ce-a21f-22db2834b5e9",
+        "provider": "local_answer",
+        "model": "qwen3.6-35b-a3b-claude-4.7-opus-reasoning-distilled-vlm-mlx-oq6",
+        "status": "success",
+        "latency_ms": 30111.53254200326,
+        "content": null,
+        "finish_reason": "stop",
+        "usage": {
+          "input_tokens": 365,
+          "output_tokens": 170
+        },
+        "error": null
+      }
+    },
+    "sparse": {
+      "assertions": "passed",
+      "status_code": 200,
+      "authorization_header_sent": false,
+      "real_local_llm_calls": 1,
+      "message": "Polaris 项目的备份保留期为 37 天，每天凌晨 03:15（Asia/Shanghai 时区）执行备份。",
+      "answer_status": "answered",
+      "citation_validation": "passed",
+      "citations": [
+        {
+          "evidence_id": "retrieved-1",
+          "quote": "Polaris 项目的备份保留期为 37 天，每天凌晨 03:15 执行备份",
+          "start": 16,
+          "end": 54,
+          "source": "doc_1b8f1dd630eeb4681f5cb45955dc415796e9f4a0c003dd7ad5f309a4518535af#child_f5c8e0748abcb4c6951b3addb31bfeece071ef752dab310fca9b4dfcd1309124"
+        }
+      ],
+      "retrieval_trace": {
+        "scopes": 2,
+        "dense_hits": 2,
+        "sparse_hits": 0,
+        "fused_candidates": 2,
+        "reranked_candidates": 2,
+        "parent_candidates": 2,
+        "rrf_k": 60,
+        "reranker_used": true,
+        "mode": "degraded",
+        "fallback_reasons": [
+          "sparse_unavailable"
+        ]
+      },
+      "provider_result": {
+        "request_id": "d9f9ccb4-d5a7-4797-be5f-bd25938febf1",
+        "provider": "local_answer",
+        "model": "qwen3.6-35b-a3b-claude-4.7-opus-reasoning-distilled-vlm-mlx-oq6",
+        "status": "success",
+        "latency_ms": 37619.286542001646,
+        "content": null,
+        "finish_reason": "stop",
+        "usage": {
+          "input_tokens": 550,
+          "output_tokens": 201
+        },
+        "error": null
+      }
+    },
+    "reranker": {
+      "assertions": "passed",
+      "status_code": 200,
+      "authorization_header_sent": false,
+      "real_local_llm_calls": 1,
+      "message": "Polaris 项目的备份保留期为 37 天，每天凌晨 03:15（Asia/Shanghai 时区）执行备份。",
+      "answer_status": "answered",
+      "citation_validation": "passed",
+      "citations": [
+        {
+          "evidence_id": "retrieved-1",
+          "quote": "Polaris 项目的备份保留期为 37 天，每天凌晨 03:15 执行备份",
+          "start": 16,
+          "end": 54,
+          "source": "doc_1b8f1dd630eeb4681f5cb45955dc415796e9f4a0c003dd7ad5f309a4518535af#child_f5c8e0748abcb4c6951b3addb31bfeece071ef752dab310fca9b4dfcd1309124"
+        }
+      ],
+      "retrieval_trace": {
+        "scopes": 2,
+        "dense_hits": 2,
+        "sparse_hits": 1,
+        "fused_candidates": 2,
+        "reranked_candidates": 2,
+        "parent_candidates": 2,
+        "rrf_k": 60,
+        "reranker_used": false,
+        "mode": "degraded",
+        "fallback_reasons": [
+          "reranker_unavailable"
+        ]
+      },
+      "provider_result": {
+        "request_id": "08cc26ef-f314-45da-9ecb-598ca8f176e4",
+        "provider": "local_answer",
+        "model": "qwen3.6-35b-a3b-claude-4.7-opus-reasoning-distilled-vlm-mlx-oq6",
+        "status": "success",
+        "latency_ms": 32978.737999997975,
+        "content": null,
+        "finish_reason": "stop",
+        "usage": {
+          "input_tokens": 550,
+          "output_tokens": 201
+        },
+        "error": null
+      }
+    },
+    "both_channels": {
+      "assertions": "passed",
+      "status_code": 503,
+      "authorization_header_sent": false,
+      "real_local_llm_calls": 0,
+      "error_kind": "retrieval_unavailable"
+    }
+  }
+}

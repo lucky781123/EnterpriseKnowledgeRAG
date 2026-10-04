@@ -1,0 +1,76 @@
+{
+  "status_code": 200,
+  "status": "passed",
+  "count": 3,
+  "results": [
+    {
+      "filename": "alpha.txt",
+      "result": {
+        "status_code": 201,
+        "status": "passed",
+        "data": {
+          "document_id": "doc_be2dd7d2509736e44394e85b4c58684085384ad3357cfdfa6fae063949c6efc1",
+          "version_id": "version_e5fd9c1713b6c4cf334313646d25f44d6476227ed274b3bc48e4a939df21ee5d",
+          "job_id": "job_685f54c4123548e6be056ba1a8f91e5e",
+          "generation_id": "dense_bef2d5525e694a159fb7e515ca236b3b",
+          "job_status": "succeeded",
+          "version_status": "published",
+          "generation_status": "active",
+          "artifacts": {
+            "raw": "ready",
+            "parsed": "ready",
+            "embedding": "ready",
+            "sparse": "ready"
+          },
+          "published": true
+        }
+      }
+    },
+    {
+      "filename": "beta.md",
+      "result": {
+        "status_code": 201,
+        "status": "passed",
+        "data": {
+          "document_id": "doc_247653cb9967079758b95b93b5517fbe43c20b75d4adc7ce098f25698dca05e9",
+          "version_id": "version_a4dd0f450074f0c440ced7d2ef48fd20b643b2b1628cca6815036d11693afd64",
+          "job_id": "job_7a64f79c5b2d42edb9a9e1c733ae8a8e",
+          "generation_id": "dense_4ae15cfdf87847e4a6dd40b041e52dc8",
+          "job_status": "succeeded",
+          "version_status": "published",
+          "generation_status": "active",
+          "artifacts": {
+            "raw": "ready",
+            "parsed": "ready",
+            "embedding": "ready",
+            "sparse": "ready"
+          },
+          "published": true
+        }
+      }
+    },
+    {
+      "filename": "large-policy.pdf",
+      "result": {
+        "status_code": 201,
+        "status": "passed",
+        "data": {
+          "document_id": "doc_e7bbd1af6c624de9b2bef04c23128e8f505dc5eebed69c2fb3167c9e02ff51fe",
+          "version_id": "version_207ea45edc55d9919ac707ae35777689adb7254d3137a2f95de41f2cc94353ac",
+          "job_id": "job_572242ae939e42c2adc94856bb4985dd",
+          "generation_id": "dense_964be471948846d9b38dbab5d04fd0f7",
+          "job_status": "succeeded",
+          "version_status": "published",
+          "generation_status": "active",
+          "artifacts": {
+            "raw": "ready",
+            "parsed": "ready",
+            "embedding": "ready",
+            "sparse": "ready"
+          },
+          "published": true
+        }
+      }
+    }
+  ]
+}

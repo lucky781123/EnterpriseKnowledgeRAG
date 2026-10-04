@@ -1,0 +1,41 @@
+{
+  "status": "passed",
+  "verified_at": "2026-10-03T12:53:07.365676+00:00",
+  "anonymous": true,
+  "files": [
+    "alpha.txt",
+    "beta.md",
+    "large-policy.pdf"
+  ],
+  "independent_documents": 3,
+  "largest_file_bytes": 12583979,
+  "persistence": "passed",
+  "answer_status": "answered",
+  "citation_validation": "passed",
+  "retrieval_trace": {
+    "scopes": 7,
+    "dense_hits": 24,
+    "sparse_hits": 0,
+    "fused_candidates": 20,
+    "reranked_candidates": 20,
+    "parent_candidates": 5,
+    "rrf_k": 60,
+    "reranker_used": true,
+    "mode": "normal",
+    "fallback_reasons": []
+  },
+  "finish_reason": "stop",
+  "timings": {
+    "queue_ms": 0.003749999450519681,
+    "ttft_ms": null,
+    "generation_ms": 4458.708416001173,
+    "validation_ms": 0.1156250000349246,
+    "completion_ms": 4459.029375000682
+  },
+  "checks": {
+    "/health/product/ready": 200,
+    "/product-workbench/": 200,
+    "ordinary_json_128kib": 413,
+    "cross_site_queue": 403
+  }
+}

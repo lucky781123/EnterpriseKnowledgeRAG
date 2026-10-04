@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "experiment": "local_p0_product_smoke",
+  "started_at": "2026-09-18T05:27:51.376594+00:00",
+  "finished_at": "2026-09-18T05:27:51.376609+00:00",
+  "run_status": "blocked",
+  "production_capacity_claim": false,
+  "retrieval_quality_claim": false,
+  "environment": {
+    "api_base_url_configured": true,
+    "dev_auth_secret_configured": false
+  },
+  "stages": {
+    "readiness": {
+      "status": "blocked",
+      "error_kind": "configuration"
+    },
+    "upload": {
+      "status": "pending"
+    },
+    "status": {
+      "status": "pending"
+    },
+    "cross_tenant_deny": {
+      "status": "pending"
+    },
+    "grant": {
+      "status": "pending"
+    },
+    "query": {
+      "status": "pending"
+    },
+    "revoke": {
+      "status": "pending"
+    },
+    "revoked_query_deny": {
+      "status": "pending"
+    },
+    "cleanup": {
+      "status": "pending"
+    }
+  }
+}

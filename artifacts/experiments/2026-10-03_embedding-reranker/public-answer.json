@@ -1,0 +1,50 @@
+{
+  "request_id": "d5cfe2fb-46c0-4bb2-94f1-19e23e436811",
+  "trace_id": "dfaf7948-d294-4e7b-b9dd-e1b57b3ef44f",
+  "context_source": "retrieved",
+  "answer_status": "answered",
+  "citation_validation": "passed",
+  "message": "MODEL_SWITCH_CHECK 审批期限为三个工作日。",
+  "citations": [
+    {
+      "evidence_id": "retrieved-1",
+      "quote": "MODEL_SWITCH_CHECK 审批期限为三个工作日。",
+      "start": 22,
+      "end": 52,
+      "source": "doc_4871cce2a9852e04812e10841e69bfd97af63677f29489f02a3d29118783fa12#child_ca87eec1187ea0045d7d44d0d8256f0d9ff61531044e5f52549a7b23f21160bc"
+    }
+  ],
+  "provider_result": {
+    "request_id": "d5cfe2fb-46c0-4bb2-94f1-19e23e436811",
+    "provider": "local_answer",
+    "model": "qwen3-coder-next-reap-48b-a3b-mlx",
+    "status": "success",
+    "latency_ms": 1667.3148749978282,
+    "content": null,
+    "finish_reason": "stop",
+    "usage": {
+      "input_tokens": 362,
+      "output_tokens": 52
+    },
+    "error": null
+  },
+  "timings": {
+    "queue_ms": 0.002458000381011516,
+    "ttft_ms": null,
+    "generation_ms": 1667.3148749978282,
+    "validation_ms": 0.05154199607204646,
+    "completion_ms": 1667.436292002094
+  },
+  "retrieval_trace": {
+    "scopes": 10,
+    "dense_hits": 65,
+    "sparse_hits": 1,
+    "fused_candidates": 20,
+    "reranked_candidates": 20,
+    "parent_candidates": 1,
+    "rrf_k": 60,
+    "reranker_used": true,
+    "mode": "normal",
+    "fallback_reasons": []
+  }
+}

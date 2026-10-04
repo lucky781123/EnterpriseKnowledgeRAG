@@ -1,0 +1,20 @@
+{
+  "status_code": 201,
+  "status": "passed",
+  "data": {
+    "document_id": "doc_03c4c8ef11be83af46800b3b94894521fcf9f32670a3553cf5f73319391f8d3a",
+    "version_id": "version_bc246dc65321b6e101a85ee172cd416dca19fcf4b7cec51f3bce3c7aa8f03151",
+    "job_id": "job_1f6e74c433404b06a653fead2db6a7fc",
+    "generation_id": "dense_64d2f0cbd70342a4abd2fcbfd455eb13",
+    "job_status": "succeeded",
+    "version_status": "published",
+    "generation_status": "active",
+    "artifacts": {
+      "raw": "ready",
+      "parsed": "ready",
+      "embedding": "ready",
+      "sparse": "ready"
+    },
+    "published": true
+  }
+}

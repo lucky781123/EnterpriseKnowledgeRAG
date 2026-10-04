@@ -1,0 +1,54 @@
+{
+  "status_code": 200,
+  "status": "passed",
+  "data": {
+    "request_id": "22f9cfe5-c4e1-4ff1-b6f4-426176e6f88b",
+    "trace_id": "177dbf43-0b70-4cbe-95d2-d11a6cf8f022",
+    "context_source": "retrieved",
+    "answer_status": "answered",
+    "citation_validation": "passed",
+    "message": "The Vega maintenance window is every Friday from 21:10 to 21:50 UTC. The rollback owner is the platform operations team.",
+    "citations": [
+      {
+        "evidence_id": "retrieved-1",
+        "quote": "The Vega maintenance window is every Friday\nfrom 21:10 to 21:50 UTC.\nThe rollback owner is the platform operations team.",
+        "start": 25,
+        "end": 145,
+        "source": "doc_03c4c8ef11be83af46800b3b94894521fcf9f32670a3553cf5f73319391f8d3a#child_abfb78c401b72caec5393080e34d3d09b981f78f7dedf09c924b8048accb6130"
+      }
+    ],
+    "provider_result": {
+      "request_id": "22f9cfe5-c4e1-4ff1-b6f4-426176e6f88b",
+      "provider": "local_answer",
+      "model": "qwen3.6-35b-a3b-claude-4.7-opus-reasoning-distilled-vlm-mlx-oq6",
+      "status": "success",
+      "latency_ms": 21693.240207998315,
+      "content": null,
+      "finish_reason": "stop",
+      "usage": {
+        "input_tokens": 545,
+        "output_tokens": 187
+      },
+      "error": null
+    },
+    "timings": {
+      "queue_ms": 0.003082997864112258,
+      "ttft_ms": null,
+      "generation_ms": 21693.240207998315,
+      "validation_ms": 0.047541994717903435,
+      "completion_ms": 21693.364417005796
+    },
+    "retrieval_trace": {
+      "scopes": 2,
+      "dense_hits": 2,
+      "sparse_hits": 1,
+      "fused_candidates": 2,
+      "reranked_candidates": 2,
+      "parent_candidates": 2,
+      "rrf_k": 60,
+      "reranker_used": true,
+      "mode": "normal",
+      "fallback_reasons": []
+    }
+  }
+}

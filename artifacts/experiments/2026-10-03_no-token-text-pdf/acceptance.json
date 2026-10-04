@@ -1,0 +1,91 @@
+{
+  "status": "passed",
+  "verified_at": "2026-10-03T09:23:26.662668+00:00",
+  "anonymous": true,
+  "tenant": "local-demo",
+  "documents": {
+    "txt": {
+      "document_id": "doc_1b8f1dd630eeb4681f5cb45955dc415796e9f4a0c003dd7ad5f309a4518535af",
+      "generation_id": "dense_c2b36edb56f446daa8855ac1761e2209",
+      "upload_status": 201,
+      "status_without_authorization": 200,
+      "message": "Polaris 项目的备份保留期为 37 天，每天凌晨 03:15（Asia/Shanghai 时区）执行备份。",
+      "trace": {
+        "scopes": 2,
+        "dense_hits": 2,
+        "sparse_hits": 1,
+        "fused_candidates": 2,
+        "reranked_candidates": 2,
+        "parent_candidates": 2,
+        "rrf_k": 60,
+        "reranker_used": true,
+        "mode": "normal",
+        "fallback_reasons": []
+      },
+      "persistence": "passed",
+      "citations": "passed"
+    },
+    "pdf": {
+      "document_id": "doc_03c4c8ef11be83af46800b3b94894521fcf9f32670a3553cf5f73319391f8d3a",
+      "generation_id": "dense_64d2f0cbd70342a4abd2fcbfd455eb13",
+      "upload_status": 201,
+      "status_without_authorization": 200,
+      "message": "The Vega maintenance window is every Friday from 21:10 to 21:50 UTC. The rollback owner is the platform operations team.",
+      "trace": {
+        "scopes": 2,
+        "dense_hits": 2,
+        "sparse_hits": 1,
+        "fused_candidates": 2,
+        "reranked_candidates": 2,
+        "parent_candidates": 2,
+        "rrf_k": 60,
+        "reranker_used": true,
+        "mode": "normal",
+        "fallback_reasons": []
+      },
+      "persistence": "passed",
+      "citations": "passed"
+    }
+  },
+  "checks": {
+    "readiness": {
+      "status": "ready",
+      "dependencies": {
+        "database": {
+          "status": "ready"
+        },
+        "weaviate_dense": {
+          "status": "ready"
+        },
+        "weaviate_sparse": {
+          "status": "ready"
+        },
+        "ollama_embedding": {
+          "status": "ready"
+        },
+        "bge_reranker": {
+          "status": "ready"
+        },
+        "lmstudio": {
+          "status": "ready"
+        },
+        "object_storage": {
+          "status": "ready"
+        },
+        "dev_identity": {
+          "status": "ready"
+        },
+        "product_services": {
+          "status": "ready"
+        }
+      }
+    },
+    "frontend_status": 200,
+    "cross_site_queue": 403,
+    "ordinary_json_128kib_limit": 413
+  },
+  "fallback_cases": 5,
+  "offline_tests": "303 passed, 12 skipped",
+  "postgres_tests": "16 passed",
+  "api": "http://127.0.0.1:8001"
+}

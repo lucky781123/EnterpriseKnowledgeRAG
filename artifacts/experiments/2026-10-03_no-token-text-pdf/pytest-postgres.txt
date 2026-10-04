@@ -1,0 +1,8 @@
+................                                                         [100%]
+=============================== warnings summary ===============================
+../../../opt/anaconda3/envs/enterprise-rag/lib/python3.11/site-packages/PyPDF2/__init__.py:21
+  /Users/liuhui/opt/anaconda3/envs/enterprise-rag/lib/python3.11/site-packages/PyPDF2/__init__.py:21: DeprecationWarning: PyPDF2 is deprecated. Please move to the pypdf library instead.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+16 passed, 1 warning in 2.37s

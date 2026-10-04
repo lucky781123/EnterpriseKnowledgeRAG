@@ -1,0 +1,79 @@
+{
+  "status": "inspected",
+  "model": "qwen3.6-35b-a3b-claude-4.7-opus-reasoning-distilled-vlm-mlx-oq6",
+  "max_tokens": 2048,
+  "temperature": 0.0,
+  "evidence_count": 5,
+  "distinct_documents": 2,
+  "evidence_sources": [
+    {
+      "evidence_id": "retrieved-1",
+      "document_id": "doc_1285cc2c1c05af9582958c201a5dfd7eb5d4287101efe9d74a7b1eea0551983b",
+      "chars": 800,
+      "title_matches_requested_bank": true,
+      "text_mentions_requested_bank": false,
+      "text_mentions_other_bank": false
+    },
+    {
+      "evidence_id": "retrieved-2",
+      "document_id": "doc_1285cc2c1c05af9582958c201a5dfd7eb5d4287101efe9d74a7b1eea0551983b",
+      "chars": 769,
+      "title_matches_requested_bank": true,
+      "text_mentions_requested_bank": false,
+      "text_mentions_other_bank": false
+    },
+    {
+      "evidence_id": "retrieved-3",
+      "document_id": "doc_315888746e5d5257669217d4928f942e50ef1b34277f388011c850a1f407b09e",
+      "chars": 795,
+      "title_matches_requested_bank": false,
+      "text_mentions_requested_bank": false,
+      "text_mentions_other_bank": false
+    },
+    {
+      "evidence_id": "retrieved-4",
+      "document_id": "doc_315888746e5d5257669217d4928f942e50ef1b34277f388011c850a1f407b09e",
+      "chars": 96,
+      "title_matches_requested_bank": false,
+      "text_mentions_requested_bank": false,
+      "text_mentions_other_bank": false
+    },
+    {
+      "evidence_id": "retrieved-5",
+      "document_id": "doc_1285cc2c1c05af9582958c201a5dfd7eb5d4287101efe9d74a7b1eea0551983b",
+      "chars": 424,
+      "title_matches_requested_bank": true,
+      "text_mentions_requested_bank": false,
+      "text_mentions_other_bank": false
+    }
+  ],
+  "probe": {
+    "elapsed_seconds": 21.278,
+    "http_status": 200,
+    "finish_reason": "stop",
+    "answer_status": "invalid_citations",
+    "citation_validation": "failed",
+    "citations_count": 0,
+    "message_chars": 1085,
+    "usage": {
+      "prompt_tokens": 3093,
+      "completion_tokens": 1381,
+      "total_tokens": 4474,
+      "completion_tokens_details": {
+        "reasoning_tokens": 336
+      }
+    },
+    "max_long_line_repeat": 1,
+    "protocol_error": null,
+    "mode": "sampling",
+    "sampler": {
+      "temperature": 0.7,
+      "top_p": 0.8,
+      "top_k": 20,
+      "presence_penalty": 1.5,
+      "max_tokens": 2048,
+      "stream": false
+    },
+    "business_passed": false
+  }
+}

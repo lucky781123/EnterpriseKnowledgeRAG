@@ -1,0 +1,85 @@
+{
+  "status": "failed",
+  "embedding_model": "feadxus/qwen3-embedding:4b",
+  "dimension": 2560,
+  "profile": "feadxus/qwen3-embedding:4b:2560:parent-child-v1:dense-v1",
+  "reranker_model": "jina-reranker-v3-mlx",
+  "applied": true,
+  "results": [
+    {
+      "document_id": "doc_03c4c8ef11be83af46800b3b94894521fcf9f32670a3553cf5f73319391f8d3a",
+      "version_id": "version_bc246dc65321b6e101a85ee172cd416dca19fcf4b7cec51f3bce3c7aa8f03151",
+      "children": 1,
+      "status": "failed",
+      "error_type": "ProductIndexingError",
+      "elapsed_seconds": 0.62
+    },
+    {
+      "document_id": "doc_1285cc2c1c05af9582958c201a5dfd7eb5d4287101efe9d74a7b1eea0551983b",
+      "version_id": "version_33817eef985688b49fa6141972a5f366a045e070f52ba6d45d60ecb599a0e030",
+      "children": 51,
+      "status": "failed",
+      "error_type": "ProductIndexingError",
+      "elapsed_seconds": 9.524
+    },
+    {
+      "document_id": "doc_1b8f1dd630eeb4681f5cb45955dc415796e9f4a0c003dd7ad5f309a4518535af",
+      "version_id": "version_2e0e2e5c3d3d3872eeb1eb997f735b2767d604cb7c58758d5c2d98400638fd5f",
+      "children": 1,
+      "status": "failed",
+      "error_type": "ProductIndexingError",
+      "elapsed_seconds": 0.199
+    },
+    {
+      "document_id": "doc_247653cb9967079758b95b93b5517fbe43c20b75d4adc7ce098f25698dca05e9",
+      "version_id": "version_a4dd0f450074f0c440ced7d2ef48fd20b643b2b1628cca6815036d11693afd64",
+      "children": 1,
+      "status": "failed",
+      "error_type": "ProductIndexingError",
+      "elapsed_seconds": 0.186
+    },
+    {
+      "document_id": "doc_315888746e5d5257669217d4928f942e50ef1b34277f388011c850a1f407b09e",
+      "version_id": "version_93ad5920a571f7a846fe407ccf4ff9d905f65793f4b12903af2340d1239d9072",
+      "children": 104,
+      "status": "failed",
+      "error_type": "ProductIndexingError",
+      "elapsed_seconds": 18.76
+    },
+    {
+      "document_id": "doc_4631bb6180bb8d90d0fb52460229b0844d7bf4f4cbfcdd2c591a2a13f2708ce4",
+      "version_id": "version_b62c926bfcc0dfc3ec0e3d6d3dd29258c8b3d82c108d80c2afe16c587253bcf7",
+      "children": 11,
+      "status": "failed",
+      "error_type": "ProductIndexingError",
+      "elapsed_seconds": 1.906
+    },
+    {
+      "document_id": "doc_67f5e3ff9602a8e4fc257a67e27b1739b9c8499af99d5465b3af2948677cd787",
+      "version_id": "version_8c9754326b46372e5f585064ae34e66fd885a67eda0fbfd4c90f931aee9a3ea1",
+      "children": 8,
+      "status": "failed",
+      "error_type": "ProductIndexingError",
+      "elapsed_seconds": 1.571
+    },
+    {
+      "document_id": "doc_be2dd7d2509736e44394e85b4c58684085384ad3357cfdfa6fae063949c6efc1",
+      "version_id": "version_e5fd9c1713b6c4cf334313646d25f44d6476227ed274b3bc48e4a939df21ee5d",
+      "children": 1,
+      "status": "failed",
+      "error_type": "ProductIndexingError",
+      "elapsed_seconds": 0.217
+    },
+    {
+      "document_id": "doc_e7bbd1af6c624de9b2bef04c23128e8f505dc5eebed69c2fb3167c9e02ff51fe",
+      "version_id": "version_207ea45edc55d9919ac707ae35777689adb7254d3137a2f95de41f2cc94353ac",
+      "children": 1,
+      "status": "failed",
+      "error_type": "ProductIndexingError",
+      "elapsed_seconds": 0.26
+    }
+  ],
+  "authorized_documents": 9,
+  "expected_children": 179,
+  "new_profile_scopes": 0
+}

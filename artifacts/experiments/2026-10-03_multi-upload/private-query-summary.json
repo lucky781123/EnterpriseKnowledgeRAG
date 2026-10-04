@@ -1,0 +1,28 @@
+{
+  "http_status": 200,
+  "elapsed_seconds": 16.913,
+  "request_id": "83343397-2095-460c-b47d-2adbb745181b",
+  "trace_id": "14575fa7-488b-4573-9a54-b638e91443ed",
+  "answer_status": "answered",
+  "citation_validation": "passed",
+  "citations_count": 5,
+  "message_chars": 311,
+  "finish_reason": "stop",
+  "usage": {
+    "input_tokens": 2918,
+    "output_tokens": 659
+  },
+  "retrieval_trace": {
+    "scopes": 7,
+    "dense_hits": 24,
+    "sparse_hits": 0,
+    "fused_candidates": 20,
+    "reranked_candidates": 20,
+    "parent_candidates": 5,
+    "rrf_k": 60,
+    "reranker_used": true,
+    "mode": "normal",
+    "fallback_reasons": []
+  },
+  "business_passed": true
+}

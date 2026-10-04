@@ -1,0 +1,16 @@
+{
+  "status": "passed",
+  "transport": "real_browser_http",
+  "files": [
+    "alpha.txt",
+    "beta.md",
+    "large-policy.pdf"
+  ],
+  "independent_documents": 3,
+  "documents_ready": true,
+  "default_max_tokens": 2048,
+  "immediate_pending_status": true,
+  "answer_status": "answered",
+  "citation_validation": "passed",
+  "page_errors": []
+}

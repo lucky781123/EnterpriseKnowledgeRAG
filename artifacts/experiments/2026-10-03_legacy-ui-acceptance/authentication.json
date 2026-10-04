@@ -1,0 +1,7 @@
+{
+  "status": "passed",
+  "invalid_token_http": 401,
+  "fresh_token_document_status_http": 200,
+  "txt_format_http": 422,
+  "token_not_recorded": true
+}

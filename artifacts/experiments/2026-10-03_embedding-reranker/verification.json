@@ -1,0 +1,160 @@
+{
+  "llm_model": "qwen3-coder-next-reap-48b-a3b-mlx",
+  "embedding_model": "feadxus/qwen3-embedding:4b",
+  "dimension": 2560,
+  "reranker_model": "jina-reranker-v3-mlx",
+  "reranker_provider": "http",
+  "readiness": {
+    "status": "ready",
+    "dependencies": {
+      "database": {
+        "status": "ready"
+      },
+      "weaviate_dense": {
+        "status": "ready"
+      },
+      "weaviate_sparse": {
+        "status": "ready"
+      },
+      "ollama_embedding": {
+        "status": "ready"
+      },
+      "http_reranker": {
+        "status": "ready"
+      },
+      "lmstudio": {
+        "status": "ready"
+      },
+      "object_storage": {
+        "status": "ready"
+      },
+      "dev_identity": {
+        "status": "ready"
+      },
+      "product_services": {
+        "status": "ready"
+      }
+    }
+  },
+  "frontend_http_status": 200,
+  "rerank_probe": {
+    "indexes": [
+      0,
+      2
+    ],
+    "scores": [
+      0.25651443004608154,
+      0.21380996704101562
+    ],
+    "passed": true
+  },
+  "persistence": {
+    "status": "passed",
+    "document_id": "doc_4871cce2a9852e04812e10841e69bfd97af63677f29489f02a3d29118783fa12",
+    "version_id": "version_b90e5f135b1b4bfffdb307898f3180688ec3ebda5ba1248316089853e98b6332",
+    "generation_id": "dense_901ebc16d0ef43949f569841197d7f14",
+    "document_status": "ready",
+    "version_status": "published",
+    "generation_status": "active",
+    "active_pointer_matches": true,
+    "raw_hash_matches": true,
+    "manifest_hash_matches": true,
+    "lineage_matches": true,
+    "blocks": 2,
+    "parents": 1,
+    "children": 1,
+    "dense_objects": 1,
+    "sparse_objects": 1,
+    "chunk_ids_match": true,
+    "vector_dimensions": [
+      2560
+    ],
+    "embedding_model": "feadxus/qwen3-embedding:4b",
+    "artifacts": {
+      "parsed": {
+        "status": "ready",
+        "item_count": 2
+      },
+      "raw": {
+        "status": "ready",
+        "item_count": 1
+      },
+      "embedding": {
+        "status": "ready",
+        "item_count": 1
+      },
+      "sparse": {
+        "status": "ready",
+        "item_count": 1
+      }
+    }
+  },
+  "public_answer": {
+    "http_status": 200,
+    "answer_status": "answered",
+    "citation_validation": "passed",
+    "citations_count": 1,
+    "model": "qwen3-coder-next-reap-48b-a3b-mlx",
+    "finish_reason": "stop",
+    "usage": {
+      "input_tokens": 362,
+      "output_tokens": 52
+    },
+    "retrieval_trace": {
+      "scopes": 10,
+      "dense_hits": 65,
+      "sparse_hits": 1,
+      "fused_candidates": 20,
+      "reranked_candidates": 20,
+      "parent_candidates": 1,
+      "rrf_k": 60,
+      "reranker_used": true,
+      "mode": "normal",
+      "fallback_reasons": []
+    },
+    "timings": {
+      "queue_ms": 0.002458000381011516,
+      "ttft_ms": null,
+      "generation_ms": 1667.3148749978282,
+      "validation_ms": 0.05154199607204646,
+      "completion_ms": 1667.436292002094
+    },
+    "configured_llm_matches": true,
+    "passed": true
+  },
+  "shareholder_answer": {
+    "http_status": 200,
+    "answer_status": "invalid_citations",
+    "citation_validation": "failed",
+    "citations_count": 0,
+    "model": "qwen3-coder-next-reap-48b-a3b-mlx",
+    "finish_reason": "stop",
+    "usage": {
+      "input_tokens": 3443,
+      "output_tokens": 401
+    },
+    "retrieval_trace": {
+      "scopes": 10,
+      "dense_hits": 65,
+      "sparse_hits": 0,
+      "fused_candidates": 20,
+      "reranked_candidates": 20,
+      "parent_candidates": 5,
+      "rrf_k": 60,
+      "reranker_used": true,
+      "mode": "normal",
+      "fallback_reasons": []
+    },
+    "timings": {
+      "queue_ms": 0.0031669987947680056,
+      "ttft_ms": null,
+      "generation_ms": 9250.225125004363,
+      "validation_ms": 0.04512500163400546,
+      "completion_ms": 9250.39708300028
+    },
+    "configured_llm_matches": true,
+    "passed": false
+  },
+  "status": "passed",
+  "acceptance_scope": "model_configuration_and_public_pipeline"
+}

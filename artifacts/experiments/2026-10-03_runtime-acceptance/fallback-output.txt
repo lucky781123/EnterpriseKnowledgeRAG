@@ -1,0 +1,9 @@
+{"case": "embedding", "assertions": "passed"}
+{"case": "dense", "assertions": "passed"}
+{"case": "sparse", "assertions": "passed"}
+{"case": "reranker", "assertions": "passed"}
+{"case": "both_channels", "assertions": "passed"}
+{"case": "authentication", "assertions": "passed"}
+{"case": "model", "assertions": "passed"}
+{"case": "no_acl", "assertions": "passed"}
+{"status": "passed"}

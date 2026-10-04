@@ -1,0 +1,54 @@
+{
+  "status_code": 200,
+  "status": "passed",
+  "data": {
+    "request_id": "070e3633-defc-4081-90e3-acfd0e666b8a",
+    "trace_id": "9a498878-4ed9-4226-8455-fcaa3fc4c91a",
+    "context_source": "retrieved",
+    "answer_status": "answered",
+    "citation_validation": "passed",
+    "message": "Polaris 项目的备份保留期为 37 天，每天凌晨 03:15（Asia/Shanghai 时区）执行备份。",
+    "citations": [
+      {
+        "evidence_id": "retrieved-1",
+        "quote": "Polaris 项目的备份保留期为 37 天，每天凌晨 03:15 执行备份",
+        "start": 16,
+        "end": 54,
+        "source": "doc_1b8f1dd630eeb4681f5cb45955dc415796e9f4a0c003dd7ad5f309a4518535af#child_f5c8e0748abcb4c6951b3addb31bfeece071ef752dab310fca9b4dfcd1309124"
+      }
+    ],
+    "provider_result": {
+      "request_id": "070e3633-defc-4081-90e3-acfd0e666b8a",
+      "provider": "local_answer",
+      "model": "qwen3.6-35b-a3b-claude-4.7-opus-reasoning-distilled-vlm-mlx-oq6",
+      "status": "success",
+      "latency_ms": 21540.96695800399,
+      "content": null,
+      "finish_reason": "stop",
+      "usage": {
+        "input_tokens": 550,
+        "output_tokens": 201
+      },
+      "error": null
+    },
+    "timings": {
+      "queue_ms": 0.00291600008495152,
+      "ttft_ms": null,
+      "generation_ms": 21540.96695800399,
+      "validation_ms": 0.1610830004210584,
+      "completion_ms": 21541.20574999979
+    },
+    "retrieval_trace": {
+      "scopes": 2,
+      "dense_hits": 2,
+      "sparse_hits": 1,
+      "fused_candidates": 2,
+      "reranked_candidates": 2,
+      "parent_candidates": 2,
+      "rrf_k": 60,
+      "reranker_used": true,
+      "mode": "normal",
+      "fallback_reasons": []
+    }
+  }
+}

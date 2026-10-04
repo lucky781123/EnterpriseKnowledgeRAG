@@ -1,0 +1,55 @@
+{
+  "configured_model": "qwen3-coder-next-reap-48b-a3b-mlx",
+  "config_file": "config/local-llm.toml",
+  "probes": [
+    {
+      "case": "public_excerpt",
+      "http_status": 200,
+      "elapsed_seconds": 2.971,
+      "model": "qwen3-coder-next-reap-48b-a3b-mlx",
+      "model_matches_configuration": true,
+      "answer_status": "answered",
+      "citation_validation": "passed",
+      "citations_count": 1,
+      "finish_reason": "stop",
+      "usage": {
+        "input_tokens": 235,
+        "output_tokens": 47
+      },
+      "retrieval_trace": null,
+      "error_kind": null,
+      "passed": true
+    },
+    {
+      "case": "shareholder_product",
+      "http_status": 200,
+      "elapsed_seconds": 16.233,
+      "model": "qwen3-coder-next-reap-48b-a3b-mlx",
+      "model_matches_configuration": true,
+      "answer_status": "invalid_citations",
+      "citation_validation": "failed",
+      "citations_count": 0,
+      "finish_reason": "stop",
+      "usage": {
+        "input_tokens": 3277,
+        "output_tokens": 437
+      },
+      "retrieval_trace": {
+        "scopes": 9,
+        "dense_hits": 64,
+        "sparse_hits": 0,
+        "fused_candidates": 20,
+        "reranked_candidates": 20,
+        "parent_candidates": 5,
+        "rrf_k": 60,
+        "reranker_used": true,
+        "mode": "normal",
+        "fallback_reasons": []
+      },
+      "error_kind": null,
+      "passed": false
+    }
+  ],
+  "readiness_http_status": 200,
+  "frontend_http_status": 200
+}

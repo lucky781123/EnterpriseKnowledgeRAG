@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "experiment": "local_p0_product_smoke",
+  "started_at": "2026-10-03T06:44:47.080613+00:00",
+  "finished_at": "2026-10-03T06:44:55.451455+00:00",
+  "run_status": "passed",
+  "production_capacity_claim": false,
+  "retrieval_quality_claim": false,
+  "environment": {
+    "api_base_url_configured": true,
+    "dev_auth_secret_configured": true
+  },
+  "stages": {
+    "readiness": {
+      "status_code": 200,
+      "status": "passed"
+    },
+    "upload": {
+      "status_code": 201,
+      "status": "passed",
+      "document_id": "doc_e3fd386ac9cd71bce5a66406961f5a2c219d9a7baedb27834e7a698910284ac5",
+      "version_id": "version_4f05e7a512e38283d59e27d315bb564ae1caf52b65e43f867bed91450bfdaa03",
+      "job_id": "job_f1cfbe8253604a90b4891519645345fd",
+      "generation_id": "dense_52ca9b00e8384e4480f32a44cec9f1c4",
+      "job_status": "succeeded",
+      "version_status": "published",
+      "generation_status": "active",
+      "published": true,
+      "artifacts": {
+        "raw": "ready",
+        "parsed": "ready",
+        "embedding": "ready",
+        "sparse": "ready"
+      }
+    },
+    "status": {
+      "status_code": 200,
+      "status": "passed",
+      "document_id": "doc_e3fd386ac9cd71bce5a66406961f5a2c219d9a7baedb27834e7a698910284ac5",
+      "document_status": "ready",
+      "artifacts": {
+        "raw": {
+          "status": "ready",
+          "item_count": 1
+        },
+        "parsed": {
+          "status": "ready",
+          "item_count": 2
+        },
+        "embedding": {
+          "status": "ready",
+          "item_count": 1
+        },
+        "sparse": {
+          "status": "ready",
+          "item_count": 1
+        }
+      },
+      "generation": {
+        "generation_id": "dense_52ca9b00e8384e4480f32a44cec9f1c4",
+        "status": "active",
+        "expected_item_count": 1,
+        "actual_item_count": 1,
+        "checkpoint": 1
+      }
+    },
+    "cross_tenant_deny": {
+      "status_code": 404,
+      "status": "blocked",
+      "error_kind": "resource_not_found"
+    },
+    "cross_tenant_query_deny": {
+      "status_code": 404,
+      "status": "blocked",
+      "error_kind": "evidence_not_found"
+    },
+    "grant": {
+      "status_code": 200,
+      "status": "passed",
+      "document_id": "doc_e3fd386ac9cd71bce5a66406961f5a2c219d9a7baedb27834e7a698910284ac5",
+      "granted": true
+    },
+    "query": {
+      "status_code": 200,
+      "status": "passed",
+      "answer_status": "answered",
+      "citation_validation": "passed",
+      "citation_count": 1,
+      "retrieval_trace": {
+        "scopes": 1,
+        "dense_hits": 1,
+        "sparse_hits": 1,
+        "fused_candidates": 1,
+        "reranked_candidates": 1,
+        "parent_candidates": 1,
+        "rrf_k": 60,
+        "reranker_used": true,
+        "mode": "normal",
+        "fallback_reasons": []
+      }
+    },
+    "revoke": {
+      "status_code": 200,
+      "status": "passed",
+      "document_id": "doc_e3fd386ac9cd71bce5a66406961f5a2c219d9a7baedb27834e7a698910284ac5",
+      "revoked": true
+    },
+    "revoked_query_deny": {
+      "status_code": 404,
+      "status": "blocked",
+      "error_kind": "evidence_not_found"
+    },
+    "regrant": {
+      "status_code": 200,
+      "status": "passed",
+      "document_id": "doc_e3fd386ac9cd71bce5a66406961f5a2c219d9a7baedb27834e7a698910284ac5",
+      "granted": true
+    },
+    "regranted_query": {
+      "status_code": 200,
+      "status": "passed",
+      "answer_status": "answered",
+      "citation_validation": "passed",
+      "citation_count": 1,
+      "retrieval_trace": {
+        "scopes": 1,
+        "dense_hits": 1,
+        "sparse_hits": 1,
+        "fused_candidates": 1,
+        "reranked_candidates": 1,
+        "parent_candidates": 1,
+        "rrf_k": 60,
+        "reranker_used": true,
+        "mode": "normal",
+        "fallback_reasons": []
+      }
+    },
+    "cleanup": {
+      "status": "not_applicable",
+      "reason": "产品 API 当前没有删除文档接口；本 smoke 不直接删除数据库或索引对象"
+    }
+  }
+}

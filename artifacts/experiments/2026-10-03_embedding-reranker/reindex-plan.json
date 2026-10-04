@@ -1,0 +1,11 @@
+{
+  "status": "planned",
+  "embedding_model": "feadxus/qwen3-embedding:4b",
+  "dimension": 2560,
+  "profile": "feadxus/qwen3-embedding:4b:2560:parent-child-v1:dense-v1",
+  "reranker_model": "jina-reranker-v3-mlx",
+  "applied": false,
+  "results": [],
+  "authorized_documents": 9,
+  "expected_children": 179
+}

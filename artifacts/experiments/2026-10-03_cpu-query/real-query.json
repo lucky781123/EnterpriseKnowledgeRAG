@@ -1,0 +1,1708 @@
+{
+  "label": "real-query",
+  "samples": [
+    {
+      "phase": "before",
+      "timestamp": "2026-10-03T18:56:32.089453+08:00",
+      "processes": [
+        {
+          "pid": 419,
+          "name": "WindowServer",
+          "cpu_percent": 71.6,
+          "cpu_time": "347:22.32"
+        },
+        {
+          "pid": 7190,
+          "name": "rag-api",
+          "cpu_percent": 4.8,
+          "cpu_time": "0:28.75"
+        },
+        {
+          "pid": 31254,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:31.30"
+        },
+        {
+          "pid": 31256,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "14:20.39"
+        },
+        {
+          "pid": 31257,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:05.44"
+        },
+        {
+          "pid": 31443,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 21.9,
+          "cpu_time": "196:20.36"
+        },
+        {
+          "pid": 51222,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 0.2,
+          "cpu_time": "1:47.03"
+        },
+        {
+          "pid": 10608,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "1:21.07"
+        }
+      ]
+    },
+    {
+      "phase": "during",
+      "timestamp": "2026-10-03T18:56:32.168693+08:00",
+      "processes": [
+        {
+          "pid": 419,
+          "name": "WindowServer",
+          "cpu_percent": 71.6,
+          "cpu_time": "347:22.38"
+        },
+        {
+          "pid": 7190,
+          "name": "rag-api",
+          "cpu_percent": 3.4,
+          "cpu_time": "0:28.75"
+        },
+        {
+          "pid": 31254,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:31.30"
+        },
+        {
+          "pid": 31256,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "14:20.40"
+        },
+        {
+          "pid": 31257,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:05.44"
+        },
+        {
+          "pid": 31443,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 21.5,
+          "cpu_time": "196:20.37"
+        },
+        {
+          "pid": 51222,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 0.4,
+          "cpu_time": "1:47.03"
+        },
+        {
+          "pid": 10608,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "1:21.07"
+        }
+      ]
+    },
+    {
+      "phase": "during",
+      "timestamp": "2026-10-03T18:56:37.217274+08:00",
+      "processes": [
+        {
+          "pid": 419,
+          "name": "WindowServer",
+          "cpu_percent": 62.2,
+          "cpu_time": "347:26.00"
+        },
+        {
+          "pid": 7190,
+          "name": "rag-api",
+          "cpu_percent": 264.4,
+          "cpu_time": "0:37.53"
+        },
+        {
+          "pid": 31254,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:31.31"
+        },
+        {
+          "pid": 31256,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.5,
+          "cpu_time": "14:20.62"
+        },
+        {
+          "pid": 31257,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:05.44"
+        },
+        {
+          "pid": 31443,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 31.5,
+          "cpu_time": "196:22.16"
+        },
+        {
+          "pid": 51222,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 0.2,
+          "cpu_time": "1:47.06"
+        },
+        {
+          "pid": 10608,
+          "name": "llama-server",
+          "cpu_percent": 0.2,
+          "cpu_time": "1:21.08"
+        },
+        {
+          "pid": 16791,
+          "name": "llama-server",
+          "cpu_percent": 0.2,
+          "cpu_time": "0:00.79"
+        }
+      ]
+    },
+    {
+      "phase": "during",
+      "timestamp": "2026-10-03T18:56:42.275402+08:00",
+      "processes": [
+        {
+          "pid": 419,
+          "name": "WindowServer",
+          "cpu_percent": 68.2,
+          "cpu_time": "347:29.43"
+        },
+        {
+          "pid": 7190,
+          "name": "rag-api",
+          "cpu_percent": 5.1,
+          "cpu_time": "0:42.25"
+        },
+        {
+          "pid": 31254,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:31.31"
+        },
+        {
+          "pid": 31256,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "14:20.73"
+        },
+        {
+          "pid": 31257,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:05.44"
+        },
+        {
+          "pid": 31443,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 24.5,
+          "cpu_time": "196:23.80"
+        },
+        {
+          "pid": 51222,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 0.2,
+          "cpu_time": "1:47.08"
+        },
+        {
+          "pid": 10608,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "1:21.10"
+        },
+        {
+          "pid": 16791,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "0:00.80"
+        }
+      ]
+    },
+    {
+      "phase": "during",
+      "timestamp": "2026-10-03T18:56:47.331606+08:00",
+      "processes": [
+        {
+          "pid": 419,
+          "name": "WindowServer",
+          "cpu_percent": 71.4,
+          "cpu_time": "347:33.16"
+        },
+        {
+          "pid": 7190,
+          "name": "rag-api",
+          "cpu_percent": 5.2,
+          "cpu_time": "0:42.50"
+        },
+        {
+          "pid": 31254,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:31.32"
+        },
+        {
+          "pid": 31256,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "14:20.87"
+        },
+        {
+          "pid": 31257,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:05.44"
+        },
+        {
+          "pid": 31443,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 26.2,
+          "cpu_time": "196:25.55"
+        },
+        {
+          "pid": 51222,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 0.2,
+          "cpu_time": "1:47.10"
+        },
+        {
+          "pid": 10608,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "1:21.11"
+        },
+        {
+          "pid": 16791,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "0:00.81"
+        }
+      ]
+    },
+    {
+      "phase": "during",
+      "timestamp": "2026-10-03T18:56:52.391588+08:00",
+      "processes": [
+        {
+          "pid": 419,
+          "name": "WindowServer",
+          "cpu_percent": 76.8,
+          "cpu_time": "347:37.05"
+        },
+        {
+          "pid": 7190,
+          "name": "rag-api",
+          "cpu_percent": 4.3,
+          "cpu_time": "0:42.75"
+        },
+        {
+          "pid": 31254,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:31.33"
+        },
+        {
+          "pid": 31256,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.2,
+          "cpu_time": "14:20.97"
+        },
+        {
+          "pid": 31257,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:05.44"
+        },
+        {
+          "pid": 31443,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 32.2,
+          "cpu_time": "196:27.23"
+        },
+        {
+          "pid": 51222,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 0.2,
+          "cpu_time": "1:47.13"
+        },
+        {
+          "pid": 10608,
+          "name": "llama-server",
+          "cpu_percent": 0.2,
+          "cpu_time": "1:21.12"
+        },
+        {
+          "pid": 16791,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "0:00.82"
+        }
+      ]
+    },
+    {
+      "phase": "during",
+      "timestamp": "2026-10-03T18:56:57.449116+08:00",
+      "processes": [
+        {
+          "pid": 419,
+          "name": "WindowServer",
+          "cpu_percent": 73.7,
+          "cpu_time": "347:40.95"
+        },
+        {
+          "pid": 7190,
+          "name": "rag-api",
+          "cpu_percent": 5.8,
+          "cpu_time": "0:43.03"
+        },
+        {
+          "pid": 31254,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:31.34"
+        },
+        {
+          "pid": 31256,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "14:21.17"
+        },
+        {
+          "pid": 31257,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:05.44"
+        },
+        {
+          "pid": 31443,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 20.2,
+          "cpu_time": "196:28.99"
+        },
+        {
+          "pid": 51222,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 0.2,
+          "cpu_time": "1:47.15"
+        },
+        {
+          "pid": 10608,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "1:21.14"
+        },
+        {
+          "pid": 16791,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "0:00.83"
+        }
+      ]
+    },
+    {
+      "phase": "during",
+      "timestamp": "2026-10-03T18:57:02.502007+08:00",
+      "processes": [
+        {
+          "pid": 419,
+          "name": "WindowServer",
+          "cpu_percent": 74.5,
+          "cpu_time": "347:44.88"
+        },
+        {
+          "pid": 7190,
+          "name": "rag-api",
+          "cpu_percent": 5.3,
+          "cpu_time": "0:43.29"
+        },
+        {
+          "pid": 31254,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:31.34"
+        },
+        {
+          "pid": 31256,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.2,
+          "cpu_time": "14:21.33"
+        },
+        {
+          "pid": 31257,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:05.45"
+        },
+        {
+          "pid": 31443,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 23.2,
+          "cpu_time": "196:30.57"
+        },
+        {
+          "pid": 51222,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 0.2,
+          "cpu_time": "1:47.17"
+        },
+        {
+          "pid": 10608,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "1:21.16"
+        },
+        {
+          "pid": 16791,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "0:00.84"
+        }
+      ]
+    },
+    {
+      "phase": "during",
+      "timestamp": "2026-10-03T18:57:07.580173+08:00",
+      "processes": [
+        {
+          "pid": 419,
+          "name": "WindowServer",
+          "cpu_percent": 69.4,
+          "cpu_time": "347:48.75"
+        },
+        {
+          "pid": 7190,
+          "name": "rag-api",
+          "cpu_percent": 5.7,
+          "cpu_time": "0:43.55"
+        },
+        {
+          "pid": 31254,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:31.35"
+        },
+        {
+          "pid": 31256,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.1,
+          "cpu_time": "14:21.50"
+        },
+        {
+          "pid": 31257,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:05.45"
+        },
+        {
+          "pid": 31443,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 29.7,
+          "cpu_time": "196:32.41"
+        },
+        {
+          "pid": 51222,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 2.4,
+          "cpu_time": "1:47.20"
+        },
+        {
+          "pid": 10608,
+          "name": "llama-server",
+          "cpu_percent": 0.2,
+          "cpu_time": "1:21.18"
+        },
+        {
+          "pid": 16791,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "0:00.85"
+        }
+      ]
+    },
+    {
+      "phase": "during",
+      "timestamp": "2026-10-03T18:57:12.628894+08:00",
+      "processes": [
+        {
+          "pid": 419,
+          "name": "WindowServer",
+          "cpu_percent": 85.8,
+          "cpu_time": "347:52.72"
+        },
+        {
+          "pid": 7190,
+          "name": "rag-api",
+          "cpu_percent": 2.9,
+          "cpu_time": "0:43.75"
+        },
+        {
+          "pid": 31254,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:31.36"
+        },
+        {
+          "pid": 31256,
+          "name": "com.docker.backend",
+          "cpu_percent": 2.2,
+          "cpu_time": "14:21.70"
+        },
+        {
+          "pid": 31257,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:05.45"
+        },
+        {
+          "pid": 31443,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 62.6,
+          "cpu_time": "196:34.15"
+        },
+        {
+          "pid": 51222,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 0.1,
+          "cpu_time": "1:47.24"
+        },
+        {
+          "pid": 10608,
+          "name": "llama-server",
+          "cpu_percent": 0.2,
+          "cpu_time": "1:21.19"
+        },
+        {
+          "pid": 16791,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "0:00.86"
+        }
+      ]
+    },
+    {
+      "phase": "during",
+      "timestamp": "2026-10-03T18:57:17.685664+08:00",
+      "processes": [
+        {
+          "pid": 419,
+          "name": "WindowServer",
+          "cpu_percent": 70.9,
+          "cpu_time": "347:56.58"
+        },
+        {
+          "pid": 7190,
+          "name": "rag-api",
+          "cpu_percent": 5.7,
+          "cpu_time": "0:43.96"
+        },
+        {
+          "pid": 31254,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:31.37"
+        },
+        {
+          "pid": 31256,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.1,
+          "cpu_time": "14:21.84"
+        },
+        {
+          "pid": 31257,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:05.45"
+        },
+        {
+          "pid": 31443,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 24.9,
+          "cpu_time": "196:35.75"
+        },
+        {
+          "pid": 51222,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 0.0,
+          "cpu_time": "1:47.26"
+        },
+        {
+          "pid": 10608,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "1:21.20"
+        },
+        {
+          "pid": 16791,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "0:00.87"
+        }
+      ]
+    },
+    {
+      "phase": "during",
+      "timestamp": "2026-10-03T18:57:22.746263+08:00",
+      "processes": [
+        {
+          "pid": 419,
+          "name": "WindowServer",
+          "cpu_percent": 71.4,
+          "cpu_time": "348:00.25"
+        },
+        {
+          "pid": 7190,
+          "name": "rag-api",
+          "cpu_percent": 5.4,
+          "cpu_time": "0:44.23"
+        },
+        {
+          "pid": 31254,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.1,
+          "cpu_time": "0:31.37"
+        },
+        {
+          "pid": 31256,
+          "name": "com.docker.backend",
+          "cpu_percent": 4.5,
+          "cpu_time": "14:21.98"
+        },
+        {
+          "pid": 31257,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:05.45"
+        },
+        {
+          "pid": 31443,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 53.3,
+          "cpu_time": "196:37.61"
+        },
+        {
+          "pid": 51222,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 0.2,
+          "cpu_time": "1:47.29"
+        },
+        {
+          "pid": 10608,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "1:21.21"
+        },
+        {
+          "pid": 16791,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "0:00.88"
+        }
+      ]
+    },
+    {
+      "phase": "during",
+      "timestamp": "2026-10-03T18:57:27.805989+08:00",
+      "processes": [
+        {
+          "pid": 419,
+          "name": "WindowServer",
+          "cpu_percent": 65.4,
+          "cpu_time": "348:03.93"
+        },
+        {
+          "pid": 7190,
+          "name": "rag-api",
+          "cpu_percent": 5.5,
+          "cpu_time": "0:44.54"
+        },
+        {
+          "pid": 31254,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:31.38"
+        },
+        {
+          "pid": 31256,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "14:22.11"
+        },
+        {
+          "pid": 31257,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:05.45"
+        },
+        {
+          "pid": 31443,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 21.5,
+          "cpu_time": "196:39.31"
+        },
+        {
+          "pid": 51222,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 0.2,
+          "cpu_time": "1:47.31"
+        },
+        {
+          "pid": 10608,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "1:21.23"
+        },
+        {
+          "pid": 16791,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "0:00.89"
+        }
+      ]
+    },
+    {
+      "phase": "during",
+      "timestamp": "2026-10-03T18:57:32.853449+08:00",
+      "processes": [
+        {
+          "pid": 419,
+          "name": "WindowServer",
+          "cpu_percent": 71.5,
+          "cpu_time": "348:07.58"
+        },
+        {
+          "pid": 7190,
+          "name": "rag-api",
+          "cpu_percent": 5.4,
+          "cpu_time": "0:44.81"
+        },
+        {
+          "pid": 31254,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.1,
+          "cpu_time": "0:31.39"
+        },
+        {
+          "pid": 31256,
+          "name": "com.docker.backend",
+          "cpu_percent": 4.1,
+          "cpu_time": "14:22.28"
+        },
+        {
+          "pid": 31257,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:05.45"
+        },
+        {
+          "pid": 31443,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 39.5,
+          "cpu_time": "196:40.98"
+        },
+        {
+          "pid": 51222,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 0.3,
+          "cpu_time": "1:47.34"
+        },
+        {
+          "pid": 10608,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "1:21.24"
+        },
+        {
+          "pid": 16791,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "0:00.90"
+        }
+      ]
+    },
+    {
+      "phase": "during",
+      "timestamp": "2026-10-03T18:57:37.901118+08:00",
+      "processes": [
+        {
+          "pid": 419,
+          "name": "WindowServer",
+          "cpu_percent": 84.2,
+          "cpu_time": "348:11.46"
+        },
+        {
+          "pid": 7190,
+          "name": "rag-api",
+          "cpu_percent": 2.5,
+          "cpu_time": "0:45.02"
+        },
+        {
+          "pid": 31254,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:31.40"
+        },
+        {
+          "pid": 31256,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "14:22.40"
+        },
+        {
+          "pid": 31257,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:05.45"
+        },
+        {
+          "pid": 31443,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 22.8,
+          "cpu_time": "196:42.68"
+        },
+        {
+          "pid": 51222,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 0.4,
+          "cpu_time": "1:47.37"
+        },
+        {
+          "pid": 10608,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "1:21.25"
+        },
+        {
+          "pid": 16791,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "0:00.91"
+        }
+      ]
+    },
+    {
+      "phase": "during",
+      "timestamp": "2026-10-03T18:57:42.952847+08:00",
+      "processes": [
+        {
+          "pid": 419,
+          "name": "WindowServer",
+          "cpu_percent": 71.9,
+          "cpu_time": "348:15.28"
+        },
+        {
+          "pid": 7190,
+          "name": "rag-api",
+          "cpu_percent": 5.6,
+          "cpu_time": "0:45.23"
+        },
+        {
+          "pid": 31254,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:31.41"
+        },
+        {
+          "pid": 31256,
+          "name": "com.docker.backend",
+          "cpu_percent": 3.5,
+          "cpu_time": "14:22.54"
+        },
+        {
+          "pid": 31257,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:05.45"
+        },
+        {
+          "pid": 31443,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 36.4,
+          "cpu_time": "196:44.41"
+        },
+        {
+          "pid": 51222,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 0.2,
+          "cpu_time": "1:47.39"
+        },
+        {
+          "pid": 10608,
+          "name": "llama-server",
+          "cpu_percent": 0.2,
+          "cpu_time": "1:21.27"
+        },
+        {
+          "pid": 16791,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "0:00.92"
+        }
+      ]
+    },
+    {
+      "phase": "during",
+      "timestamp": "2026-10-03T18:57:48.003836+08:00",
+      "processes": [
+        {
+          "pid": 419,
+          "name": "WindowServer",
+          "cpu_percent": 78.7,
+          "cpu_time": "348:19.23"
+        },
+        {
+          "pid": 7190,
+          "name": "rag-api",
+          "cpu_percent": 5.5,
+          "cpu_time": "0:45.49"
+        },
+        {
+          "pid": 31254,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:31.41"
+        },
+        {
+          "pid": 31256,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.2,
+          "cpu_time": "14:22.71"
+        },
+        {
+          "pid": 31257,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:05.45"
+        },
+        {
+          "pid": 31443,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 27.2,
+          "cpu_time": "196:46.01"
+        },
+        {
+          "pid": 51222,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 0.1,
+          "cpu_time": "1:47.42"
+        },
+        {
+          "pid": 10608,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "1:21.28"
+        },
+        {
+          "pid": 16791,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "0:00.93"
+        }
+      ]
+    },
+    {
+      "phase": "during",
+      "timestamp": "2026-10-03T18:57:53.057413+08:00",
+      "processes": [
+        {
+          "pid": 419,
+          "name": "WindowServer",
+          "cpu_percent": 76.9,
+          "cpu_time": "348:23.36"
+        },
+        {
+          "pid": 7190,
+          "name": "rag-api",
+          "cpu_percent": 4.2,
+          "cpu_time": "0:45.72"
+        },
+        {
+          "pid": 31254,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.6,
+          "cpu_time": "0:31.42"
+        },
+        {
+          "pid": 31256,
+          "name": "com.docker.backend",
+          "cpu_percent": 10.3,
+          "cpu_time": "14:22.88"
+        },
+        {
+          "pid": 31257,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:05.45"
+        },
+        {
+          "pid": 31443,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 91.5,
+          "cpu_time": "196:48.05"
+        },
+        {
+          "pid": 51222,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 0.0,
+          "cpu_time": "1:47.44"
+        },
+        {
+          "pid": 10608,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "1:21.29"
+        },
+        {
+          "pid": 16791,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "0:00.94"
+        }
+      ]
+    },
+    {
+      "phase": "during",
+      "timestamp": "2026-10-03T18:57:58.113195+08:00",
+      "processes": [
+        {
+          "pid": 419,
+          "name": "WindowServer",
+          "cpu_percent": 79.7,
+          "cpu_time": "348:27.37"
+        },
+        {
+          "pid": 7190,
+          "name": "rag-api",
+          "cpu_percent": 5.7,
+          "cpu_time": "0:45.98"
+        },
+        {
+          "pid": 31254,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:31.43"
+        },
+        {
+          "pid": 31256,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "14:22.99"
+        },
+        {
+          "pid": 31257,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:05.45"
+        },
+        {
+          "pid": 31443,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 23.2,
+          "cpu_time": "196:49.57"
+        },
+        {
+          "pid": 51222,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 0.2,
+          "cpu_time": "1:47.47"
+        },
+        {
+          "pid": 10608,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "1:21.30"
+        },
+        {
+          "pid": 16791,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "0:00.95"
+        }
+      ]
+    },
+    {
+      "phase": "during",
+      "timestamp": "2026-10-03T18:58:03.170822+08:00",
+      "processes": [
+        {
+          "pid": 419,
+          "name": "WindowServer",
+          "cpu_percent": 74.2,
+          "cpu_time": "348:31.19"
+        },
+        {
+          "pid": 7190,
+          "name": "rag-api",
+          "cpu_percent": 5.5,
+          "cpu_time": "0:46.25"
+        },
+        {
+          "pid": 31254,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.4,
+          "cpu_time": "0:31.45"
+        },
+        {
+          "pid": 31256,
+          "name": "com.docker.backend",
+          "cpu_percent": 6.9,
+          "cpu_time": "14:23.25"
+        },
+        {
+          "pid": 31257,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:05.45"
+        },
+        {
+          "pid": 31443,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 51.5,
+          "cpu_time": "196:51.46"
+        },
+        {
+          "pid": 51222,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 0.2,
+          "cpu_time": "1:47.49"
+        },
+        {
+          "pid": 10608,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "1:21.32"
+        },
+        {
+          "pid": 16791,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "0:00.96"
+        }
+      ]
+    },
+    {
+      "phase": "during",
+      "timestamp": "2026-10-03T18:58:08.232225+08:00",
+      "processes": [
+        {
+          "pid": 419,
+          "name": "WindowServer",
+          "cpu_percent": 73.7,
+          "cpu_time": "348:35.15"
+        },
+        {
+          "pid": 7190,
+          "name": "rag-api",
+          "cpu_percent": 4.6,
+          "cpu_time": "0:46.52"
+        },
+        {
+          "pid": 31254,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:31.46"
+        },
+        {
+          "pid": 31256,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "14:23.35"
+        },
+        {
+          "pid": 31257,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:05.45"
+        },
+        {
+          "pid": 31443,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 24.0,
+          "cpu_time": "196:53.07"
+        },
+        {
+          "pid": 51222,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 0.1,
+          "cpu_time": "1:47.52"
+        },
+        {
+          "pid": 10608,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "1:21.33"
+        },
+        {
+          "pid": 16791,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "0:00.97"
+        }
+      ]
+    },
+    {
+      "phase": "during",
+      "timestamp": "2026-10-03T18:58:13.283635+08:00",
+      "processes": [
+        {
+          "pid": 419,
+          "name": "WindowServer",
+          "cpu_percent": 72.2,
+          "cpu_time": "348:39.08"
+        },
+        {
+          "pid": 7190,
+          "name": "rag-api",
+          "cpu_percent": 4.5,
+          "cpu_time": "0:46.76"
+        },
+        {
+          "pid": 31254,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.1,
+          "cpu_time": "0:31.47"
+        },
+        {
+          "pid": 31256,
+          "name": "com.docker.backend",
+          "cpu_percent": 3.4,
+          "cpu_time": "14:23.51"
+        },
+        {
+          "pid": 31257,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:05.45"
+        },
+        {
+          "pid": 31443,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 38.1,
+          "cpu_time": "196:55.03"
+        },
+        {
+          "pid": 51222,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 0.2,
+          "cpu_time": "1:47.55"
+        },
+        {
+          "pid": 10608,
+          "name": "llama-server",
+          "cpu_percent": 0.2,
+          "cpu_time": "1:21.35"
+        },
+        {
+          "pid": 16791,
+          "name": "llama-server",
+          "cpu_percent": 0.2,
+          "cpu_time": "0:00.98"
+        }
+      ]
+    },
+    {
+      "phase": "during",
+      "timestamp": "2026-10-03T18:58:18.338253+08:00",
+      "processes": [
+        {
+          "pid": 419,
+          "name": "WindowServer",
+          "cpu_percent": 72.7,
+          "cpu_time": "348:42.89"
+        },
+        {
+          "pid": 7190,
+          "name": "rag-api",
+          "cpu_percent": 5.7,
+          "cpu_time": "0:47.03"
+        },
+        {
+          "pid": 31254,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:31.48"
+        },
+        {
+          "pid": 31256,
+          "name": "com.docker.backend",
+          "cpu_percent": 1.3,
+          "cpu_time": "14:23.69"
+        },
+        {
+          "pid": 31257,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:05.45"
+        },
+        {
+          "pid": 31443,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 28.2,
+          "cpu_time": "196:56.82"
+        },
+        {
+          "pid": 51222,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 0.3,
+          "cpu_time": "1:47.57"
+        },
+        {
+          "pid": 10608,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "1:21.36"
+        },
+        {
+          "pid": 16791,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "0:00.99"
+        }
+      ]
+    },
+    {
+      "phase": "during",
+      "timestamp": "2026-10-03T18:58:23.395316+08:00",
+      "processes": [
+        {
+          "pid": 419,
+          "name": "WindowServer",
+          "cpu_percent": 66.3,
+          "cpu_time": "348:46.80"
+        },
+        {
+          "pid": 7190,
+          "name": "rag-api",
+          "cpu_percent": 5.1,
+          "cpu_time": "0:47.30"
+        },
+        {
+          "pid": 31254,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:31.49"
+        },
+        {
+          "pid": 31256,
+          "name": "com.docker.backend",
+          "cpu_percent": 2.3,
+          "cpu_time": "14:23.85"
+        },
+        {
+          "pid": 31257,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:05.45"
+        },
+        {
+          "pid": 31443,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 44.7,
+          "cpu_time": "196:58.73"
+        },
+        {
+          "pid": 51222,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 0.4,
+          "cpu_time": "1:47.60"
+        },
+        {
+          "pid": 10608,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "1:21.37"
+        },
+        {
+          "pid": 16791,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "0:01.00"
+        }
+      ]
+    },
+    {
+      "phase": "during",
+      "timestamp": "2026-10-03T18:58:28.458661+08:00",
+      "processes": [
+        {
+          "pid": 419,
+          "name": "WindowServer",
+          "cpu_percent": 79.4,
+          "cpu_time": "348:50.53"
+        },
+        {
+          "pid": 7190,
+          "name": "rag-api",
+          "cpu_percent": 5.7,
+          "cpu_time": "0:47.57"
+        },
+        {
+          "pid": 31254,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.3,
+          "cpu_time": "0:31.49"
+        },
+        {
+          "pid": 31256,
+          "name": "com.docker.backend",
+          "cpu_percent": 8.9,
+          "cpu_time": "14:23.98"
+        },
+        {
+          "pid": 31257,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:05.45"
+        },
+        {
+          "pid": 31443,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 63.0,
+          "cpu_time": "197:00.38"
+        },
+        {
+          "pid": 51222,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 0.3,
+          "cpu_time": "1:47.63"
+        },
+        {
+          "pid": 10608,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "1:21.39"
+        },
+        {
+          "pid": 16791,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "0:01.01"
+        }
+      ]
+    },
+    {
+      "phase": "after",
+      "timestamp": "2026-10-03T18:58:35.892511+08:00",
+      "processes": [
+        {
+          "pid": 419,
+          "name": "WindowServer",
+          "cpu_percent": 65.0,
+          "cpu_time": "348:55.90"
+        },
+        {
+          "pid": 7190,
+          "name": "rag-api",
+          "cpu_percent": 5.1,
+          "cpu_time": "0:47.95"
+        },
+        {
+          "pid": 31254,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:31.51"
+        },
+        {
+          "pid": 31256,
+          "name": "com.docker.backend",
+          "cpu_percent": 3.5,
+          "cpu_time": "14:24.24"
+        },
+        {
+          "pid": 31257,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:05.45"
+        },
+        {
+          "pid": 31443,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 36.6,
+          "cpu_time": "197:02.91"
+        },
+        {
+          "pid": 51222,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 0.2,
+          "cpu_time": "1:47.66"
+        },
+        {
+          "pid": 10608,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "1:21.40"
+        },
+        {
+          "pid": 16791,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "0:01.02"
+        }
+      ]
+    },
+    {
+      "phase": "after",
+      "timestamp": "2026-10-03T18:58:40.942092+08:00",
+      "processes": [
+        {
+          "pid": 419,
+          "name": "WindowServer",
+          "cpu_percent": 65.0,
+          "cpu_time": "348:59.57"
+        },
+        {
+          "pid": 7190,
+          "name": "rag-api",
+          "cpu_percent": 4.7,
+          "cpu_time": "0:48.19"
+        },
+        {
+          "pid": 31254,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:31.51"
+        },
+        {
+          "pid": 31256,
+          "name": "com.docker.backend",
+          "cpu_percent": 1.3,
+          "cpu_time": "14:24.35"
+        },
+        {
+          "pid": 31257,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:05.45"
+        },
+        {
+          "pid": 31443,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 23.1,
+          "cpu_time": "197:04.51"
+        },
+        {
+          "pid": 51222,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 0.2,
+          "cpu_time": "1:47.69"
+        },
+        {
+          "pid": 10608,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "1:21.42"
+        },
+        {
+          "pid": 16791,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "0:01.03"
+        }
+      ]
+    },
+    {
+      "phase": "after",
+      "timestamp": "2026-10-03T18:58:46.001215+08:00",
+      "processes": [
+        {
+          "pid": 419,
+          "name": "WindowServer",
+          "cpu_percent": 67.9,
+          "cpu_time": "349:03.15"
+        },
+        {
+          "pid": 7190,
+          "name": "rag-api",
+          "cpu_percent": 4.5,
+          "cpu_time": "0:48.42"
+        },
+        {
+          "pid": 31254,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:31.52"
+        },
+        {
+          "pid": 31256,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.3,
+          "cpu_time": "14:24.48"
+        },
+        {
+          "pid": 31257,
+          "name": "com.docker.backend",
+          "cpu_percent": 0.0,
+          "cpu_time": "0:05.45"
+        },
+        {
+          "pid": 31443,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 28.8,
+          "cpu_time": "197:06.22"
+        },
+        {
+          "pid": 51222,
+          "name": "com.apple.Virtualization.VirtualMachine",
+          "cpu_percent": 0.2,
+          "cpu_time": "1:47.72"
+        },
+        {
+          "pid": 10608,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "1:21.43"
+        },
+        {
+          "pid": 16791,
+          "name": "llama-server",
+          "cpu_percent": 0.1,
+          "cpu_time": "0:01.04"
+        }
+      ]
+    }
+  ],
+  "query": {
+    "http_status": 200,
+    "elapsed_seconds": 118.703,
+    "request_id": "7653d9e1-d87c-48d4-980f-74af61d3bce7",
+    "trace_id": "5d6259f3-9ba5-4cda-810f-52bafa1c1d4f",
+    "answer_status": "invalid_citations",
+    "citation_validation": "failed",
+    "citations_count": 0,
+    "message_chars": 471,
+    "finish_reason": "stop",
+    "usage": {
+      "input_tokens": 2915,
+      "output_tokens": 1043
+    },
+    "timings": {
+      "queue_ms": 0.0038330035749822855,
+      "ttft_ms": null,
+      "generation_ms": 111883.9582080036,
+      "validation_ms": 0.33420899853808805,
+      "completion_ms": 111884.9011659986
+    },
+    "retrieval_trace": {
+      "scopes": 4,
+      "dense_hits": 21,
+      "sparse_hits": 0,
+      "fused_candidates": 20,
+      "reranked_candidates": 20,
+      "parent_candidates": 5,
+      "rrf_k": 60,
+      "reranker_used": true,
+      "mode": "normal",
+      "fallback_reasons": []
+    }
+  },
+  "business_passed": false
+}

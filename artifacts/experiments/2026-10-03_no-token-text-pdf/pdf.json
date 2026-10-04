@@ -1,0 +1,21 @@
+{
+  "status": "passed",
+  "transport": "real_browser_http",
+  "upload_published": true,
+  "anonymous": true,
+  "metadata_left_empty": true,
+  "document_ready": true,
+  "answer_status": "answered",
+  "citation_validation": "passed",
+  "normal_reranked": true,
+  "desktop": [
+    1440,
+    1000
+  ],
+  "mobile": [
+    390,
+    844
+  ],
+  "horizontal_overflow": false,
+  "page_errors": []
+}

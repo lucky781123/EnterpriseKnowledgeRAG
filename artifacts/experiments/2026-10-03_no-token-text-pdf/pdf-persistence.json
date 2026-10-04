@@ -1,0 +1,41 @@
+{
+  "status": "passed",
+  "document_id": "doc_03c4c8ef11be83af46800b3b94894521fcf9f32670a3553cf5f73319391f8d3a",
+  "version_id": "version_bc246dc65321b6e101a85ee172cd416dca19fcf4b7cec51f3bce3c7aa8f03151",
+  "generation_id": "dense_64d2f0cbd70342a4abd2fcbfd455eb13",
+  "document_status": "ready",
+  "version_status": "published",
+  "generation_status": "active",
+  "active_pointer_matches": true,
+  "raw_hash_matches": true,
+  "manifest_hash_matches": true,
+  "lineage_matches": true,
+  "blocks": 1,
+  "parents": 1,
+  "children": 1,
+  "dense_objects": 1,
+  "sparse_objects": 1,
+  "chunk_ids_match": true,
+  "vector_dimensions": [
+    1024
+  ],
+  "embedding_model": "bge-m3:latest",
+  "artifacts": {
+    "parsed": {
+      "status": "ready",
+      "item_count": 1
+    },
+    "raw": {
+      "status": "ready",
+      "item_count": 1
+    },
+    "embedding": {
+      "status": "ready",
+      "item_count": 1
+    },
+    "sparse": {
+      "status": "ready",
+      "item_count": 1
+    }
+  }
+}

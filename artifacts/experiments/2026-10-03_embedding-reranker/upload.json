@@ -1,0 +1,16 @@
+{
+  "document_id": "doc_4871cce2a9852e04812e10841e69bfd97af63677f29489f02a3d29118783fa12",
+  "version_id": "version_b90e5f135b1b4bfffdb307898f3180688ec3ebda5ba1248316089853e98b6332",
+  "job_id": "job_b9845756fdbf4a6084dad42036229175",
+  "generation_id": "dense_901ebc16d0ef43949f569841197d7f14",
+  "job_status": "succeeded",
+  "version_status": "published",
+  "generation_status": "active",
+  "artifacts": {
+    "raw": "ready",
+    "parsed": "ready",
+    "embedding": "ready",
+    "sparse": "ready"
+  },
+  "published": true
+}

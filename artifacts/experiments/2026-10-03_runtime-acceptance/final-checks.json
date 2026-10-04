@@ -1,0 +1,10 @@
+{
+  "status": "passed",
+  "artifact_identity_matches": true,
+  "fallback_cases": 8,
+  "credential_literals_found": false,
+  "token_mode": "0600",
+  "product_ready_http": 200,
+  "frontend_http": 200,
+  "api": "http://127.0.0.1:8001"
+}

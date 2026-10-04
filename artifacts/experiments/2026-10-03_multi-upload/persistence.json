@@ -1,0 +1,131 @@
+{
+  "status": "passed",
+  "files": {
+    "alpha.txt": {
+      "file_bytes": 52,
+      "status": "passed",
+      "document_id": "doc_be2dd7d2509736e44394e85b4c58684085384ad3357cfdfa6fae063949c6efc1",
+      "version_id": "version_e5fd9c1713b6c4cf334313646d25f44d6476227ed274b3bc48e4a939df21ee5d",
+      "generation_id": "dense_bef2d5525e694a159fb7e515ca236b3b",
+      "document_status": "ready",
+      "version_status": "published",
+      "generation_status": "active",
+      "active_pointer_matches": true,
+      "raw_hash_matches": true,
+      "manifest_hash_matches": true,
+      "lineage_matches": true,
+      "blocks": 1,
+      "parents": 1,
+      "children": 1,
+      "dense_objects": 1,
+      "sparse_objects": 1,
+      "chunk_ids_match": true,
+      "vector_dimensions": [
+        1024
+      ],
+      "embedding_model": "bge-m3:latest",
+      "artifacts": {
+        "parsed": {
+          "status": "ready",
+          "item_count": 1
+        },
+        "raw": {
+          "status": "ready",
+          "item_count": 1
+        },
+        "embedding": {
+          "status": "ready",
+          "item_count": 1
+        },
+        "sparse": {
+          "status": "ready",
+          "item_count": 1
+        }
+      }
+    },
+    "beta.md": {
+      "file_bytes": 66,
+      "status": "passed",
+      "document_id": "doc_247653cb9967079758b95b93b5517fbe43c20b75d4adc7ce098f25698dca05e9",
+      "version_id": "version_a4dd0f450074f0c440ced7d2ef48fd20b643b2b1628cca6815036d11693afd64",
+      "generation_id": "dense_4ae15cfdf87847e4a6dd40b041e52dc8",
+      "document_status": "ready",
+      "version_status": "published",
+      "generation_status": "active",
+      "active_pointer_matches": true,
+      "raw_hash_matches": true,
+      "manifest_hash_matches": true,
+      "lineage_matches": true,
+      "blocks": 2,
+      "parents": 1,
+      "children": 1,
+      "dense_objects": 1,
+      "sparse_objects": 1,
+      "chunk_ids_match": true,
+      "vector_dimensions": [
+        1024
+      ],
+      "embedding_model": "bge-m3:latest",
+      "artifacts": {
+        "embedding": {
+          "status": "ready",
+          "item_count": 1
+        },
+        "sparse": {
+          "status": "ready",
+          "item_count": 1
+        },
+        "parsed": {
+          "status": "ready",
+          "item_count": 2
+        },
+        "raw": {
+          "status": "ready",
+          "item_count": 1
+        }
+      }
+    },
+    "large-policy.pdf": {
+      "file_bytes": 12583979,
+      "status": "passed",
+      "document_id": "doc_e7bbd1af6c624de9b2bef04c23128e8f505dc5eebed69c2fb3167c9e02ff51fe",
+      "version_id": "version_207ea45edc55d9919ac707ae35777689adb7254d3137a2f95de41f2cc94353ac",
+      "generation_id": "dense_964be471948846d9b38dbab5d04fd0f7",
+      "document_status": "ready",
+      "version_status": "published",
+      "generation_status": "active",
+      "active_pointer_matches": true,
+      "raw_hash_matches": true,
+      "manifest_hash_matches": true,
+      "lineage_matches": true,
+      "blocks": 1,
+      "parents": 1,
+      "children": 1,
+      "dense_objects": 1,
+      "sparse_objects": 1,
+      "chunk_ids_match": true,
+      "vector_dimensions": [
+        1024
+      ],
+      "embedding_model": "bge-m3:latest",
+      "artifacts": {
+        "parsed": {
+          "status": "ready",
+          "item_count": 1
+        },
+        "raw": {
+          "status": "ready",
+          "item_count": 1
+        },
+        "embedding": {
+          "status": "ready",
+          "item_count": 1
+        },
+        "sparse": {
+          "status": "ready",
+          "item_count": 1
+        }
+      }
+    }
+  }
+}
