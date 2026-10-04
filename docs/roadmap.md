@@ -2,19 +2,32 @@
 
 ## 当前进度
 
+**2026-10-03 更新：** 真实上传到引用、DB/对象/双路索引核验、跨tenant与撤权、
+8类依赖故障注入已通过，前后端由根 `start.sh` 管理。
+当前Embedding为 `bge-m3:latest`/1024维，历史qwen实验不覆盖当前配置。
+全量离线303 passed/12 skipped，真实PostgreSQL16 passed。
+追加本机免Token TXT/308279字节PDF真实UI上传、双路/模型/引用通过；
+最新证据 `artifacts/experiments/2026-10-03_no-token-text-pdf/`，不代表OCR/公网模式。
+多文件与无项目层面上传数量/大小上限已真实验收：3个独立文档（含
+12583979字节PDF）同时选择、发布、ready、检索和引用通过；证据见
+`artifacts/experiments/2026-10-03_multi-upload/`。不代表物理无限或生产容量结论。
+证据见 `artifacts/experiments/2026-10-03_runtime-acceptance/`。
+以下旧数字为历史阶段记录，不能代替本轮结果。
+
 - 开工前置文档：已完成。
 - 项目级 RAG Skill suite：已完成 5 个 Skill、共享契约、40 个压力场景及 CI 验证，`.agents/skills/` 为唯一权威目录。
 - 评测集草案：已生成 40 条，待抽样确认。
 - 第 1 轮代码骨架：已完成第一批基础件。
 - Phase 3 PostgreSQL 基础切片：数据模型、显式事务、migration、发布约束、连接池、事务级超时、Compose migration job、CI PostgreSQL job 和 schema readiness 已完成并取得真实验证证据。
-- 历史基线已验证：离线 `126 passed, 11 skipped`，有效开发 DSN `137 passed`；完成 BM25F 中文对照实验后的最新离线全量为 `200 passed, 11 skipped`。本轮 PostgreSQL 集成因未注入 DSN 明确跳过。
+- 历史基线已验证：离线 `126 passed, 11 skipped`，有效开发 DSN `137 passed`；BM25F 中文对照阶段曾记录离线 `200 passed, 11 skipped`；当前 Task 8 最新离线代码级回归为 `261 passed, 12 skipped`。本轮 PostgreSQL 集成因未注入 DSN 明确跳过；该结果是离线回归，不是真实依赖 smoke 证据。
 - 已完成：配置契约、Provider 协议/错误分类、Fake LLM、有界本地 LLM 调度器、本地对象存储适配器、领域实体、最小 API，以及 BGE Reranker 的统一异步 Adapter。
 - 已完成：LM Studio OpenAI-compatible Provider、JSON/SSE 摘录问答、取消/超时清理、评测与 benchmark、精简工作台，以及 Markdown/HTML/受控文本 PDF 的真实摄取基础。
 - 当前已取得真实 Weaviate `1.27.10` 证据：Dense collection/batch/integrity/nearVector/delete，以及 BM25F schema/weighted query/tenant-version filter/cleanup 均通过；默认读取路径仍是 PostgreSQL。
 - 固定小数据集 BM25F/RRF 质量实验已完成：Dense、BM25F、RRF `k=20/60/100` 的 Recall@K、MRR、nDCG、独有命中和 p50/p95 延迟均已记录；RRF 在 top 3 补足双相关查询，但三个 `k` 无法区分。
 - BM25F 中文 tokenizer/预处理对照已完成：baseline `word + identity` @3 为 `0.625/0.625/0.625`，`trigram + identity` 为 `0.75/0.75/0.75`，`word + cjk_bigram` 为 `1.0/1.0/1.0`；这些结果仅来自 10 个合成 chunk 和 8 条查询。
 - 当前已完成：方案 C 本地 P0 产品代码闭环，包括同步上传、双路 generation 发布、开发身份 ACL、Dense+BM25F+RRF+BGE 查询、Parent/引用复核、状态/ACL 管理、产品 readiness 和请求体预算。
-- 当前待处理：在专用开发环境执行真实上传到引用 smoke，并同步脱敏实验产物；真实依赖证据、人工确认数据集、中文 profile 泛化、生产容量、备份恢复和故障转移仍未验证。
+- 当前待处理：人工确认数据集、中文profile泛化、生产容量、备份恢复和故障转移；
+  真实本地上传到引用smoke已于2026-10-03完成，仍不外推生产结论。
 - 当前非目标：Keycloak/OIDC、Celery/RabbitMQ、Redis、Git 同步、OCR、Minikube、在线 Provider fallback 和生产容量结论继续后置；不得把离线/SQLite 或合成小样本结果写成真实生产证据。
 
 ## 目标版本

@@ -11,7 +11,162 @@
 
 最终交付目标：**P0 完整 + P1 关键证据 + P2 可演进**。
 
-## 2. 当前状态（2026-09-17）
+## 2. 当前状态（2026-10-03）
+
+### 最新：三类模型统一配置与Embedding / Jina切换
+
+- 运行配置唯一入口为`config/local-llm.toml`，`.env`通过`LOCAL_LLM_CONFIG_FILE`
+  启用。顶层为回答LLM；`[embedding]`包含model/base_url/dimension；
+  `[reranker]`包含model/base_url。文件优先于旧环境变量，错误配置拒绝启动。
+- 当前LLM为`qwen3-coder-next-reap-48b-a3b-mlx`（LM Studio1234）；
+  Embedding为`feadxus/qwen3-embedding:4b`（Ollama11434，实测2560维）；
+  Reranker为`jina-reranker-v3-mlx`（8003的`POST /v1/rerank`）。
+  API进程不再加载BGE；未启用嵌套配置的旧部署保留兼容路径。
+- 修改文件后stop/start，不热更新、不自动下载/加载模型。仅换LLM/Reranker无需回填；
+  换Embedding须匹配实际维度，并执行`python -m scripts.reindex_local_models --apply`。
+  命令需先加载`.env`，详细顺序见README；工具限本机development演示身份授权的文档。
+- Dense物理collection按profile隔离，旧1024维索引和旧指针保留；同一当前已发布version
+  允许新增profile，只发布新generation pointer，不重复改变version发布时间。
+- 已回填9份授权文档/179个Child；真实公开TXT新上传201后新profile为10个scope。
+  DB/原文/manifest hash、lineage、双路对象、2560维、published/active/ready均核验通过。
+- 最新真实查询Dense65/Sparse1、RRF60/Jina正常、answered/引用passed/stop；
+  公开回答为“MODEL_SWITCH_CHECK 审批期限为三个工作日。”。
+  股东题生成约9.25秒/stop，但仍invalid_citations/failed，来源与引用问题未修复。
+- 全量371 passed/12 skipped，单独真实PostgreSQL16 passed；新增配置/HTTP契约/
+  profile隔离/发布与维度守卫测试通过。新增模块和相关文件Ruff通过；
+  原检索模块3条既有告警不扩大修复。证据：
+  `artifacts/experiments/2026-10-03_embedding-reranker/README.md`。
+
+### 前序：本地回答模型配置文件与用户指定模型切换
+
+- 本机`.env`显式指定`LOCAL_LLM_CONFIG_FILE=config/local-llm.toml`；Settings启动时
+  读取TOML的model/base_url/max_concurrency/max_queue_size，文件优先于旧同名环境
+  配置。显式文件缺失、非法TOML、错误字段/类型拒绝启动，不静默回退旧模型。
+- 用户修改配置后`bash start.sh stop`再`bash start.sh`即可，不需要改代码；
+  不实现热更新/自动下载。密钥仍由LOCAL_LLM_API_KEY注入；该历史轮Embedding/Reranker不变。
+  未启用文件的旧部署仍读环境变量，model-registry.yaml只作能力和历史记录。
+- 按用户要求切换到LM Studio已加载的`qwen3-coder-next-reap-48b-a3b-mlx`。
+  重启仅受控8001 API，其他API、数据库、模型服务不停止；API/frontend200。
+- 真实公开摘录问答2.971秒，返回模型ID与TOML一致，answered/引用passed/stop。
+  股东产品查询16.233秒、stop/输出437，引用仍failed/invalid_citations，
+  故该问题尚未通过业务验收，不把模型切换等同于来源与引用问题修复。
+- 新配置测试12项；全量339 passed/12 skipped，本轮未重跑真实PG集成。
+  脱敏证据`artifacts/experiments/2026-10-03_local-model-config/verification.json`。
+
+### 前序诊断：原蒸馏模型股东问答重复推理
+
+- 原蒸馏回答模型在用户这道题上输出2047 tokens，均计为reasoning并重复，
+  finish length；不是证明Embedding/Reranker或服务代码无限循环。
+- 真实factory取得5条授权证据，来自2份文档；2条来源标题不含“平安”。
+  模型输入仅内部document/chunk ID，没有标题；存在主体归属风险，但尚未确认
+  标题不匹配的文档一定属于另一银行。
+- 相同证据有界采样对照21.278秒、finish stop、长行无重复，
+  但invalid_citations/failed，不能算业务成功。原生reasoning=off探测400，
+  未核实拒绝原因，未证明开关有效。
+- 建议先对照本机已有`qwen3.6-35b-a3b-turboquant-mlx`，再考虑
+  `qwen3.6-27b-oq8-mtp`；两者尚未生成验收。不擅自卸载共享模型。
+- 新增`scripts/diagnose_answer_model.py`及脱敏报告
+  `artifacts/experiments/2026-10-03_answer-model/README.md`。
+  此前诊断轮未改8001、`.env`与线上Provider；本轮切换状态见最新节。
+  后续须验证模型引用/主体/日期，
+  并处理来源标题缺失，不能用提高token或宽松解析冒充修复。
+
+### 最新追加：免Token TXT / 大PDF
+
+- 当前本机 `.env` 显式 `P0_ANONYMOUS_ENABLED=true`；UI Token控件隐藏，
+  上传/状态/问答不校验Token，不读取短期token文件；不涉及模型密钥。
+- 服务端固定 `local-demo/local-demo-user`，editor/reader，ACL仍执行。
+  仅development/真实loopback peer/本机Origin，Gradio queue也受保护；
+  Uvicorn禁用proxy headers，默认配置仍关闭匿名。
+- UTF-8 TXT支持校验、MIME、保真段落parser和服务注册；
+  UI空source/title/idempotency自动补齐。FAILED仍需显式replay。
+- Gradio临时文件路径使用流式磁盘multipart上传，工作台支持多文件；
+  产品上传默认不设项目层面的数量/大小上限，普通JSON仍128KiB。
+  单文件失败不阻断同批其他文档，Source/幂等键按文件独立生成。
+- 真实Chrome两次上传201/发布：中文TXT与308279字节含图文本PDF，
+  无Token和元数据留空，DB/对象/双路/1024维/hash/lineage/pointer均通过；
+  实际回答answered、引用passed，Dense/BM25F/RRF60/BGE均命中。
+- 4种单依赖故障降级真实本地LLM各1次；双路全部故障503/调用0次。
+  全量303 passed/12 skipped，真实PostgreSQL16 passed。
+- 最新证据 `artifacts/experiments/2026-10-03_no-token-text-pdf/README.md`；
+  旧runtime-acceptance是默认鉴权实验，不能替代此次TXT/PDF结论。
+- API/UI保持8001运行；7860兼容入口只307跳转到统一工作台，
+  用户原8000与外部模型/数据库不动。改.env需stop/start。
+
+### 最新追加：多文件与无上传数量/大小上限（2026-10-03）
+
+- 旧UI的 `gr.File` 未设置 `file_count="multiple"`，Gradio标准上传器还固定
+  `max_files=1000`，挂载参数曾固定 `max_file_size=10MiB`；这是此前只能选一个
+  文件和大PDF返回413的直接原因。
+- 现在工作台支持多选；每个文件按文件名生成独立 `source_id`/幂等键并逐个调用
+  产品API，单文件失败不会阻断同批其他文档，结果和Document ID逐项回填。
+- 产品 multipart、Gradio流式临时上传和工作台 `queue/join` 批量元数据均不设
+  项目层面的数量/大小上限；普通API JSON仍保持128 KiB。这里的“无上限”不等于
+  物理无限，仍受磁盘、内存、网络、multipart格式、解析器和下游模型能力限制。
+- 修复多scope检索按文档遍历顺序截断候选的问题：Dense/BM25F结果先按通道
+  分数形成全局排名，再做RRF和候选截断，后上传但高相关的文档不会被旧文档挤掉。
+- 真实Chrome一次上传 `alpha.txt`、`beta.md` 和 12583979 字节 `large-policy.pdf`，
+  3个独立文档均201/published/active/ready；DB、原文/manifest hash、切片lineage、
+  双路索引、1024维向量、RRF/BGE、本地回答和逐字引用均通过。
+- 证据目录：`artifacts/experiments/2026-10-03_multi-upload/`；
+  全量离线回归327 passed/12 skipped，真实PostgreSQL集成16 passed。
+- 产品/UI默认问答预算已从512提高到2048 tokens、300秒，立即显示处理中。
+  HTTP200的incomplete/引用失败不再标passed。最终真实“试用期都有哪些条文”
+  默认查询16.913秒、answered、5条引用passed、finish stop；仅保存脱敏状态在
+  `private-query-summary.json`，不证明所有相关条文均已覆盖。
+- BGE默认CPU4线程、串行准入，取消请求设置Event并在批次边界停止；当前原生kernel
+  不能强制打断，worker结束前不释放占位。WindowServer排查按用户要求停止扩展。
+
+### 本轮早期鉴权验收（保留追溯）
+
+本轮已完成真实本地P0上传到引用验收，历史2026-09-18配置阻塞已解除。
+新会话以最上方三模型最新节、`CLAUDE.md`及该节证据为准；下列早期验收参考
+`artifacts/experiments/2026-10-03_runtime-acceptance/README.md` 为最新事实。
+
+- 一键 `bash start.sh`，支持status/stop；API `127.0.0.1:8001`，
+  Gradio `/product-workbench/`。原8000服务保留；日志/状态 `.local/runtime/`。
+- Python为Conda `enterprise-rag` 3.11.15；旧 `.venv` 3.9.6缺依赖，不用/不删。
+  实际Gradio6.29.0。
+- 实际模型：Ollama `bge-m3:latest`/1024维，BGE `BAAI/bge-reranker-v2-m3`/CPU，
+  LM Studio使用下述历史长模型名；Weaviate1.27.10、PostgreSQL16。
+- 首次上传因入口历史写死4096维返回503，已改为显式
+  `OLLAMA_EMBEDDING_DIMENSION`（本地1024），模型/维度均进入profile，守卫保留。
+- 正常HTTP上传201，job succeeded、version published、generation active，
+  四类artifact ready；双路/RRF/BGE均命中，模型answered、引用passed。
+- DB/对象/索引原文hash、manifest hash、lineage、active pointer、
+  两路chunk IDs/count及实际1024维均交叉核验通过。
+- 8类故障用例通过：embedding/dense/sparse/reranker降级仍用授权证据调用真实LM；
+  双路故障/认证/无权限/模型不可用明确失败。
+  故障注入为真实factory的ASGI HTTP；正常路径为运行中服务网络HTTP，分开记载。
+- 跨tenant/撤权404，重授200/answered/引用passed，不做绕权限纯模型兜底。
+- 干净全量279 passed、12 skipped；真实PostgreSQL集成16 passed。
+- 真实浏览器上传/状态/问答/SSE完整trace通过，桌面/移动视口无横向溢出；
+  同租户多文档发布已验证。修复Dense/Sparse REST列表不执行where导致其他
+  generation污染完整性计数的问题，新增cursor分页和scope/profile核验。
+- 仅恢复归档中的 `compose.p0.yaml`，其余旧脚本不用，新建受控 `start.sh`。
+- 本轮规划 `.planning/2026-10-03-runtime-acceptance/`，交接
+  `.planning/handoff/HANDOFF.md` 最新节；保留前序修改。
+
+### 2.1 实际架构与边界
+
+- 三条API：caller-supplied摘录、旧PG cosine demo、产品Weaviate混合检索。
+  验收必须用 `scripts.local_p0_api:app --factory` 的产品入口。
+- 自研TXT/Markdown/HTML/PyPDF2；Parent800/Child320 **字符**、无overlap，
+  当前未用LangChain/LangGraph做解析/在线流程。
+- PostgreSQL11表为权威事实；原文/manifest本地对象存储，向量/词法Weaviate。
+  Migration为Python contract0001–0004，不是Alembic。
+- 两路共用generation/active pointer，双路完整性齐备后事务发布，
+  不是独立pointer或跨系统分布式事务。
+- scope内顺序Dense/BM25F、RRF60、HTTP Jina、Parent去重/ACL、LM、出站ACL复核。
+  检索和出站复核共享deadline，F2-G仅获得剩余预算。
+- Sparse-only使用Child正文，部分locator为空；多scope串行/N+1、
+  HTTP取消不保证上游推理即时停止均为生产边界。BGE取消限制仅适用旧兼容路径。
+- OIDC、Redis、Celery/RabbitMQ、Git同步、OCR、Agentic、在线Provider fallback、
+  HA、容量/SLO、备份恢复未接入或未验收。Skill/设计图不等于实现。
+- `.env` 和 `.local/` 不提交；历史鉴权验收token仍位于
+  `.local/runtime/acceptance-token.txt`，当前匿名UI不使用它，不在聊天里输出。
+
+## 2H. 历史状态（2026-09-18，保留追溯）
 
 - 业务 RAG 的方案 B 最小闭环已实现并取得真实依赖 smoke 证据；完整生产级 RAG 仍未完成。Phase 3 的 PostgreSQL 基础切片和真实摄取基础已实现，覆盖数据模型、异步 session、migration contract、状态机、受控解析、确定性 chunk lineage 和版本状态编排。
 - 本机：MacBook Pro，M3 Max，128 GB 统一内存，2 TB SSD。
@@ -25,7 +180,7 @@
 - 评测集草案：`docs/evaluation/dataset-draft.jsonl`，共 40 条，等待人工抽样确认。
 - 第 1 轮基础代码已完成首批骨架：配置、Provider 契约、Fake LLM、并发调度器、本地对象存储、领域实体和最小 API 已实现。
 - 项目级 RAG Skill suite 已在 `.agents/skills/` 完成，包含 5 个 Skill、7 个共享 JSON Schema、10 个场景文件和 40 个压力场景；CI 和测试均以该目录为唯一权威来源。
-- 历史 PostgreSQL/F2-G 基线曾记录离线 `126 passed, 11 skipped` 和有效开发 DSN `137 passed`；完成 BM25F 中文对照实验后，最新离线全量为 `200 passed, 11 skipped`。本轮未注入 `POSTGRES_DSN`，因此 PostgreSQL 集成仍明确跳过；Ruff、compileall、Compose config、Skill suite validator 和 diff 检查均通过。
+- 历史 PostgreSQL/F2-G 基线曾记录离线 `126 passed, 11 skipped` 和有效开发 DSN `137 passed`；BM25F 中文对照阶段曾记录离线 `200 passed, 11 skipped`；当前 Task 8 最新离线代码级回归为 `261 passed, 12 skipped`。本轮未注入 `POSTGRES_DSN`，因此 PostgreSQL 集成仍明确跳过；该结果是离线回归，不是真实依赖 smoke 证据；新增入口/runner 的局部 Ruff、compileall 和 diff 检查通过。
 - 环境预检：`docs/preflight-checklist.md`；用户已验证 Docker Desktop 正常（`linux/aarch64`、16 CPU、15.6 GiB），Minikube 未安装，`kubectl` 已安装。Codex 沙箱因 socket 权限可能无法复跑 Docker API。
 - 本轮真实验证使用固定镜像 `postgres:16`，容器内 PostgreSQL 版本为 `16.15`，Docker Server 为 `linux/arm64`；测试结果仅证明当前 schema、事务和发布锁场景，不代表生产容量或高并发性能。
 - PostgreSQL 连接池已按单机/CI 保守参数设计：`pool_size=3`、`max_overflow=2`、`pool_timeout=10s`、`pool_recycle=1800s`、`pool_pre_ping=True`；事务超时使用 `SET LOCAL`，默认 `statement_timeout=30s`、`lock_timeout=5s`。
@@ -36,7 +191,7 @@
 - F2-G 原文摘录问答已实现：请求接收调用方提供的 `question + evidence`，执行 evidence identity 校验，固定记录 `context_source=caller_supplied`，并明确不把调用方上下文冒充为检索或授权结果。
 - F2-G Provider/API 已实现：LM Studio OpenAI-compatible adapter、JSON complete、统一 SSE stream、模型 readiness、共享 `httpx` client 生命周期、按 alias 的 `LocalLLMScheduler`、队列/总 deadline、错误归一化、主动取消和清理路径均有对应测试。
 - F2-G 评测与实验已实现：摘录 evaluator、Fake/mock/真实 LM Studio 分层证据、可复现 benchmark runner、并发 1/2、`max_tokens=128/256`、usage 缺失和取消清理结果均已写入 `artifacts/experiments/2026-09-14_f2-g/`；精简 F2-I 本地工作台已接入同一服务入口。
-- F2-G 专项和真实摄取基础的历史证据保持不变；当前最新离线全量为 `200 passed, 11 skipped`。真实 LM Studio/F2-G 观测仍按原实验产物解释，不外推为生产质量或容量。
+- F2-G 专项和真实摄取基础的历史证据保持不变；当前 Task 8 最新离线全量为 `261 passed, 12 skipped`。该结果是离线回归，不是真实依赖 smoke 证据；真实 LM Studio/F2-G 观测仍按原实验产物解释，不外推为生产质量或容量。
 - F2-G 当前边界仍明确：F2-G 入口本身仍是 caller-supplied evidence 的摘录问答，不代表检索、授权或事实真实性；方案 C 产品入口已另行接入 Dense+BM25F+RRF+BGE、开发身份 ACL 和引用复核。真实本地 benchmark 不代表语义质量、成本、SLO、GPU 行为或生产吞吐。
 - 真实摄取基础已实现：支持 Markdown、HTML 和受控文本型 PDF 的校验与统一解析，生成带标题路径/locator 的 `ParsedBlock` 以及确定性 Parent/Child chunk；原文和 parsed manifest 写入本地对象存储，PostgreSQL 保存 job/version/artifact 状态。
 - 摄取可靠性已验证：同租户幂等键复用、内容冲突、FAILED 显式 replay、同内容 version 复用和共享 version 并发成功/失败均有测试；真实 PostgreSQL 并发失败证据证明 parser 只执行一次。摄取成功不会自动设置 `documents.current_version_id`。
@@ -51,7 +206,7 @@
 - 中文对照只证明当前 10 个合成 chunk、8 条查询上的字符重叠收益：`trigram` 仍漏掉 2 条语义改写并引入低分噪声，`cjk_bigram` 满分可能过拟合。生产默认 profile、人工确认 development/frozen 数据集、索引体积、容量和 SLO 仍待实验。
 - 方案 C 本地 P0 产品闭环已实现：同步上传、开发 HMAC Bearer token、文档状态/ACL 管理、Dense+BM25F+RRF+BGE 查询和引用前复核均有离线契约证据；真实上传到引用 smoke 尚未在专用 PostgreSQL/Weaviate/Ollama/BGE/LM Studio 环境完成。
 
-## 3. 已确认技术边界
+## 3. 已确认技术边界（含规划，实施状态以第2节为准）
 
 - `Python + FastAPI`；内部调试使用 Gradio；REST + 统一 SSE。
 - Docker Compose 开发；Minikube 做本地 Kubernetes 验证，云上迁移作为 P2 演进方案。

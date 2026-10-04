@@ -38,10 +38,10 @@
 - Test: `tests/unit/test_dev_auth.py`
 - Test: `tests/unit/test_settings.py`
 
-- [ ] RED：锁定签名、篡改、过期、未来 `iat`、非法 claim、错误 secret、角色去重和不可变 `RequestContext`。
-- [ ] GREEN：用标准库实现 URL-safe Base64、HMAC-SHA256、`compare_digest()` 和严格 claim 校验。
-- [ ] GREEN：增加 `DEV_AUTH_ENABLED`、`DEV_AUTH_SECRET`、`DEV_AUTH_TOKEN_TTL_SECONDS`；非 development 环境启用时启动失败。
-- [ ] VERIFY：运行 `tests/unit/test_dev_auth.py tests/unit/test_settings.py`、Ruff 和 compileall。
+- [x] RED：锁定签名、篡改、过期、未来 `iat`、非法 claim、错误 secret、角色去重和不可变 `RequestContext`。
+- [x] GREEN：用标准库实现 URL-safe Base64、HMAC-SHA256、`compare_digest()` 和严格 claim 校验。
+- [x] GREEN：增加 `DEV_AUTH_ENABLED`、`DEV_AUTH_SECRET`、`DEV_AUTH_TOKEN_TTL_SECONDS`；非 development 环境启用时启动失败。
+- [x] VERIFY：运行 `tests/unit/test_dev_auth.py tests/unit/test_settings.py`、Ruff 和 compileall。
 
 ## Task 2: FastAPI 身份依赖与 ACL 授权服务
 
@@ -53,10 +53,10 @@
 - Test: `tests/unit/test_authorization.py`
 - Test: `tests/api/test_product_auth_api.py`
 
-- [ ] RED：锁定缺失/非法 token、角色矩阵、同 tenant allow、跨 tenant deny、资源不存在和 IDOR 统一 404。
-- [ ] GREEN：从 Bearer token 建立 `RequestContext`，不读取 tenant header 或请求体 tenant。
-- [ ] GREEN：实现上传者自动 READ ACL、admin grant/revoke、授权文档和 active generation scope 查询。
-- [ ] VERIFY：撤权后同一进程下一次查询立即拒绝，不依赖 Weaviate 清理。
+- [x] RED：锁定缺失/非法 token、角色矩阵、同 tenant allow、跨 tenant deny、资源不存在和 IDOR 统一 404。
+- [x] GREEN：从 Bearer token 建立 `RequestContext`，不读取 tenant header 或请求体 tenant。
+- [x] GREEN：实现上传者自动 READ ACL、admin grant/revoke、授权文档和 active generation scope 查询。
+- [x] VERIFY：撤权后同一进程下一次查询立即拒绝，不依赖 Weaviate 清理。
 
 ## Task 3: 双路 generation 完整性与发布事务
 
@@ -69,10 +69,10 @@
 - Test: `tests/unit/test_product_generation.py`
 - Test: `tests/integration/test_product_publish_postgres.py`
 
-- [ ] RED：锁定 Dense/Sparse count、chunk identity、tenant/version/generation/profile 任一不一致时拒绝发布。
-- [ ] GREEN：为 tenant 派生稳定 Sparse collection 名称；复用同一 generation ID 和 child identity。
-- [ ] GREEN：在发布事务前将 EMBEDDING/SPARSE artifact 标记 READY；事务内切换 document version 与 generation pointer。
-- [ ] VERIFY：发布失败时旧 version/generation 保持 active；未发布新对象不可查询。
+- [x] RED：锁定 Dense/Sparse count、chunk identity、tenant/version/generation/profile 任一不一致时拒绝发布。
+- [x] GREEN：为 tenant 派生稳定 Sparse collection 名称；复用同一 generation ID 和 child identity。
+- [x] GREEN：在发布事务前将 EMBEDDING/SPARSE artifact 标记 READY；事务内切换 document version 与 generation pointer。
+- [x] VERIFY：发布失败时旧 version/generation 保持 active；未发布新对象不可查询。
 
 ## Task 4: 同步产品上传编排与 multipart API
 
@@ -83,10 +83,10 @@
 - Test: `tests/unit/test_product_ingestion.py`
 - Test: `tests/api/test_document_upload_api.py`
 
-- [ ] RED：锁定 editor/admin 上传、reader 拒绝、MIME/大小校验、幂等复用、内容冲突和失败不发布。
-- [ ] GREEN：同步复用 `IngestionService`、manifest、Dense indexer、Sparse projector/transport、完整性校验和发布事务。
-- [ ] GREEN：新增 `POST /api/v1/documents`，返回 document/version/job/generation/artifact/publish 状态。
-- [ ] VERIFY：请求取消或单路失败只留下不可查询 generation；稳定 idempotency key 可安全重试。
+- [x] RED：锁定 editor/admin 上传、reader 拒绝、MIME/大小校验、幂等复用、内容冲突和失败不发布。
+- [x] GREEN：同步复用 `IngestionService`、manifest、Dense indexer、Sparse projector/transport、完整性校验和发布事务。
+- [x] GREEN：新增 `POST /api/v1/documents`，返回 document/version/job/generation/artifact/publish 状态。
+- [x] VERIFY：请求取消或单路失败只留下不可查询 generation；稳定 idempotency key 可安全重试。
 
 ## Task 5: 授权 scope 与混合检索服务
 
@@ -98,10 +98,10 @@
 - Test: `tests/unit/test_hybrid_retrieval.py`
 - Test: `tests/integration/test_product_acl_retrieval.py`
 
-- [ ] RED：锁定授权 scope、Dense/Sparse 双路归因、RRF 稳定排序、候选去重、Reranker 映射和 Parent 去重。
-- [ ] GREEN：每个问题只生成一次 embedding；只查询授权 active generation；RRF 默认 `k=60`。
-- [ ] GREEN：BGE Reranker 必须成功；失败返回 `reranker_unavailable`，不静默降级。
-- [ ] VERIFY：两个 tenant 相同文本和 query 零串租户；无授权 scope 时不访问 Weaviate、Reranker 或 LLM。
+- [x] RED：锁定授权 scope、Dense/Sparse 双路归因、RRF 稳定排序、候选去重、Reranker 映射和 Parent 去重。
+- [x] GREEN：每个问题只生成一次 embedding；只查询授权 active generation；RRF 默认 `k=60`。
+- [x] GREEN：BGE Reranker 必须成功；失败返回 `reranker_unavailable`，不静默降级。
+- [x] VERIFY：两个 tenant 相同文本和 query 零串租户；无授权 scope 时不访问 Weaviate、Reranker 或 LLM。
 
 ## Task 6: 产品问答、Parent 回溯和引用复核
 
@@ -110,12 +110,12 @@
 - Modify: `src/enterprise_rag/api/app.py`
 - Modify: `src/enterprise_rag/excerpts/service.py`
 - Test: `tests/api/test_product_rag_query_api.py`
-- Test: `tests/unit/test_product_citations.py`
+- Test: `tests/api/test_product_rag_query_api.py`
 
-- [ ] RED：锁定请求字段白名单、当前版本复核、Parent ACL 复核、引用 identity/quote/ACL 复核和无 evidence 不调用 LLM。
-- [ ] GREEN：新增 `POST /api/v1/rag/query`，转换授权 Parent 为现有 F2-G evidence 并复用调度器和引用校验。
-- [ ] GREEN：响应返回回答、引用和不含正文/内部 collection/key 的安全 retrieval trace。
-- [ ] VERIFY：撤权后旧 citation 详情也返回 404；文档内 prompt injection 文本只作为 evidence data。
+- [x] RED：锁定请求字段白名单、当前版本复核、Parent ACL 复核、引用 identity/quote/ACL 复核和无 evidence 不调用 LLM。
+- [x] GREEN：新增 `POST /api/v1/rag/query`，转换授权 Parent 为现有 F2-G evidence 并复用调度器和引用校验。
+- [x] GREEN：响应返回回答、引用和不含正文/内部 collection/key 的安全 retrieval trace。
+- [x] VERIFY：撤权后旧 citation 详情也返回 404；文档内 prompt injection 文本只作为 evidence data。
 
 ## Task 7: 状态、ACL 管理接口与产品 readiness
 
@@ -126,15 +126,16 @@
 - Test: `tests/api/test_product_management_api.py`
 - Test: `tests/api/test_app.py`
 
-- [ ] RED：锁定文档/版本/任务/generation 状态查询、admin ACL grant/revoke 和 readiness 缺依赖行为。
-- [ ] GREEN：产品 readiness 显式检查 PostgreSQL、Weaviate、Embedding、Reranker、LM Studio、对象存储和开发身份配置。
-- [ ] VERIFY：基础 liveness 不调用外部依赖；产品依赖不完整时返回稳定 not ready。
+- [x] RED：锁定文档/版本/任务/generation 状态查询、admin ACL grant/revoke 和 readiness 缺依赖行为。
+- [x] GREEN：产品 readiness 显式检查 PostgreSQL、Weaviate、Embedding、Reranker、LM Studio、对象存储和开发身份配置。
+- [x] VERIFY：基础 liveness 不调用外部依赖；产品依赖不完整时返回稳定 not ready。
 
 ## Task 8: 工作台、Compose、真实 smoke 与文档收口
 
 **Files:**
 - Modify: `src/enterprise_rag/workbench/app.py`
-- Modify: `compose.yaml`
+- Create: `compose.p0.yaml`
+- Modify: `Dockerfile`
 - Modify: `.env.example`
 - Create: `scripts/local_p0_smoke.py`
 - Create: `tests/test_local_p0_smoke.py`
@@ -142,11 +143,16 @@
 - Modify: `PROJECT_CONTEXT.md`
 - Modify: `docs/roadmap.md`
 - Modify: `docs/acceptance-matrix.md`
+- Create: `scripts/local_p0_api.py`
+- Create: `tests/test_local_p0_api.py`
+- Create: `tests/test_local_p0_compose.py`
 
-- [ ] RED/GREEN：工作台只调用 FastAPI，支持 token、上传、状态和问答，不直连数据库或模型服务。
-- [ ] RED/GREEN：smoke 报告只保存脱敏阶段、数量、状态、延迟和越权零命中，不保存 token、正文或凭据。
-- [ ] REAL：在专用开发 PostgreSQL、Weaviate 1.27.10、Ollama、BGE 和 LM Studio 上完成上传到引用、跨租户拒绝、撤权和恢复。
-- [ ] VERIFY：全量 pytest、Ruff、compileall、Compose config、Skill validator、`git diff --check` 和敏感信息审计通过。
+- [x] RED/GREEN：工作台只调用 FastAPI，支持 token、上传、状态和问答，不直连数据库或模型服务。
+- [x] RED/GREEN：smoke 报告只保存脱敏阶段、数量、状态、延迟和越权零命中，不保存 token、正文或凭据。
+- [x] REAL：2026-10-03在开发PostgreSQL、Weaviate1.27.10、Ollama bge-m3/1024、
+  BGE v2-m3、LM Studio完成上传到引用、跨tenant、撤权和重授；
+  证据 `artifacts/experiments/2026-10-03_runtime-acceptance/`，不是生产容量验证。
+- [x] VERIFY：全量 pytest、Ruff、compileall、Compose config、Skill validator、`git diff --check` 和敏感信息审计通过；真实依赖 smoke 单独保留在 `REAL` 项。
 
 ## 用户参与点
 

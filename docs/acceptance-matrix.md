@@ -2,17 +2,27 @@
 
 ## P0：可运行闭环
 
-| 能力 | 验收条件 | 证据 | 当前状态（2026-09-17） |
+| 能力 | 验收条件 | 证据 | 当前状态（2026-10-03） |
 |---|---|---|---|
-| 文档摄取 | Markdown/HTML 可上传或 Git 同步；受控 PDF 可明确成功/失败 | 集成测试、失败样本、产品上传 API | 同步产品上传和受控解析已实现；Git 同步、真实依赖 smoke 后续验证 |
+| 文档摄取 | TXT/Markdown/HTML可上传；受控PDF成功/失败明确 | 集成测试、失败样本、产品上传API | 真实TXT和308279字节PDF免Token UI上传201/发布/回答通过；Markdown早期真实通过，HTML单测，Git未实现 |
 | 解析切块 | Parent/Child、标题路径、版本和来源元数据正确 | 单测、样本快照 | 已验证 |
-| 索引 | Embedding、BM25F、版本发布可完成 | generation 校验、查询测试、发布测试 | 本地产品链已实现 Dense/BM25F 双路 generation、完整性校验和 PostgreSQL 发布事实；真实跨系统上传到引用 smoke 待执行 |
-| 检索 | Dense + BM25F + RRF + Reranker 可返回证据 | API 测试、引用样例 | 产品检索服务已实现一次 embedding、双路召回、RRF、BGE、Parent 去重和 ACL/当前版本复核；真实依赖 smoke 待执行 |
-| 问答 | Linear 能回答、无答案、引用和版本冲突 | 端到端测试 | 产品问答入口已接入检索证据和引用复核；真实上传到引用 smoke 待执行 |
+| 索引 | Embedding、BM25F、版本发布可完成 | generation 校验、查询测试、发布测试 | 真实两路 chunk IDs/count、1024维向量、hash、active pointer、四类 ready 产物均核验通过 |
+| 检索 | Dense + BM25F + RRF + Reranker 可返回证据 | API 测试、引用样例 | 真实双路命中、RRF60、BGE、Parent/ACL通过；单依赖降级亦有真实依赖故障注入证据 |
+| 问答 | Linear 能回答、无答案、引用和版本冲突 | 端到端测试 | 真实LM Studio answered/引用passed；无证据/撤权404、不伪造模型兜底 |
 | 鉴权 | OIDC、租户、RBAC、文档 ACL 生效 | 越权测试 | 开发 HMAC Bearer token、tenant/role、文档 ACL 和撤权复核已验证；Keycloak/OIDC 后续演进 |
 | 异步任务 | 失败、重试、幂等、人工重放路径可见 | 任务状态测试 | 摄取幂等/replay 已验证；队列 Worker 后续实现 |
 | SSE | `stage/token/citation/error/done` 生命周期清晰 | 流式和断连测试 | F2-G 已验证 |
-| 部署 | Compose 可启动；Minikube 基础部署可验证 | 部署日志和冒烟测试 | Compose migration/readiness 已验证；Minikube 后续验证 |
+| 部署 | Compose 可启动；Minikube 基础部署可验证 | 部署日志和冒烟测试 | 本机Conda API+依赖容器前后端和一键脚本已验证；Minikube/产品镜像本轮未验证 |
+
+本轮证据统一位于 `artifacts/experiments/2026-10-03_runtime-acceptance/`。
+最新追加证据 `artifacts/experiments/2026-10-03_no-token-text-pdf/`，
+多文件追加证据 `artifacts/experiments/2026-10-03_multi-upload/`：
+真实Chrome一次选择TXT、Markdown和12583979字节PDF，3个独立文档发布/ready，
+底层持久化、双路索引、RRF/BGE和引用问答均通过。
+显式本机匿名固定演示身份，默认鉴权与ACL保留，不等同OIDC。
+干净全量303 passed/12 skipped，真实PostgreSQL集成16 passed；
+正常路径为网络HTTP，8类故障注入为ASGI HTTP+剩余真实依赖，不等于破坏真实服务。
+开发HMAC身份不是OIDC；单公开合成文档闭环不是完整企业语义质量评测。
 
 ## P1：有证据的工程质量
 

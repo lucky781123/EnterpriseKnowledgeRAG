@@ -2,6 +2,29 @@
 
 ## 1. 目标闭环
 
+本节是目标图，不代表Git同步、OIDC、Agentic或完整审计/指标已接入。
+
+### 当前实际链路（2026-10-03）
+
+产品factory `scripts.local_p0_api:app --factory` 已真实验收：
+默认开发Bearer / 本机显式匿名上传 → TXT/Markdown/HTML/PyPDF2解析 →
+Parent800/Child320字符 → 本地原文/manifest →
+Ollama bge-m3/1024 → Weaviate Dense/BM25F → 双路完整性 →
+PostgreSQL共用generation/pointer事务发布 → ACL scopes →
+一次embedding → scope内顺序双路 → RRF60/BGE → Parent去重/ACL →
+LM Studio摘录JSON → 引用/出站ACL。
+
+双路不是独立active pointer；PG是发布和权限权威，外部写入并非分布式事务。
+可恢复单依赖故障保留其他授权证据，BGE失败保留RRF，并显式标记degraded；
+认证/范围错误不降级，无证据不调用模型。总deadline包含检索与最终ACL。
+Sparse-only为Child正文，部分locator缺失；BGE线程取消与多scope串行属于已知边界。
+最新证据见 `artifacts/experiments/2026-10-03_runtime-acceptance/`。
+免Token TXT/大PDF追加证据见 `artifacts/experiments/2026-10-03_no-token-text-pdf/`。
+匿名固定local-demo身份，仅development/loopback/本机Origin；ACL保留。
+产品multipart、Gradio临时文件和queue/join批量元数据不设项目层面的数量/大小上限，
+普通API JSON仍128KiB，7860仅跳转统一工作台；实际仍受机器和下游能力限制。
+多scope结果先按同一profile的通道分数形成全局排名，再执行RRF与候选截断。
+
 ```text
 上传 API / Git 同步
   → 文件验证
@@ -16,7 +39,7 @@
   → SSE、引用、审计、指标
 ```
 
-## 1.1 当前 Dense 迁移切片状态（2026-09-16）
+## 1.1 历史 Dense 迁移切片状态（2026-09-16）
 
 - **已实现：** 每个 tenant 独立 Weaviate collection 映射；generation scope 固定为
   `(tenant_id, document_id, version_id, index_profile_key)`；PostgreSQL 保存 generation、active/previous pointer 和状态事实。

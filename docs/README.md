@@ -7,6 +7,9 @@
 - [技术栈](./technology-stack.md)：组件候选、运行约束和取舍。
 - [架构](./architecture.md)：数据流、权限闭环和非目标。
 - [验收矩阵](./acceptance-matrix.md)：P0/P1/P2 验收标准与状态语义。
+- [2026-10-03真实运行验收](../artifacts/experiments/2026-10-03_runtime-acceptance/README.md)：启动、HTTP/DB/索引/降级/浏览器证据与复现。
+- [免Token TXT/大PDF追加验收](../artifacts/experiments/2026-10-03_no-token-text-pdf/README.md)：最新本机免Token配置、真实上传/回答/持久化和故障日志。
+- [多文件与无上传上限验收](../artifacts/experiments/2026-10-03_multi-upload/README.md)：3个独立文档、12 MiB PDF、真实UI和持久化证据。
 - [风险登记](./risk-register.md)：已知风险、触发条件和缓解方案。
 
 ## 开发与运维

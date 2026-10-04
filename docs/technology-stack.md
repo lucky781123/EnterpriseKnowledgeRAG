@@ -2,6 +2,18 @@
 
 状态标记：`已确认`、`待验证`、`候选`、`非目标`。
 
+**实施快照（2026-10-03）：** Python3.11.15/FastAPI/SQLAlchemy/asyncpg、
+Gradio6.29.0、PostgreSQL16、Weaviate1.27.10、本地文件对象存储、
+Ollama bge-m3/1024、BGE v2-m3 CPU、LM Studio本地回答已实际连通。
+Migration为Python contract，不是Alembic。
+最新追加：UTF-8 TXT和308279字节文本型PDF免Token UI真实通过；
+匿名默认关闭，本机显式开启后固定演示身份，不涉及模型Token，ACL仍保留。
+产品multipart、Gradio临时文件和queue/join批量元数据不设项目层面的数量/大小上限，
+普通API128KiB；当前7860只跳转8001。实际仍受机器、解析器和下游模型能力限制。
+下表“已确认”包含架构选择，不表示Celery/Redis/OIDC/Minikube/
+LinearAsyncExecutor/LangGraph已经实现。当前parser/splitter和在线编排为自研，
+实际Parent800/Child320字符、overlap0；下述200与候选数量是历史实验起点。
+
 ## 应用与编排
 
 | 层次 | 方案 | 状态 | 说明 |

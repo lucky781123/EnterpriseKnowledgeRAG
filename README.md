@@ -1,145 +1,187 @@
 # EnterpriseKnowledgeRAG
 
-面向研发技术文档的企业级 RAG 学习与验证项目。
+面向研发技术文档的企业级 RAG 学习与验证工程。
 
-> 当前状态（2026-09-17）：方案 C 的本地 P0 产品代码闭环已完成，覆盖同步上传、双路 generation 发布、开发身份 ACL、Dense+BM25F+RRF+BGE 检索、Parent/引用复核、状态/ACL 管理和产品 readiness；真实 PostgreSQL/Weaviate/Ollama/BGE/LM Studio 的上传到引用 smoke 仍待在专用开发环境执行。
+**当前状态：2026-10-03 已完成真实本地 P0 闭环验收。** 上传、解析、
+Parent/Child、PostgreSQL、Weaviate Dense/BM25F、RRF、HTTP Jina Reranker、
+LM Studio 回答、引用和 ACL 已连通。单依赖故障可使用剩余授权证据降级；
+无证据、无权限或模型不可用时明确失败。这不等于生产部署、容量或企业质量验收。
 
-仓库级 `.agents/skills/` 已提供 5 个经过自动验证的 RAG 开发 Skill、共享契约和压力场景。它们用于约束后续开发与评审，不代表对应的业务 RAG 能力已经实现。
+**追加验收：TXT / 308279 字节文本型 PDF 已在免 Token UI 真实上传并回答成功。**
+本机 `.env` 已启用 `P0_ANONYMOUS_ENABLED=true`，不用填任何模型或开发 Token；
+Source ID、标题、幂等键可留空。工作台支持一次选择多个文档；产品 multipart、
+Gradio临时文件和批量 queue 元数据默认不设置项目层面的文档数量和大小上限，
+普通 JSON 请求仍为 128 KiB。实际仍受磁盘、内存、网络、文件格式和解析器能力
+限制。最新证据：`artifacts/experiments/2026-10-03_multi-upload/README.md`。
 
-当前目标是完成：
+## 一键启动
 
-- P0：可运行的端到端闭环；
-- P1：检索、权限、可靠性、性能有可复现实验证据；
-- P2：清晰、诚实、带触发条件的生产演进方案。
-
-## 当前开发策略
-
-- 本地 LLM：LM Studio，默认模型为 `qwen3.6-35b-a3b-claude-4.7-opus-reasoning-distilled-vlm-mlx-oq6`。
-- Embedding：Ollama，已验证 `hardcore_aryabhata_598/qwen3-embedding:8b` 可运行。
-- Reranker：进程内 `BGEReranker + SyncRerankerAdapter`。
-- 在线 LLM：通过 OpenAI-compatible Provider 接入，默认关闭，仅用于抽样评测。
-- `omlx`：后续小模型运行时实验，不是主链路前置依赖。
-
-## 当前已完成的基础切片
-
-当前仓库已经具备：
-
-- 配置加载与校验；
-- Provider 抽象和 Fake LLM；
-- 评测集加载器；
-- 领域数据结构和 PostgreSQL 持久化模型；
-- 异步 session、显式事务和首个 migration contract；
-- 小连接池、事务级 PostgreSQL `SET LOCAL` 超时和 schema readiness；
-- Compose one-shot migration job、API readiness 和 PostgreSQL 集成测试入口。
-- LM Studio OpenAI-compatible Provider、JSON complete、统一 SSE stream、取消/超时清理和 Provider readiness。
-- F2-G 原文摘录问答：调用方提供 `question + evidence`，服务执行 evidence identity 校验并返回结构化答案状态。
-- Markdown、HTML 和受控文本型 PDF 的校验、解析、确定性 Parent/Child chunk、lineage、对象产物和 PostgreSQL 摄取状态编排。
-- 摄取幂等、内容冲突、FAILED replay、同内容 version 复用和共享 version 并发 parser owner 协调。
-- 真实 Ollama + Weaviate 的固定小数据集 Dense/BM25F/RRF 对照，包含 Recall@K、MRR、nDCG、独有命中和 p50/p95 延迟证据。
-- BM25F 中文对照实验：固定 Dense、字段权重和 RRF，比较 `word + identity`、`trigram + identity` 与 `word + cjk_bigram`。
-- 本地 P0 产品闭环：`POST /api/v1/documents` 同步上传、双路 generation 发布、开发 Bearer token、文档状态/ACL 管理、`POST /api/v1/rag/query` 混合检索问答，以及 `/health/product/ready`。
-
-详细状态见 [PROJECT_CONTEXT.md](./PROJECT_CONTEXT.md) 和 [docs/preflight-checklist.md](./docs/preflight-checklist.md)。
-
-## 快速开始
-
-### 1. 创建 Python 环境
+在当前已配置的开发机执行：
 
 ```bash
-python3.11 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -e '.[dev]'
+bash start.sh
+bash start.sh status
+# 只停止该脚本管理的 API；保留外部模型、数据库和用户其他服务
+bash start.sh stop
 ```
 
-如果要运行本地 BGE Reranker，额外安装：
+脚本加载根目录 `.env`，检查 Python 3.11+ 和依赖，启动已有 PostgreSQL 容器和
+Compose Weaviate，执行 migration，启动产品 API 与同端口 Gradio 并等待就绪。
+端口从8000自动避让，实际地址以输出和 `.local/runtime/service.json` 为准。
+本轮地址：
+
+- API：`http://127.0.0.1:8001`
+- 前端：`http://127.0.0.1:8001/product-workbench/`
+- 原7860书签：当前兼容入口会跳转至同一工作台；根启动脚本主要管理8001。
+- Readiness：`GET /health/product/ready`
+- 本地日志：`.local/runtime/api.log`
+
+**前置条件：** Docker Desktop、开发 PostgreSQL、Ollama 和 LM Studio 已配置；
+本地模型已下载/加载，8003 的 Jina Reranker 服务已运行。脚本不安装模型、不创建未知密码的数据库、
+不启动 LM Studio GUI，不停止用户原8000服务。重复 start 复用自己的进程。
+
+解释器选择：`RAG_PYTHON` → 本机 `enterprise-rag` Conda → `.venv` → `python3`。
+本轮 `/Users/liuhui/opt/anaconda3/envs/enterprise-rag/bin/python`（3.11.15）。
+旧 `.venv` 是3.9.6且缺依赖，不使用，也不删除。
+
+其他机器需 Python3.11+，安装 `python -m pip install -e '.[dev,workbench,reranker]'`，
+再配置 `.env.example` 中的变量。不要覆盖已有 `.env`。`Settings` 不自动读 dotenv。
+
+## 模型与索引
+
+**三类本地模型统一配置：** 本机 `.env` 已指定
+`LOCAL_LLM_CONFIG_FILE=config/local-llm.toml`。回答模型读取顶层 `model/base_url`，
+Embedding 读取 `[embedding]` 的 `model/base_url/dimension`，
+Reranker 读取 `[reranker]` 的 `model/base_url`，无需改代码。修改后执行：
 
 ```bash
-python -m pip install -e '.[reranker]'
+bash start.sh stop
+bash start.sh
 ```
 
-### 2. 配置环境变量
+配置在启动时读取，不热更新；`model`必须与LM Studio模型ID一致，模型须在服务中
+可用。文件优先于旧 LLM、Ollama Embedding 和 BGE 环境变量；
+`max_concurrency/max_queue_size` 仍在顶层配置。
+API Key仍只从 `.env` 的 `LOCAL_LLM_API_KEY`读取；未启用文件的旧部署保留环境变量
+路径。`config/model-registry.yaml`是能力/历史验证记录，不是本机运行配置。
+仅更换回答 LLM 或 Reranker 不需要重新入库；更换 Embedding 必须回填新索引。
+
+最新公开产品样本真实上传、双路检索、Jina 重排及回答通过：
+`answered / citation_validation=passed / finish_reason=stop`。
+股东问题已正常结束，但仍 `invalid_citations / failed`，不能当作完整修复。
+证据：`artifacts/experiments/2026-10-03_embedding-reranker/verification.json`。
+
+**此前模型诊断：** “平安银行公司股东数量及持股情况”触发原蒸馏回答模型重复推理、
+预算耗尽。相同证据的采样对照虽21.278秒结束且未重复，但引用校验失败，尚未修复。
+另有两份来源文档、模型缺少标题元数据的风险。建议对照已有本地候选模型，
+该诊断轮尚未切换模型，后续已按上述配置切换；历史细节见
+`artifacts/experiments/2026-10-03_answer-model/README.md`，不可当作验收通过。
+
+| 角色 | 本轮真实配置 |
+|---|---|
+| Embedding | Ollama `feadxus/qwen3-embedding:4b`，实测2560维，11434 |
+| Reranker | `jina-reranker-v3-mlx`，HTTP `127.0.0.1:8003/v1/rerank` |
+| 回答 | LM Studio `qwen3-coder-next-reap-48b-a3b-mlx`，由 `config/local-llm.toml` 读取 |
+| 向量/词法 | Weaviate1.27.10，独立Dense/BM25F调用 |
+| 元数据 | PostgreSQL16，migration `0004_weaviate_hybrid_generations` |
+
+`[embedding].dimension` 必须匹配模型真实输出。新模型/维度会生成独立 Dense
+profile 与物理 collection，不能混用向量。历史1024/4096维索引与实验保留，不删除。
+本次已回填9份授权文档、179个Child切片；另新增公开验证样本，当前新profile有10个scope。
+
+以后更换 Embedding 的步骤：停止受控 API、修改 TOML、执行回填，再启动 API。
+回填工具仅适用于当前显式 development 免 Token 演示身份，有权读取的当前发布文档；
+不用于任意租户或生产迁移。默认只输出脱敏计划，`--apply` 才写入。
 
 ```bash
-cp .env.example .env
+bash start.sh stop
+# 修改 config/local-llm.toml 的 [embedding]，模型须已在 Ollama 中可用
 set -a
 source .env
 set +a
+PYTHON=/Users/liuhui/opt/anaconda3/envs/enterprise-rag/bin/python
+"$PYTHON" -m scripts.reindex_local_models
+"$PYTHON" -m scripts.reindex_local_models --apply
+bash start.sh
 ```
 
-当前 `Settings` 读取进程环境变量，不会自动加载 `.env` 文件。真实服务联调时请使用上面的 shell 导出方式或其他环境变量管理工具；不要提交真实密钥。
+回填复用同一document/version，完成双路完整性检查后发布新profile指针；不覆盖旧profile。
+HTTP Reranker 不在 API 进程内加载 BGE，不自动重试；可恢复故障按既有策略保留RRF并标记degraded。
 
-### 3. 运行测试和检查
+## 验收与复现
+
+最新三模型切换证据：`artifacts/experiments/2026-10-03_embedding-reranker/README.md`。
+运行中API上传201、2560维持久化、Dense65/BM25F1、RRF60/Jina和完整引用回答通过。
+全量离线371 passed / 12 skipped；单独真实PostgreSQL集成16 passed。
+
+此前免 Token 证据：`artifacts/experiments/2026-10-03_no-token-text-pdf/`：
+`acceptance.json`、TXT/PDF上传/回答/持久化、截图、`http-success.log`、
+5类真实依赖故障注入和回归输出。完整复现命令见该目录README。
+多文件最新证据：`artifacts/experiments/2026-10-03_multi-upload/`：
+一次选择 TXT、Markdown、12583979 字节 PDF，生成 3 个独立 Document ID，
+全部 published/active/ready，并完成 Dense/BM25F/RRF/BGE/本地 LLM 引用问答。
+免Token历史轮303 passed / 12 skipped，多文件历史轮327 passed / 12 skipped；
+各轮另行真实PostgreSQL16 passed。
+
+此前默认鉴权证据：`artifacts/experiments/2026-10-03_runtime-acceptance/`。
+
+- `metrics.json`：真实网络HTTP上传、状态、双路检索、RRF/BGE、回答及ACL测试。
+- `persistence.json`：原文/manifest hash、lineage、维度、双路chunk IDs、active pointer。
+- `answer.json`：公开合成文档的真实模型回答、逐字引用与 retrieval trace。
+- `fallback.json`：8个ASGI HTTP故障注入用例，未替换的依赖均为真实服务。
+- `browser.json` 和截图：真实浏览器工作台验收。
+- 本目录 `README.md`：精确实验边界、命令及测试结果。
 
 ```bash
-python -m pytest -q
-python -m ruff check .
-python .agents/skills/_shared/scripts/validate_suite.py .agents/skills
-python -m compileall -q src tests .agents/skills/_shared/scripts
+set -a
+source .env
+set +a
+PYTHON=/Users/liuhui/opt/anaconda3/envs/enterprise-rag/bin/python
+"$PYTHON" -m scripts.verify_no_token prepare
+# 先完成实验README中的真实浏览器TXT/PDF上传和问答，再核验底层持久化/降级
+"$PYTHON" -m scripts.verify_no_token verify
 ```
 
-### 4. 启动当前 API 骨架
+最新runner不读取Token。当前固定演示tenant为local-demo，ACL仍保留。
+如需重跑历史跨tenant/撤权smoke，须在**独立鉴权服务**上设置
+`P0_ANONYMOUS_ENABLED=false`；不能把依赖Token的历史smoke连到当前匿名服务。
+该模式下开发Token是本项目身份凭证，不是LLM/Embedding/Reranker密钥。
 
-```bash
-uvicorn enterprise_rag.api.app:app --reload
-```
+干净shell中 `python -m pytest -q` 可离线回归；加载开发 `.env` 后仅运行
+`python -m pytest -q tests/integration` 检查真实PostgreSQL。
+不要把全部开发环境变量注入确定性单测。
 
-```bash
-curl http://127.0.0.1:8000/health/live
-curl http://127.0.0.1:8000/health/ready
-curl http://127.0.0.1:8000/api/v1/meta
-```
+## 工程入口
 
-### 5. 使用 Docker Compose
+产品入口是 `scripts.local_p0_api:app --factory`，不是默认基础API。
 
-```bash
-docker compose up --build
-```
+| 路径 | 职责 |
+|---|---|
+| `/api/v1/query` | caller-supplied evidence摘录问答；不是授权检索 |
+| `/api/v1/retrieval/query` | 旧PostgreSQL JSON + 应用cosine demo |
+| `/api/v1/documents`、`/api/v1/rag/query` | 产品链；默认开发Bearer，本机显式匿名时固定演示身份 |
 
-当前 Compose 默认复用已运行的 `enterprise-rag-postgres` 容器（本机 `54329`），并启动固定版本 Weaviate、one-shot migration job 和 API。API 依赖 migration 成功与 Weaviate healthy，但产品链的真实上传到引用 smoke 仍需要显式注入专用开发依赖；旧 `/api/v1/retrieval/query` 仍保持 PostgreSQL JSON demo 路径。若使用其他 DSN，请在 `.env` 中覆盖 `POSTGRES_DSN`。Redis、RabbitMQ、Keycloak、Git 同步、OCR 和生产容量验证仍未接入。
+`compose.yaml` 保留基础API；`compose.p0.yaml` 提供独立产品API覆盖配置，
+需显式环境变量。本次是本机Conda API + 依赖容器，未重新验证Docker产品镜像。
+`不用的说明和脚本/` 保留历史排障资料，仅恢复仍被引用的 `compose.p0.yaml`；
+`scripts/gradio_enhanced.py` 已改为本机7860跳转兼容入口，不再调用旧摘录问答。
 
-## 配置文件
+## 交接与边界
 
-- `.env.example`：公开的开发环境变量模板。
-- `config/model-registry.example.yaml`：公开的模型能力登记表模板。
-- `config/model-registry.yaml`：当前本地验证基线，不含密钥。
-- `config/model-registry.local.yaml`：本地覆盖文件，不应提交。
+新会话依次读 `PROJECT_CONTEXT.md`、`CLAUDE.md`、最新三模型切换实验README、
+`.planning/2026-10-03-runtime-acceptance/` 和 `.planning/handoff/HANDOFF.md`。
+专题文档见 `docs/README.md`。
 
-`.planning/` 是本地开发工作区，默认不纳入发布仓库；需要公开开发记录时，请整理到 `docs/` 后再提交。
+实际解析器为自研UTF-8 TXT/Markdown/HTML/PyPDF2；Parent800/Child320 **字符**，无overlap。
+两路索引共用generation/active pointer，不是独立发布。
+Sparse-only降级使用Child正文，部分locator可能为空。
+检索和最终ACL继承同一deadline；HTTP取消只证明本地等待/传输取消，不保证服务端立即停止推理。
 
-## 项目结构
+尚未接入：Keycloak/OIDC、Redis、Celery/RabbitMQ、Git同步、OCR、Agentic Rewrite、
+生产队列、容量/SLO、HA、备份恢复及在线Provider fallback。
+小样本通过不是完整RAG质量结论。开发HMAC token不是企业SSO。
+匿名模式默认关闭，仅development与loopback可用；共享固定身份不是企业多用户鉴权。
+配置改动后stop/start，重复start只复用原进程、不热加载.env。
+`.env`、token、对象存储和本地日志不可提交；参阅 `SECURITY.md`。
 
-```text
-src/enterprise_rag/   Python 包和领域代码
-tests/                单元、API、契约和集成测试
-.agents/skills/       RAG 开发 Skill、共享契约和压力场景
-docs/                 架构、运维、评测和 ADR
-config/               非敏感配置模板
-scripts/              本地验证脚本
-Dockerfile            API 镜像构建文件
-compose.yaml          PostgreSQL、migration job 和 API 的本地 Compose 配置
-```
-
-## 文档导航
-
-文档入口见 [docs/README.md](./docs/README.md)。评测集目前仍是草案，引用的企业文档样本尚未全部纳入仓库，因此不能直接视为完整 RAG 评测基线。
-
-## 当前限制
-
-- 首期不承诺复杂扫描 PDF、复杂表格和版面完全还原。
-- Fake Provider、本地模型和单机 Compose 不能代表生产容量或企业真实效果。
-- 当前版本已完成真实摄取基础、F2-G/F2-I 摘录式 JSON/SSE、Weaviate Dense 迁移 contract、真实 Dense/BM25F transport smoke 和固定合成小数据集质量实验，但尚未完成 Sparse Generation、默认 Dense/BM25F+RRF 检索编排、请求级 ACL 和完整 RAG 问答链。
-- 中文对照中 `word + cjk_bigram` 在 8 条合成查询上达到 BM25F @3 满分，但该结果可能受小样本和字符重叠影响；人工确认数据集、泛化、索引体积和生产容量仍待验证，不能据此冻结默认 profile。
-- 当前摄取入口是受控服务调用和测试编排，不包含上传/Git 同步 API、OCR、队列 Worker 或自动发布。
-
-## 安全
-
-请阅读 [SECURITY.md](./SECURITY.md)。任何 API Key、密码、token、数据库连接串都只能通过本地环境变量或外部密钥管理系统提供。
-
-## 贡献
-
-开发流程见 [CONTRIBUTING.md](./CONTRIBUTING.md)。
-
-## License
-
-本项目使用 [MIT License](./LICENSE)。
+目标仍是P0完整、P1关键实验证据、P2可演进。License：MIT。

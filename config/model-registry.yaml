@@ -1,7 +1,9 @@
 schema_version: 1
 updated_at: "2026-09-15"
 
-# 这里记录模型能力和运行时，不保存任何密钥。
+# 这里记录模型能力和历史验证，不保存任何密钥，也不是本机运行配置。
+# 2026-10-03本机LLM/Embedding/Reranker均改读config/local-llm.toml。
+# 下方旧模型名称、状态与enabled值仅保留历史实验身份，不控制当前运行。
 providers:
   local_lmstudio:
     type: openai_compatible

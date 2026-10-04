@@ -2,12 +2,19 @@
 
 ## 状态
 
-- 日期：2026-09-16
-- 状态：设计已获用户确认，尚未实现
+- 日期：2026-09-18
+- 状态：设计、实现与真实 transport smoke 已完成；方案 C 全链路上传到引用 smoke 待专用配置
 - 前置基线：当前 P0 使用 PostgreSQL JSON + 应用层 cosine 的 Dense 检索路径
 - 目标后端：Weaviate Dense collection
 
-本文只描述已批准的 Weaviate Dense 迁移架构，不表示对应代码、真实 Weaviate 环境或生产容量已经完成验证。
+本文记录已批准的 Weaviate Dense 迁移架构及当前实现边界。对应代码已经实现，真实 Weaviate `1.27.10` transport smoke 已验证 collection、批量写入、完整性、nearVector 查询和删除；这不代表生产容量、跨系统发布回滚或方案 C 全链路上传到引用 smoke 已完成。
+
+当前状态分层如下：
+
+- **已实现：** tenant 独立 collection、generation scope、PostgreSQL active/previous pointer、批量 checkpoint、完整性校验、回填、retire、cleanup 和显式 repository 注入。
+- **已验证：** 真实 Weaviate transport 的建 collection、批量写入、完整性校验、nearVector 查询和删除。
+- **待实验：** 方案 C 在专用 PostgreSQL/Weaviate/Ollama/BGE/LM Studio 配置下的上传到引用 smoke，以及真实环境中的跨系统发布/回滚联调。
+- **非目标：** 本文不冻结 Sparse Generation 的通用状态机、不切换默认旧 retrieval API 的 PostgreSQL 读取路径，也不提供生产容量结论。
 
 ## 目标
 
