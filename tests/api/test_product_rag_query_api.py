@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from dataclasses import dataclass
 
+import pytest
 from fastapi.testclient import TestClient
 
 from enterprise_rag.api.app import create_app
@@ -14,8 +16,42 @@ from enterprise_rag.providers.registry import ProviderRegistry
 from enterprise_rag.retrieval.hybrid import HybridCandidate
 from enterprise_rag.retrieval.product import ProductRetrievalResult, ProductRetrievalTrace
 from enterprise_rag.retrieval.service import RetrievalResult
-from enterprise_rag.security.dev_token import DevTokenCodec
 from enterprise_rag.security.authorization import ResourceNotFound
+from enterprise_rag.security.dev_token import DevTokenCodec
+
+
+@pytest.mark.parametrize("slow_stage", ["retrieval", "citation_acl"])
+def test_product_query_deadline_covers_retrieval_and_final_acl(slow_stage, monkeypatch) -> None:
+    """总预算同时约束检索和引用出站复核，检索超时前不能调用模型。"""
+
+    result = ProductRetrievalResult(
+        candidates=(_candidate(),), trace=ProductRetrievalTrace.empty(),
+    )
+    app, token, provider = _app(
+        chat_response=json.dumps({
+            "answer_status": "answered", "message": "由部署任务执行。",
+            "excerpts": [{"evidence_id": "retrieved-1", "quote": "部署任务"}],
+        }, ensure_ascii=False),
+        retrieval_result=result,
+    )
+
+    async def delayed(*_args, **_kwargs):
+        """超过请求预算的依赖操作应被取消，不能等待其迟到结果。"""
+        await asyncio.sleep(2)
+        return result
+
+    if slow_stage == "retrieval":
+        monkeypatch.setattr(app.state.product_retrieval_service, "search", delayed)
+    else:
+        monkeypatch.setattr(app.state.authorization_service, "require_document_read", delayed)
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/v1/rag/query", headers={"Authorization": f"Bearer {token}"},
+            json={"question": "谁执行部署？", "timeout_ms": 1200},
+        )
+    assert response.status_code == 504
+    assert response.json()["error"]["kind"] == "timeout"
+    assert len(provider.calls) == (0 if slow_stage == "retrieval" else 1)
 
 
 class _Database:

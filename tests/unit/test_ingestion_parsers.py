@@ -39,6 +39,17 @@ def test_markdown_parser_keeps_heading_path_and_lineage():
     assert all(block.block_id for block in blocks)
 
 
+def test_txt_preserves_literal_markdown_and_html_with_lineage() -> None:
+    """TXT不能删除Markdown符号或HTML样式文本，保留行范围和确定性identity。"""
+
+    source = "# 不是标题\n<b>字面文本</b>\n\n第二段\n".encode()
+    blocks = parse_document(source, filename="guide.txt")
+    assert [block.text for block in blocks] == ["# 不是标题\n<b>字面文本</b>", "第二段"]
+    assert blocks[0].heading_path == ()
+    assert blocks[0].source_locator == {"kind": "line", "start": 1, "end": 2}
+    assert blocks == parse_document(source, filename="guide.txt")
+
+
 def test_html_parser_tracks_heading_path_and_stable_order_without_fake_offsets():
     """HTML 解析只记录可靠的行范围，不臆造字符 offset。"""
 

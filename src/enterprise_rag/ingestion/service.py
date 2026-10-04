@@ -115,7 +115,7 @@ class IngestionService:
         database: Database,
         storage: ObjectStorage,
         *,
-        max_bytes: int = 10 * 1024 * 1024,
+        max_bytes: int | None = None,
         parent_size: int = 800,
         child_size: int = 320,
     ) -> None:
@@ -127,6 +127,7 @@ class IngestionService:
         # 使用二参数 wrapper 统一 parser 协议，测试或未来适配器可以直接替换某个
         # 扩展名的函数，而不需要了解 parse_document 的关键字参数细节。
         self.parsers: dict[str, Parser] = {
+            ".txt": lambda data, filename: parse_document(data, filename=filename),
             ".md": lambda data, filename: parse_document(data, filename=filename),
             ".markdown": lambda data, filename: parse_document(data, filename=filename),
             ".html": lambda data, filename: parse_document(data, filename=filename),

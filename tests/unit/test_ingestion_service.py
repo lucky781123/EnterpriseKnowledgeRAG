@@ -83,7 +83,8 @@ def _request(content: bytes = "# 标题\n\n正文".encode(), **overrides) -> Ing
 
 
 @pytest.mark.asyncio
-async def test_ingest_writes_raw_and_parsed_artifacts_without_publishing(tmp_path):
+@pytest.mark.parametrize("filename", ["guide.md", "guide.txt"])
+async def test_ingest_writes_raw_and_parsed_artifacts_without_publishing(tmp_path, filename):
     """成功摄取应完成 raw/parsed，但不能偷偷切换当前可见版本。"""
 
     database = Database(f"sqlite+aiosqlite:///{tmp_path / 'ingestion.db'}")
@@ -91,7 +92,7 @@ async def test_ingest_writes_raw_and_parsed_artifacts_without_publishing(tmp_pat
     storage = LocalObjectStorage(tmp_path / "objects")
     service = IngestionService(database, storage)
     try:
-        result = await service.ingest(_request())
+        result = await service.ingest(_request(filename=filename))
 
         assert result.status is JobStatus.SUCCEEDED
         assert result.version_status is VersionStatus.READY

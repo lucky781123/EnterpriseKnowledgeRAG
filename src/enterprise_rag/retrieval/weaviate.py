@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from collections.abc import Sequence
@@ -20,7 +21,6 @@ from enterprise_rag.retrieval.contracts import (
     WeaviateObject,
 )
 from enterprise_rag.retrieval.service import RetrievalResult
-
 
 _COLLECTION_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_]*$")
 
@@ -55,6 +55,7 @@ class WeaviateHTTPXTransport:
         *,
         api_key: str | None = None,
         request_timeout_seconds: float = 10.0,
+        index_profile_key: str | None = None,
     ) -> None:
         """保存服务端配置；调用方只能提供服务根地址而不能改变请求路径。"""
 
@@ -67,6 +68,20 @@ class WeaviateHTTPXTransport:
         self._base_url = normalized
         self._api_key = api_key
         self._timeout = httpx.Timeout(request_timeout_seconds)
+        # PostgreSQL保留租户逻辑collection；新配置按不可变profile映射到独立物理库。
+        # 未传profile时保留旧部署名称，不移动或删除旧数据。
+        self._profile_key = index_profile_key
+        self._profile_suffix = (
+            "_Profile_" + hashlib.sha256(index_profile_key.encode("utf-8")).hexdigest()[:24]
+            if index_profile_key else ""
+        )
+
+    def physical_collection_name(self, collection_name: str) -> str:
+        """将逻辑collection映射到当前profile的物理库；重复映射保持稳定。"""
+        name = self._validate_collection_name(collection_name)
+        if self._profile_suffix and not name.endswith(self._profile_suffix):
+            name += self._profile_suffix
+        return name
 
     @staticmethod
     def _validate_collection_name(collection_name: str) -> str:
@@ -180,7 +195,7 @@ class WeaviateHTTPXTransport:
     async def ensure_collection(self, collection_name: str, schema_version: str) -> None:
         """确保 collection 存在并拥有固定的无内置向量化 Dense schema。"""
 
-        collection_name = self._validate_collection_name(collection_name)
+        collection_name = self.physical_collection_name(collection_name)
         if not schema_version.strip():
             raise ValueError("schema_version 不能为空")
         try:
@@ -232,9 +247,13 @@ class WeaviateHTTPXTransport:
     ) -> WeaviateBatchResult:
         """按稳定 object_id 批量 upsert，并将任意部分失败归类为可重试错误。"""
 
-        collection_name = self._validate_collection_name(collection_name)
+        collection_name = self.physical_collection_name(collection_name)
         if not objects:
             return WeaviateBatchResult(accepted=0)
+        if self._profile_key and any(
+            item.properties.get("index_profile") != self._profile_key for item in objects
+        ):
+            raise ValueError("Dense对象profile与物理collection不一致")
         payload = {
             "objects": [
                 {
@@ -284,24 +303,41 @@ class WeaviateHTTPXTransport:
     async def _list_objects(
         self, collection_name: str, *, generation_id: str, version_id: str
     ) -> list[dict[str, Any]]:
-        """读取指定 generation/version 的对象，用于完整性检查和清理。"""
+        """分页读取 collection，并严格筛选 generation/version 的完整性事实。"""
 
-        collection_name = self._validate_collection_name(collection_name)
-        params = httpx.QueryParams(
-            {
-                "class": collection_name,
-                "where": json.dumps(self._where(generation_id, version_id), separators=(",", ":")),
-                "limit": "10000",
-            }
-        )
-        path = f"/v1/objects?{params}"
-        data = self._json(await self._request("GET", path))
-        objects = data.get("objects") if isinstance(data, dict) else None
-        if not isinstance(objects, list):
-            raise WeaviateTransportError(
-                "protocol", retryable=False, safe_message="Weaviate 对象列表格式非法"
-            )
-        return [item for item in objects if isinstance(item, dict)]
+        collection_name = self.physical_collection_name(collection_name)
+        scoped_objects: list[dict[str, Any]] = []
+        after: str | None = None
+        page_size = 1000
+        while True:
+            # Weaviate 1.27 的 REST 对象列表不执行 GraphQL where；不能把整个
+            # tenant collection 当成本次 generation。分页后按实际属性再次筛选。
+            parameters = {"class": collection_name, "limit": str(page_size)}
+            if after is not None:
+                parameters["after"] = after
+            data = self._json(await self._request(
+                "GET", f"/v1/objects?{httpx.QueryParams(parameters)}",
+            ))
+            objects = data.get("objects") if isinstance(data, dict) else None
+            if not isinstance(objects, list):
+                raise WeaviateTransportError(
+                    "protocol", retryable=False, safe_message="Weaviate 对象列表格式非法",
+                )
+            for item in objects:
+                properties = item.get("properties") if isinstance(item, dict) else None
+                if isinstance(properties, dict) and (
+                    properties.get("generation_id"), properties.get("version_id"),
+                ) == (generation_id, version_id):
+                    scoped_objects.append(item)
+            if len(objects) < page_size:
+                return scoped_objects
+            next_after = objects[-1].get("id") if isinstance(objects[-1], dict) else None
+            # 缺失或不推进的 cursor 必须失败，避免静默截断或无限循环。
+            if not isinstance(next_after, str) or not next_after or next_after == after:
+                raise WeaviateTransportError(
+                    "protocol", retryable=False, safe_message="Weaviate 对象分页游标非法",
+                )
+            after = next_after
 
     async def count_generation(
         self, collection_name: str, *, generation_id: str, version_id: str
@@ -340,7 +376,7 @@ class WeaviateHTTPXTransport:
     ) -> list[RetrievalResult]:
         """通过 GraphQL nearVector 查询，并映射为现有 RetrievalResult。"""
 
-        collection_name = self._validate_collection_name(collection_name)
+        collection_name = self.physical_collection_name(collection_name)
         if top_k <= 0:
             raise ValueError("top_k 必须大于 0")
         selection = " ".join(
@@ -401,7 +437,7 @@ class WeaviateHTTPXTransport:
     ) -> int:
         """删除指定 generation/version 的对象，并返回上游报告的删除数量。"""
 
-        collection_name = self._validate_collection_name(collection_name)
+        collection_name = self.physical_collection_name(collection_name)
         payload = {
             "match": {
                 "class": collection_name,

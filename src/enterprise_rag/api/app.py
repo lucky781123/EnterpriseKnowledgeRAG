@@ -56,7 +56,11 @@ from enterprise_rag.security.authorization import (
 )
 from enterprise_rag.security.dev_token import DevTokenCodec
 
-from .dependencies import build_request_context_dependency
+from .dependencies import (
+    build_local_anonymous_dependency,
+    build_request_context_dependency,
+    require_local_request,
+)
 from .middleware import RequestBodyLimitMiddleware
 from .product_readiness import ProductReadinessManager
 from .product_schemas import (
@@ -226,6 +230,7 @@ def create_app(
     """创建应用并装配共享 Chat、Embedding、检索和产品上传依赖。"""
 
     resolved_settings = settings or Settings.from_env()
+    resolved_settings.validate()
     resolved_dev_token_codec = dev_token_codec
     if resolved_dev_token_codec is None and resolved_settings.dev_auth_enabled:
         if resolved_settings.dev_auth_secret is None:
@@ -346,8 +351,33 @@ def create_app(
     app.add_middleware(
         RequestBodyLimitMiddleware,
         max_bytes=resolved_settings.api_request_body_max_bytes,
-        path_limits={"/api/v1/documents": resolved_settings.product_upload_max_bytes},
+        # 产品 multipart 路径默认不设应用层大小上限；普通 JSON 仍保持 128 KiB。
+        path_limits={
+            "/api/v1/documents": (
+                resolved_settings.product_upload_max_bytes + 64 * 1024
+                if resolved_settings.product_upload_max_bytes is not None
+                else None
+            ),
+            "/product-workbench/gradio_api/upload": (
+                resolved_settings.product_upload_max_bytes + 64 * 1024
+                if resolved_settings.product_upload_max_bytes is not None
+                else None
+            ),
+            # 多文件控件会把已上传文件的临时路径列表提交到Gradio queue。
+            # 该请求只承载文件元数据，不能沿用普通JSON的128 KiB上限，
+            # 否则文件本体虽能上传，极大批量仍会在入库前被拦截。
+            "/product-workbench/gradio_api/queue/join": None,
+        },
     )
+    if resolved_settings.local_anonymous_enabled:
+        @app.middleware("http")
+        async def local_boundary(request: Request, call_next):
+            """同时保护 UI queue 和 API，避免浏览器跨站借 UI 代理调用本地模型。"""
+            try:
+                require_local_request(request)
+            except HTTPException as exc:
+                return JSONResponse(status_code=exc.status_code, content={"error": exc.detail})
+            return await call_next(request)
     app.state.settings = resolved_settings
     app.state.database = resolved_database
     app.state.embedding_provider = resolved_embedding_provider
@@ -448,7 +478,9 @@ def create_app(
             "provider": provider_payload,
         }
 
-    if resolved_dev_token_codec is not None:
+    if resolved_settings.local_anonymous_enabled:
+        product_context_dependency = build_local_anonymous_dependency()
+    elif resolved_dev_token_codec is not None:
         product_context_dependency = build_request_context_dependency(resolved_dev_token_codec)
     else:
 
@@ -836,6 +868,7 @@ def create_app(
     ) -> ProductRagQueryResponse | JSONResponse:
         """执行服务端授权的混合检索、摘录问答和引用复核。"""
 
+        deadline = time.monotonic() + request.timeout_ms / 1000
         retrieval_service = app.state.product_retrieval_service
         database_dependency = app.state.database
         if retrieval_service is None or database_dependency is None:
@@ -850,7 +883,10 @@ def create_app(
             )
 
         try:
-            async with database_dependency.session() as session:
+            async with (
+                asyncio.timeout(_remaining_seconds(deadline)),
+                database_dependency.session() as session,
+            ):
                 retrieval_result = await retrieval_service.search(
                     session,
                     context,
@@ -858,6 +894,11 @@ def create_app(
                     candidate_k=request.candidate_k,
                     top_k=request.top_k,
                 )
+        except TimeoutError:
+            return JSONResponse(
+                status_code=504,
+                content={"error": {"kind": "timeout", "message": "产品查询总预算耗尽"}},
+            )
         except Exception as exc:
             # 检索失败只返回稳定类别；不把 collection、SQL、上游响应或模型路径
             # 写入客户端错误体。RerankerUnavailable 由服务层转换为同一安全边界。
@@ -910,13 +951,19 @@ def create_app(
             )
 
         try:
+            remaining_ms = int(_remaining_seconds(deadline) * 1000)
+            if remaining_ms < 1000:
+                return JSONResponse(
+                    status_code=504,
+                    content={"error": {"kind": "timeout", "message": "产品查询总预算耗尽"}},
+                )
             excerpt_request = ExcerptQueryRequest(
                 question=request.question,
                 evidence=evidence,
                 model_alias=request.model_alias,
                 temperature=request.temperature,
                 max_tokens=request.max_tokens,
-                timeout_ms=request.timeout_ms,
+                timeout_ms=remaining_ms,
             )
             response = await query(excerpt_request)
         except ValueError:
@@ -938,7 +985,10 @@ def create_app(
             # 模型引用返回前重新打开数据库 session，复核当前版本和 ACL；这一步
             # 不信任检索阶段缓存的授权结论，撤权后旧 citation 不能继续出站。
             try:
-                async with database_dependency.session() as session:
+                async with (
+                    asyncio.timeout(_remaining_seconds(deadline)),
+                    database_dependency.session() as session,
+                ):
                     for citation in response.citations:
                         candidate = candidate_by_evidence_id.get(citation.evidence_id)
                         if candidate is None:
@@ -950,6 +1000,11 @@ def create_app(
                         )
                         if document.version_id != candidate.result.version_id:
                             raise ResourceNotFound("资源不存在")
+            except TimeoutError:
+                return JSONResponse(
+                    status_code=504,
+                    content={"error": {"kind": "timeout", "message": "产品查询总预算耗尽"}},
+                )
             except ResourceNotFound:
                 return JSONResponse(
                     status_code=404,

@@ -269,30 +269,21 @@ class WeaviateBM25FTransport(WeaviateHTTPXTransport):
             for value in (tenant_id, generation_id, version_id, sparse_profile_key)
         ):
             raise ValueError("Sparse generation scope 不能为空")
-        params = httpx.QueryParams(
-            {
-                "class": collection_name,
-                "where": json.dumps(
-                    self._product_scope_where(
-                        tenant_id,
-                        generation_id,
-                        version_id,
-                        sparse_profile_key,
-                    ),
-                    separators=(",", ":"),
-                ),
-                "limit": "10000",
-            }
+        # REST 列表不执行 where，复用 Dense 的 cursor 分页和 generation/version
+        # 精确筛选，再核验 Sparse 的 tenant/profile，不能统计同collection其他文档。
+        objects = await super()._list_objects(
+            collection_name, generation_id=generation_id, version_id=version_id,
         )
-        data = self._json(await self._request("GET", f"/v1/objects?{params}"))
-        objects = data.get("objects") if isinstance(data, dict) else None
-        if not isinstance(objects, list):
-            raise WeaviateTransportError(
-                "protocol",
-                retryable=False,
-                safe_message="Weaviate Sparse 对象列表格式非法",
-            )
-        return [item for item in objects if isinstance(item, dict)]
+        for item in objects:
+            properties = item["properties"]
+            if (
+                properties.get("tenant_id"), properties.get("sparse_profile"),
+            ) != (tenant_id, sparse_profile_key):
+                raise WeaviateTransportError(
+                    "protocol", retryable=False,
+                    safe_message="Weaviate Sparse 对象scope与发布事实不一致",
+                )
+        return objects
 
     async def inspect_generation(
         self,

@@ -26,7 +26,7 @@ def _request(**overrides) -> IngestionRequest:
         "source_id": "git:repo/docs/guide.md",
         "title": "开发指南",
         "filename": "guide.md",
-        "content": "# 标题\n\n正文".encode("utf-8"),
+        "content": "# 标题\n\n正文".encode(),
         "idempotency_key": "request-1",
     }
     values.update(overrides)
@@ -41,6 +41,16 @@ def test_markdown_request_is_validated_and_normalized():
     assert validated.extension == ".md"
     assert validated.media_type == "text/markdown"
     assert validated.text == "# 标题\n\n正文"
+
+
+def test_txt_utf8_is_supported() -> None:
+    """普通UTF-8 TXT必须按text/plain接入，与模型密钥无关。"""
+
+    validated = validate_request(_request(
+        filename="guide.txt", content_type="text/plain", content="普通正文".encode(),
+    ))
+    assert validated.media_type == "text/plain"
+    assert validated.text == "普通正文"
 
 
 def test_unknown_extension_is_rejected_before_object_storage():
@@ -76,3 +86,8 @@ def test_empty_text_and_size_limit_are_explicit_failures():
     with pytest.raises(PayloadTooLargeError):
         validate_request(_request(), max_bytes=2)
 
+
+def test_unlimited_size_accepts_content_over_previous_default():
+    """未配置大小上限时不再因历史10 MiB默认值拒绝合法文档。"""
+    validated = validate_request(_request(content=b"# title\n" + b"x" * (11 * 1024 * 1024)))
+    assert validated.content_hash

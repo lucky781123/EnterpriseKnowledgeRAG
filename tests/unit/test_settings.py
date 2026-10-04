@@ -62,3 +62,11 @@ def test_development_auth_is_rejected_outside_development(monkeypatch):
 
     with pytest.raises(ValueError, match="development"):
         Settings.from_env()
+
+
+def test_upload_budget_can_be_unlimited(monkeypatch):
+    """unlimited显式关闭文件大小上限，不影响普通JSON限制。"""
+    monkeypatch.setenv("PRODUCT_UPLOAD_MAX_BYTES", "unlimited")
+    settings = Settings.from_env()
+    assert settings.product_upload_max_bytes is None
+    assert settings.api_request_body_max_bytes == 128 * 1024

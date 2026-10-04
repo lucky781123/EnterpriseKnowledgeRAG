@@ -293,6 +293,29 @@ def _parse_pdf(data: bytes) -> list[ParsedBlock]:
     return blocks
 
 
+def _parse_plain_text(text: str) -> list[ParsedBlock]:
+    """按空行分段保留字面内容，并记录原始行范围，不解释 Markdown 或 HTML。"""
+
+    lines = text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+    blocks: list[ParsedBlock] = []
+    start = 0
+    for index in range(len(lines) + 1):
+        if index < len(lines) and lines[index].strip():
+            continue
+        # 空行结束当前段落；仅规范换行和段落边缘，不删除文本内部符号。
+        if index > start:
+            block = _make_block(
+                "paragraph", "\n".join(lines[start:index]), (),
+                {"kind": "line", "start": start + 1, "end": index},
+            )
+            if block is not None:
+                blocks.append(block)
+        start = index + 1
+    if not blocks:
+        raise EmptyDocumentError("文档没有可处理文本")
+    return blocks
+
+
 def parse_document(data: bytes, *, filename: str, content_type: str | None = None) -> list[ParsedBlock]:
     """根据受控扩展名解析文档；不支持格式在进入 parser 前立即拒绝。"""
 
@@ -309,6 +332,8 @@ def parse_document(data: bytes, *, filename: str, content_type: str | None = Non
         raise InvalidEncodingError("文本文件必须是 UTF-8") from exc
     if extension in {".md", ".markdown"}:
         return _parse_markdown(text)
+    if extension == ".txt":
+        return _parse_plain_text(text)
     return _parse_html(text)
 
 

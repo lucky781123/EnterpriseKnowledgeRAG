@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-import httpx
-import pytest
 import json
 from uuid import UUID
+
+import httpx
+import pytest
 
 from enterprise_rag.retrieval.contracts import WeaviateObject
 from enterprise_rag.retrieval.weaviate import (
@@ -173,7 +174,14 @@ async def test_list_objects_encodes_query_parameters_and_parses_response():
             200,
             json={
                 "objects": [
-                    {"properties": {"chunk_id": "chunk-1"}},
+                    {"properties": {
+                        "chunk_id": "chunk-1", "generation_id": "generation/1",
+                        "version_id": "version 1",
+                    }},
+                    {"properties": {
+                        "chunk_id": "other", "generation_id": "other",
+                        "version_id": "version 1",
+                    }},
                 ]
             },
             request=request,
@@ -188,8 +196,42 @@ async def test_list_objects_encodes_query_parameters_and_parses_response():
     assert chunk_ids == {"chunk-1"}
     assert observed[0].url.path == "/v1/objects"
     assert observed[0].url.params["class"] == "DenseTenant_demo"
-    assert "generation/1" in observed[0].url.params["where"]
-    assert "version 1" in observed[0].url.params["where"]
+    assert "where" not in observed[0].url.params
+
+
+@pytest.mark.asyncio
+async def test_generation_listing_follows_cursor_and_excludes_other_versions() -> None:
+    """目标generation在第二页时仍能核验，其他version不能污染计数。"""
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        """模拟REST忽略过滤条件、仅支持class/cursor的真实响应行为。"""
+        if "after" not in request.url.params:
+            objects = [
+                {"id": str(index), "properties": {
+                    "generation_id": "other", "version_id": "v1", "chunk_id": f"other-{index}",
+                }}
+                for index in range(1000)
+            ]
+        else:
+            assert request.url.params["after"] == "999"
+            objects = [
+                {"id": "target", "properties": {
+                    "generation_id": "g1", "version_id": "v1", "chunk_id": "target",
+                }},
+                {"id": "wrong-version", "properties": {
+                    "generation_id": "g1", "version_id": "v2", "chunk_id": "wrong",
+                }},
+            ]
+        return httpx.Response(200, json={"objects": objects}, request=request)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        transport = WeaviateHTTPXTransport(client, "http://weaviate.test")
+        assert await transport.list_chunk_ids(
+            "DenseTenant_demo", generation_id="g1", version_id="v1",
+        ) == {"target"}
+        assert await transport.count_generation(
+            "DenseTenant_demo", generation_id="g1", version_id="v1",
+        ) == 1
 
 
 @pytest.mark.asyncio

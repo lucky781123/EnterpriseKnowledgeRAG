@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
+from dataclasses import replace
+from types import SimpleNamespace
+
+import httpx
 import pytest
 
 from enterprise_rag.retrieval.contracts import IndexProfile
@@ -9,6 +14,181 @@ from enterprise_rag.retrieval.scope import AuthorizedRetrievalScope
 from enterprise_rag.retrieval.service import RetrievalResult
 from enterprise_rag.retrieval.sparse import SparseProfile
 from enterprise_rag.security.context import RequestContext
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("channel", ["dense", "sparse"])
+async def test_multi_document_ranking_precedes_candidate_limit(channel, monkeypatch) -> None:
+    """后加载文档的更高分命中必须进入融合，不能先按文档顺序截断候选。"""
+    from enterprise_rag.retrieval.product import ProductHybridRetrievalService
+
+    scopes = [
+        _scope(),
+        replace(_scope(), document_id="doc-2", version_id="version-2", generation_id="generation-2"),
+    ]
+    dense = _DenseTransport()
+    sparse = _SparseTransport(_sparse_profile())
+    authorization = _Authorization()
+
+    async def dense_search(_collection, *, generation_id, version_id, **_kwargs):
+        """模拟同一profile下两个文档的可比较向量分数。"""
+        if channel != "dense":
+            return []
+        second = generation_id == "generation-2"
+        return [RetrievalResult(
+            chunk_id=f"chunk-{generation_id}", parent_id=f"parent-{generation_id}",
+            version_id=version_id, document_id="doc-2" if second else "doc-1",
+            text="公开测试条文", heading_path=(), source_locators=(),
+            score=0.95 if second else 0.2,
+        )]
+
+    async def sparse_search(_collection, *, generation_id, version_id, tenant_id, **_kwargs):
+        """模拟同一租户collection中两个文档的BM25F分数。"""
+        if channel != "sparse":
+            return []
+        second = generation_id == "generation-2"
+        return [{
+            "chunk_id": f"chunk-{generation_id}", "parent_id": f"parent-{generation_id}",
+            "version_id": version_id, "document_id": "doc-2" if second else "doc-1",
+            "tenant_id": tenant_id, "generation_id": generation_id, "body": "公开测试条文",
+            "_additional": {"score": 12.0 if second else 1.0},
+        }]
+
+    async def authorize(_session, _context, document_id):
+        """保留两个文档的授权和版本复核，不绕过查询末端校验。"""
+        return SimpleNamespace(version_id="version-2" if document_id == "doc-2" else "version-1")
+
+    monkeypatch.setattr(dense, "search", dense_search)
+    monkeypatch.setattr(sparse, "search", sparse_search)
+    monkeypatch.setattr(authorization, "require_document_read", authorize)
+    service = ProductHybridRetrievalService(
+        scope_service=_ScopeService(scopes), embedding_provider=_Embedding(),
+        dense_transport=dense, sparse_transport=sparse, reranker=_Reranker(),
+        authorization_service=authorization, index_profile=_dense_profile(),
+        sparse_profile=_sparse_profile(),
+    )
+    result = await service.search(
+        object(), _context(), question="公开条文", candidate_k=1, top_k=1,
+    )
+    assert result.candidates[0].result.document_id == "doc-2"
+    assert result.trace.scopes == 2
+    assert result.trace.fused_candidates == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("failure", ["both_channels", "authentication", "cancel"])
+async def test_product_retrieval_does_not_hide_terminal_failures(failure, monkeypatch) -> None:
+    """双路全失效、认证错误和主动取消必须停止，不进入无证据降级。"""
+
+    from enterprise_rag.retrieval.product import ProductHybridRetrievalService
+    from enterprise_rag.retrieval.weaviate import WeaviateTransportError
+
+    dense = _DenseTransport()
+    sparse = _SparseTransport(_sparse_profile())
+
+    async def fail(*_args, **_kwargs):
+        """按场景注入不同故障，验证可用性不能覆盖硬约束。"""
+        if failure == "authentication":
+            raise WeaviateTransportError(
+                "authentication", retryable=False, safe_message="认证失败",
+            )
+        if failure == "cancel":
+            raise asyncio.CancelledError
+        raise httpx.ConnectError("dependency unavailable")
+
+    monkeypatch.setattr(dense, "search", fail)
+    if failure == "both_channels":
+        monkeypatch.setattr(sparse, "search", fail)
+    service = ProductHybridRetrievalService(
+        scope_service=_ScopeService([_scope()]),
+        embedding_provider=_Embedding(),
+        dense_transport=dense,
+        sparse_transport=sparse,
+        reranker=_Reranker(),
+        authorization_service=_Authorization(),
+        index_profile=_dense_profile(),
+        sparse_profile=_sparse_profile(),
+    )
+    expected = {
+        "both_channels": RuntimeError,
+        "authentication": WeaviateTransportError,
+        "cancel": asyncio.CancelledError,
+    }[failure]
+    with pytest.raises(expected):
+        await service.search(object(), _context(), question="部署", candidate_k=5, top_k=2)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("failed_component", ["embedding", "dense", "sparse", "reranker"])
+async def test_product_retrieval_falls_back_without_bypassing_acl(
+    failed_component, monkeypatch,
+) -> None:
+    """单依赖故障保留可用授权证据，降级仍必须经过最终 ACL 复核。"""
+
+    from enterprise_rag.retrieval.product import ProductHybridRetrievalService
+
+    embedding = _Embedding()
+    dense = _DenseTransport()
+    sparse = _SparseTransport(_sparse_profile())
+    reranker = _Reranker()
+    authorization = _Authorization()
+
+    async def fail(*args, **kwargs):
+        """模拟可恢复的网络故障，不伪造任何检索证据。"""
+        raise httpx.ConnectError("dependency unavailable")
+
+    dependency = {"embedding": embedding, "dense": dense, "sparse": sparse, "reranker": reranker}
+    method = {"embedding": "embed", "dense": "search", "sparse": "search", "reranker": "rerank"}
+    monkeypatch.setattr(dependency[failed_component], method[failed_component], fail)
+    service = ProductHybridRetrievalService(
+        scope_service=_ScopeService([_scope()]),
+        embedding_provider=embedding,
+        dense_transport=dense,
+        sparse_transport=sparse,
+        reranker=reranker,
+        authorization_service=authorization,
+        index_profile=_dense_profile(),
+        sparse_profile=_sparse_profile(),
+    )
+    result = await service.search(
+        object(), _context(), question="谁执行部署？", candidate_k=5, top_k=2,
+    )
+    assert result.candidates
+    assert authorization.calls
+    assert result.trace.mode == "degraded"
+    assert f"{failed_component}_unavailable" in result.trace.fallback_reasons
+    if failed_component == "reranker":
+        assert result.trace.reranker_used is False
+
+
+@pytest.mark.asyncio
+async def test_product_retrieval_rejects_scope_corruption(monkeypatch) -> None:
+    """协议或授权范围错误不能被视为普通故障，也不能进入模型兜底。"""
+
+    from enterprise_rag.retrieval.product import ProductHybridRetrievalService
+
+    sparse = _SparseTransport(_sparse_profile())
+    original = sparse.search
+
+    async def corrupt(*args, **kwargs):
+        """构造跨租户结果，验证安全校验不会被 fallback 吞掉。"""
+        rows = await original(*args, **kwargs)
+        rows[0]["tenant_id"] = "other-tenant"
+        return rows
+
+    monkeypatch.setattr(sparse, "search", corrupt)
+    service = ProductHybridRetrievalService(
+        scope_service=_ScopeService([_scope()]),
+        embedding_provider=_Embedding(),
+        dense_transport=_DenseTransport(),
+        sparse_transport=sparse,
+        reranker=_Reranker(),
+        authorization_service=_Authorization(),
+        index_profile=_dense_profile(),
+        sparse_profile=_sparse_profile(),
+    )
+    with pytest.raises(ValueError, match="scope"):
+        await service.search(object(), _context(), question="部署", candidate_k=5, top_k=2)
 
 
 def _context() -> RequestContext:
@@ -209,6 +389,27 @@ class _Authorization:
             (),
             {"document_id": document_id, "version_id": "version-1"},
         )()
+
+
+@pytest.mark.asyncio
+async def test_query_dimension_mismatch_fails_before_retrieval(monkeypatch):
+    """Embedding维度和配置不一致时，不能借Sparse-only掩盖错误。"""
+    from enterprise_rag.retrieval.product import ProductHybridRetrievalService
+    embedding = _Embedding()
+    dense, sparse, reranker = _DenseTransport(), _SparseTransport(_sparse_profile()), _Reranker()
+    async def wrong_dimension(_texts):
+        """模拟配置维度2但模型输出维度3。"""
+        return [[1.0, 0.0, 0.0]]
+    monkeypatch.setattr(embedding, "embed", wrong_dimension)
+    service = ProductHybridRetrievalService(
+        scope_service=_ScopeService([_scope()]), embedding_provider=embedding,
+        dense_transport=dense, sparse_transport=sparse, reranker=reranker,
+        authorization_service=_Authorization(), index_profile=_dense_profile(),
+        sparse_profile=_sparse_profile(),
+    )
+    with pytest.raises(ValueError, match="dimension"):
+        await service.search(object(), _context(), question="问题", candidate_k=20, top_k=5)
+    assert not dense.calls and not sparse.calls and reranker.calls == 0
 
 
 @pytest.mark.asyncio

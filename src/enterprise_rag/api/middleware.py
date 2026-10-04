@@ -14,7 +14,6 @@ import time
 from collections.abc import Awaitable, Callable
 from typing import Any
 
-
 ASGIMessage = dict[str, Any]
 Receive = Callable[[], Awaitable[ASGIMessage]]
 Send = Callable[[ASGIMessage], Awaitable[None]]
@@ -27,14 +26,14 @@ class RequestBodyLimitMiddleware:
         self,
         app: Callable[..., Awaitable[None]],
         max_bytes: int = 128 * 1024,
-        path_limits: dict[str, int] | None = None,
+        path_limits: dict[str, int | None] | None = None,
     ) -> None:
         if max_bytes <= 0:
             raise ValueError("max_bytes 必须大于 0")
         self.app = app
         self.max_bytes = max_bytes
         self.path_limits = path_limits or {}
-        if any(limit <= 0 for limit in self.path_limits.values()):
+        if any(limit is not None and limit <= 0 for limit in self.path_limits.values()):
             raise ValueError("path_limits 中的请求体预算必须大于 0")
 
     async def __call__(self, scope: dict[str, Any], receive: Receive, send: Send) -> None:
@@ -47,6 +46,11 @@ class RequestBodyLimitMiddleware:
         # 记录尽可能靠近入口的 monotonic 起点，后续路由可把它用于总预算。
         scope.setdefault("state", {})["request_started_at"] = time.monotonic()
         max_bytes = self.path_limits.get(scope.get("path"), self.max_bytes)
+        if max_bytes is None:
+            # 无大小上限的上传交给multipart解析器流式落临时文件，不在middleware
+            # 无界积累body；普通JSON仍走下面的实际字节计数与413保护。
+            await self.app(scope, receive, send)
+            return
         chunks: list[bytes] = []
         total_bytes = 0
 
@@ -67,7 +71,7 @@ class RequestBodyLimitMiddleware:
                 await self.app(scope, receive, send)
                 return
             total_bytes += len(chunk)
-            if total_bytes > max_bytes:
+            if max_bytes is not None and total_bytes > max_bytes:
                 await self._send_too_large(send, max_bytes)
                 return
             chunks.append(chunk)

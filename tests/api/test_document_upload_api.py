@@ -19,7 +19,6 @@ from enterprise_rag.providers.fake import FakeChatProvider
 from enterprise_rag.providers.registry import ProviderRegistry
 from enterprise_rag.security.dev_token import DevTokenCodec
 
-
 SECRET = "0123456789abcdef0123456789abcdef"
 
 
@@ -156,5 +155,20 @@ def test_document_upload_accepts_product_budget_larger_than_default_api_budget()
         files={"file": ("large-guide.md", content, "text/markdown")},
     )
 
+    assert response.status_code == 201
+    assert service.calls[0]["content"] == content
+
+
+def test_product_upload_above_10mib_reaches_ingestion() -> None:
+    """产品HTTP路径不能在传输层继续使用旧10 MiB上限。"""
+    service = _ProductService(calls=[])
+    client, codec = _client(service)
+    content = b"public\n" + b"x" * (11 * 1024 * 1024)
+    response = client.post(
+        "/api/v1/documents",
+        headers={"Authorization": f"Bearer {_token(codec, 'editor')}"},
+        data={"source_id": "large", "title": "large", "idempotency_key": "large"},
+        files={"file": ("large.txt", content, "text/plain")},
+    )
     assert response.status_code == 201
     assert service.calls[0]["content"] == content

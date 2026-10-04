@@ -30,6 +30,7 @@ class EmptyDocumentError(IngestionValidationError):
 
 
 SUPPORTED_MEDIA_TYPES: dict[str, str] = {
+    ".txt": "text/plain",
     ".md": "text/markdown",
     ".markdown": "text/markdown",
     ".html": "text/html",
@@ -55,7 +56,7 @@ def _normalized_text(content: bytes) -> str:
     return unicodedata.normalize("NFC", text.replace("\r\n", "\n").replace("\r", "\n"))
 
 
-def validate_request(request: IngestionRequest, *, max_bytes: int = 10 * 1024 * 1024) -> ValidatedRequest:
+def validate_request(request: IngestionRequest, *, max_bytes: int | None = None) -> ValidatedRequest:
     """校验并规范化请求。
 
     PDF 不在入口强制 UTF-8，因为其内容由 PDF parser 提取；是否为可提取文本 PDF
@@ -63,7 +64,7 @@ def validate_request(request: IngestionRequest, *, max_bytes: int = 10 * 1024 * 
     replay，而不会在对象存储和数据库之间留下无法识别的请求。
     """
 
-    if max_bytes <= 0:
+    if max_bytes is not None and max_bytes <= 0:
         raise ValueError("max_bytes 必须大于 0")
     if not isinstance(request.content, bytes):
         raise IngestionValidationError("content 必须是 bytes")
@@ -73,7 +74,7 @@ def validate_request(request: IngestionRequest, *, max_bytes: int = 10 * 1024 * 
         raise IngestionValidationError("title 和 filename 不能为空")
     if not request.idempotency_key.strip():
         raise IngestionValidationError("idempotency_key 不能为空")
-    if len(request.content) > max_bytes:
+    if max_bytes is not None and len(request.content) > max_bytes:
         raise PayloadTooLargeError("文档超过大小限制")
 
     extension = _extension(request.filename)
@@ -99,11 +100,11 @@ def validate_request(request: IngestionRequest, *, max_bytes: int = 10 * 1024 * 
 
 
 __all__ = [
+    "SUPPORTED_MEDIA_TYPES",
     "EmptyDocumentError",
     "IngestionValidationError",
     "InvalidEncodingError",
     "PayloadTooLargeError",
-    "SUPPORTED_MEDIA_TYPES",
     "UnsupportedMediaTypeError",
     "validate_request",
 ]

@@ -73,7 +73,8 @@ class ProductReadinessManager:
                 self.embedding_provider,
                 configured=self.embedding_provider is not None,
             ),
-            "bge_reranker": self._dependency_status(
+            ("http_reranker" if getattr(self.settings, "reranker_provider", "bge") == "http"
+             else "bge_reranker"): self._dependency_status(
                 reranker,
                 configured=reranker is not None,
             ),

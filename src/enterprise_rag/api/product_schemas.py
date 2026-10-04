@@ -156,8 +156,8 @@ class ProductRagQueryRequest(BaseModel):
     candidate_k: int = Field(default=20, ge=1, le=100)
     model_alias: str = Field(default="local_answer", pattern="^local_answer$")
     temperature: float = Field(default=0.0, ge=0.0, le=1.0)
-    max_tokens: int = Field(default=512, ge=1, le=2048)
-    timeout_ms: int = Field(default=120_000, ge=1_000, le=300_000)
+    max_tokens: int = Field(default=2048, ge=1, le=2048)
+    timeout_ms: int = Field(default=300_000, ge=1_000, le=300_000)
 
     @field_validator("question")
     @classmethod
@@ -190,6 +190,8 @@ class ProductRetrievalTraceResponse(BaseModel):
     parent_candidates: int = Field(ge=0)
     rrf_k: int = Field(gt=0)
     reranker_used: bool
+    mode: str = "normal"
+    fallback_reasons: tuple[str, ...] = ()
 
     @classmethod
     def from_result(cls, result: ProductRetrievalResult) -> "ProductRetrievalTraceResponse":
@@ -205,6 +207,8 @@ class ProductRetrievalTraceResponse(BaseModel):
             parent_candidates=trace.parent_candidates,
             rrf_k=trace.rrf_k,
             reranker_used=trace.reranker_used,
+            mode=trace.mode,
+            fallback_reasons=trace.fallback_reasons,
         )
 
 

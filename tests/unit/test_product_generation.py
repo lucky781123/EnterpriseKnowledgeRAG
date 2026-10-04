@@ -354,3 +354,92 @@ async def test_product_publish_switches_version_and_generation_in_one_transactio
         assert stored_pointer.active_generation_id == generation.generation_id
     finally:
         await database.dispose()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("invalid_state", [None, "missing_artifact", "not_current", "revoked"])
+async def test_product_publish_allows_new_profile_for_published_version(tmp_path, invalid_state):
+    """当前已发布版本可新增profile；产物未完整、非当前或撤销状态必须拒绝。"""
+    from enterprise_rag.db.publish import DenseGenerationPublishError
+
+    database = Database(f"sqlite+aiosqlite:///{tmp_path / 'published-profile.db'}")
+    try:
+        await database.migrate()
+        generation = await _seed_product_generation(database)
+        async with database.transaction() as session:
+            await GenerationService().validate_product_generation(
+                session,
+                generation.generation_id,
+                dense_transport=_DenseTransport({"child-1", "child-2"}, generation.generation_id),
+                sparse_transport=_SparseTransport(
+                    {"child-1", "child-2"}, _sparse_profile().key, generation.generation_id,
+                ),
+                sparse_profile=_sparse_profile(),
+            )
+            await publish_product_generation(session, generation.generation_id)
+            original_generation_id = generation.generation_id
+            version = await session.get(DocumentVersionModel, ("tenant-a", "doc-1", "version-1"))
+            published_at = version.published_at
+
+        async with database.transaction() as session:
+            profile = IndexProfile("new-embedding", 2560, "parent-child-v1", "dense-v1")
+            generation = await create_generation(
+                session,
+                GenerationScope("tenant-a", "doc-1", "version-1", profile.key),
+                profile,
+                manifest_hash="manifest-2",
+                expected_item_count=2,
+                build_attempt=1,
+                worker_lease="profile-2",
+                sparse_profile=_sparse_profile(),
+            )
+            generation.status = DenseGenerationStatus.READY
+            generation.actual_item_count = 2
+            # 明确标记测试产物，避免依赖查询返回顺序选择失败项。
+            for artifact in (
+                await session.scalars(select(VersionArtifactModel).where(
+                    VersionArtifactModel.tenant_id == "tenant-a",
+                    VersionArtifactModel.document_id == "doc-1",
+                    VersionArtifactModel.version_id == "version-1",
+                ))
+            ).all():
+                artifact.status = ArtifactStatus.READY
+                if invalid_state == "missing_artifact" and artifact.kind is ArtifactKind.EMBEDDING:
+                    artifact.status = ArtifactStatus.FAILED
+            if invalid_state == "not_current":
+                document = await session.get(DocumentModel, ("tenant-a", "doc-1"))
+                # 更改状态避免ready/current指针数据库约束先于待测试守卫阻拦。
+                from enterprise_rag.domain.entities import DocumentStatus
+                document.status = DocumentStatus.DRAFT
+                document.current_version_id = None
+            elif invalid_state == "revoked":
+                version = await session.get(DocumentVersionModel, ("tenant-a", "doc-1", "version-1"))
+                version.status = VersionStatus.REVOKED
+            await session.flush()
+            if invalid_state:
+                with pytest.raises(DenseGenerationPublishError):
+                    await publish_product_generation(session, generation.generation_id)
+                assert generation.status is DenseGenerationStatus.READY
+            else:
+                await publish_product_generation(session, generation.generation_id)
+
+        # 事务提交后重新读取，验证失败分支没有悄悄创建指针，旧profile仍可回溯。
+        async with database.session() as session:
+            version = await session.get(DocumentVersionModel, ("tenant-a", "doc-1", "version-1"))
+            pointer = await session.get(
+                DenseGenerationPointerModel,
+                ("tenant-a", "doc-1", "version-1", profile.key),
+            )
+            old_pointer = await session.get(
+                DenseGenerationPointerModel,
+                ("tenant-a", "doc-1", "version-1", _dense_profile().key),
+            )
+        assert old_pointer.active_generation_id == original_generation_id
+        assert version.published_at == published_at
+        if invalid_state:
+            assert pointer is None
+        else:
+            assert version.status is VersionStatus.PUBLISHED
+            assert pointer.active_generation_id == generation.generation_id
+    finally:
+        await database.dispose()

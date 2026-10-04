@@ -6,9 +6,12 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
+import httpx
+
 from enterprise_rag.retrieval.contracts import IndexProfile
 from enterprise_rag.retrieval.hybrid import (
     HybridCandidate,
+    RerankerUnavailable,
     collapse_parent_candidates,
     fuse_retrieval_candidates,
     rerank_retrieval_candidates,
@@ -16,8 +19,19 @@ from enterprise_rag.retrieval.hybrid import (
 from enterprise_rag.retrieval.scope import AuthorizationScopeService
 from enterprise_rag.retrieval.service import RetrievalResult
 from enterprise_rag.retrieval.sparse import SparseProfile
+from enterprise_rag.retrieval.weaviate import WeaviateTransportError
 from enterprise_rag.security.authorization import AuthorizationService, ResourceNotFound
 from enterprise_rag.security.context import RequestContext
+
+
+def _retryable_transport_failure(error: Exception) -> bool:
+    """仅网络、超时、限流和服务端故障可降级；认证及请求错误必须停止。"""
+
+    if isinstance(error, WeaviateTransportError):
+        return error.retryable
+    if isinstance(error, httpx.HTTPStatusError):
+        return error.response.status_code in {408, 429} or error.response.status_code >= 500
+    return isinstance(error, httpx.RequestError)
 
 
 @dataclass(frozen=True, slots=True)
@@ -32,6 +46,8 @@ class ProductRetrievalTrace:
     parent_candidates: int
     rrf_k: int
     reranker_used: bool
+    mode: str = "normal"
+    fallback_reasons: tuple[str, ...] = ()
 
     @classmethod
     def empty(cls, *, rrf_k: int = 60) -> "ProductRetrievalTrace":
@@ -105,34 +121,66 @@ class ProductHybridRetrievalService:
                 trace=ProductRetrievalTrace.empty(rrf_k=self.rrf_k),
             )
 
-        vectors = await self.embedding_provider.embed([question])
-        if len(vectors) != 1 or not vectors[0]:
-            raise ValueError("查询 embedding 响应数量不正确")
-        query_vector = vectors[0]
-
+        reasons: list[str] = []
+        query_vector = None
+        try:
+            vectors = await self.embedding_provider.embed([question])
+            if len(vectors) != 1 or not vectors[0]:
+                raise ValueError("查询 embedding 响应数量不正确")
+            query_vector = vectors[0]
+            # 查询也校验实际维度，配置写错不能作为Dense故障悄悄转向关键词兜底。
+            if len(query_vector) != self.index_profile.dimension:
+                raise ValueError("查询 embedding dimension 与 index profile 不一致")
+        except httpx.HTTPError as exc:
+            # 仅网络故障允许转向 BM25F；维度、协议和授权错误不能被兜底掩盖。
+            if not _retryable_transport_failure(exc):
+                raise
+            reasons.append("embedding_unavailable")
         dense_hits: list[RetrievalResult] = []
         sparse_hits: list[RetrievalResult] = []
+        successful_channels = 0
         for scope in scopes:
-            dense_hits.extend(
-                await self.dense_transport.search(
-                    scope.dense_collection_name,
+            if query_vector is not None:
+                try:
+                    dense_hits.extend(
+                        await self.dense_transport.search(
+                            scope.dense_collection_name,
+                            generation_id=scope.generation_id,
+                            version_id=scope.version_id,
+                            query=query_vector,
+                            top_k=candidate_k,
+                        )
+                    )
+                    successful_channels += 1
+                except (httpx.HTTPError, WeaviateTransportError) as exc:
+                    if not _retryable_transport_failure(exc):
+                        raise
+                    reasons.append("dense_unavailable")
+            try:
+                sparse_rows = await self.sparse_transport.search(
+                    scope.sparse_collection_name,
+                    profile=self.sparse_profile,
+                    tenant_id=scope.tenant_id,
                     generation_id=scope.generation_id,
                     version_id=scope.version_id,
-                    query=query_vector,
+                    query=question,
                     top_k=candidate_k,
                 )
-            )
-            sparse_rows = await self.sparse_transport.search(
-                scope.sparse_collection_name,
-                profile=self.sparse_profile,
-                tenant_id=scope.tenant_id,
-                generation_id=scope.generation_id,
-                version_id=scope.version_id,
-                query=question,
-                top_k=candidate_k,
-            )
-            sparse_hits.extend(self._sparse_rows_to_results(sparse_rows, scope))
+                sparse_hits.extend(self._sparse_rows_to_results(sparse_rows, scope))
+                successful_channels += 1
+            except (httpx.HTTPError, WeaviateTransportError) as exc:
+                if not _retryable_transport_failure(exc):
+                    raise
+                reasons.append("sparse_unavailable")
 
+        if not successful_channels:
+            # 两路均失效时禁止纯模型回答，避免以模型常识冒充企业证据。
+            raise RuntimeError("授权检索通道全部不可用")
+
+        # scope逐文档查询只保证文档内部排序；同一profile/租户collection的分数
+        # 必须先合并为通道全局排名，避免文档遍历顺序挤掉后来上传的高相关候选。
+        dense_hits.sort(key=lambda item: (-item.score, item.chunk_id))
+        sparse_hits.sort(key=lambda item: (-item.score, item.chunk_id))
         fused = fuse_retrieval_candidates(
             dense_hits,
             sparse_hits,
@@ -150,15 +198,24 @@ class ProductHybridRetrievalService:
                     parent_candidates=0,
                     rrf_k=self.rrf_k,
                     reranker_used=False,
+                    mode="degraded" if reasons else "normal",
+                    fallback_reasons=tuple(dict.fromkeys(reasons)),
                 ),
             )
 
-        reranked = await rerank_retrieval_candidates(
-            question,
-            fused,
-            reranker=self.reranker,
-            top_k=min(candidate_k, len(fused)),
-        )
+        reranker_used = True
+        try:
+            reranked = await rerank_retrieval_candidates(
+                question,
+                fused,
+                reranker=self.reranker,
+                top_k=min(candidate_k, len(fused)),
+            )
+        except RerankerUnavailable:
+            # BGE 失败保留 RRF 顺序；最终仍做 ACL 复核，再交本地 LLM 引用回答。
+            reranked = fused
+            reranker_used = False
+            reasons.append("reranker_unavailable")
         collapsed = collapse_parent_candidates(reranked)[:top_k]
         authorized = await self._recheck_parent_acl(session, context, collapsed)
         return ProductRetrievalResult(
@@ -171,7 +228,9 @@ class ProductHybridRetrievalService:
                 reranked_candidates=len(reranked),
                 parent_candidates=len(authorized),
                 rrf_k=self.rrf_k,
-                reranker_used=True,
+                reranker_used=reranker_used,
+                mode="degraded" if reasons else "normal",
+                fallback_reasons=tuple(dict.fromkeys(reasons)),
             ),
         )
 

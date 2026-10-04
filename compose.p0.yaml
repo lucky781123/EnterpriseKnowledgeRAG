@@ -1,0 +1,62 @@
+services:
+  # P0 产品入口单独使用覆盖文件，避免改变默认 API 的 PostgreSQL demo read path。
+  p0-api:
+    build:
+      context: .
+      args:
+        PIP_EXTRAS: reranker
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      migration:
+        condition: service_completed_successfully
+      weaviate:
+        condition: service_healthy
+    ports:
+      - "${P0_API_PORT:-8001}:8000"
+    environment:
+      APP_ENV: development
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      POSTGRES_DSN: ${POSTGRES_DSN:?POSTGRES_DSN must be provided for P0 API}
+      POSTGRES_POOL_SIZE: ${POSTGRES_POOL_SIZE:-3}
+      POSTGRES_MAX_OVERFLOW: ${POSTGRES_MAX_OVERFLOW:-2}
+      POSTGRES_POOL_TIMEOUT_SECONDS: ${POSTGRES_POOL_TIMEOUT_SECONDS:-10}
+      POSTGRES_POOL_RECYCLE_SECONDS: ${POSTGRES_POOL_RECYCLE_SECONDS:-1800}
+      POSTGRES_STATEMENT_TIMEOUT_MS: ${POSTGRES_STATEMENT_TIMEOUT_MS:-30000}
+      POSTGRES_LOCK_TIMEOUT_MS: ${POSTGRES_LOCK_TIMEOUT_MS:-5000}
+      WEAVIATE_ENABLED: "true"
+      WEAVIATE_BASE_URL: http://weaviate:8080
+      WEAVIATE_API_KEY: ${WEAVIATE_API_KEY:-}
+      WEAVIATE_SCHEMA_VERSION: ${WEAVIATE_SCHEMA_VERSION:-dense-v1}
+      DEV_AUTH_ENABLED: "true"
+      DEV_AUTH_SECRET: ${DEV_AUTH_SECRET:?DEV_AUTH_SECRET must be provided for P0 API}
+      DEV_AUTH_TOKEN_TTL_SECONDS: ${DEV_AUTH_TOKEN_TTL_SECONDS:-3600}
+      LOCAL_LLM_BASE_URL: ${LOCAL_LLM_BASE_URL:-http://host.docker.internal:1234}
+      LOCAL_LLM_API_KEY: ${LOCAL_LLM_API_KEY:-local}
+      LOCAL_LLM_MODEL: ${LOCAL_LLM_MODEL:?LOCAL_LLM_MODEL must be provided for P0 API}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      OLLAMA_EMBEDDING_MODEL: ${OLLAMA_EMBEDDING_MODEL:?OLLAMA_EMBEDDING_MODEL must be provided for P0 API}
+      OLLAMA_EMBEDDING_DIMENSION: ${OLLAMA_EMBEDDING_DIMENSION:-4096}
+      BGE_RERANKER_MODEL: ${BGE_RERANKER_MODEL:?BGE_RERANKER_MODEL must be provided for P0 API}
+      BGE_RERANKER_DEVICE: ${BGE_RERANKER_DEVICE:-cpu}
+      P0_WORKBENCH_ENABLED: ${P0_WORKBENCH_ENABLED:-false}
+      PRODUCT_OBJECT_STORAGE_ROOT: /app/.local/p0-object-storage
+    command:
+      ["uvicorn", "scripts.local_p0_api:app", "--factory", "--host", "0.0.0.0", "--port", "8000"]
+    healthcheck:
+      test:
+        ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/product/ready')"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+    volumes:
+      - p0_object_storage:/app/.local/p0-object-storage
+
+  # 覆盖基础 Compose 的示例 DSN，避免 P0 命令无意间使用示例凭据。
+  migration:
+    environment:
+      POSTGRES_DSN: ${POSTGRES_DSN:?POSTGRES_DSN must be provided for P0 API}
+
+volumes:
+  p0_object_storage:

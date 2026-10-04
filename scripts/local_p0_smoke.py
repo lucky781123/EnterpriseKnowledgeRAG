@@ -21,7 +21,6 @@ import httpx
 
 from enterprise_rag.security.dev_token import DevTokenCodec
 
-
 _DEFAULT_API_BASE_URL = "http://127.0.0.1:8000"
 _DEFAULT_TIMEOUT_SECONDS = 150.0
 _PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -44,10 +43,13 @@ _REQUIRED_STAGES = (
     "upload",
     "status",
     "cross_tenant_deny",
+    "cross_tenant_query_deny",
     "grant",
     "query",
     "revoke",
     "revoked_query_deny",
+    "regrant",
+    "regranted_query",
     "cleanup",
 )
 _SMOKE_DOCUMENT = """# 发布冻结规则
@@ -104,7 +106,7 @@ def _safe_error_kind(payload: Any) -> str | None:
 
     if not isinstance(payload, dict):
         return None
-    error = payload.get("error")
+    error = payload.get("error", payload.get("detail"))
     if not isinstance(error, dict):
         return None
     kind = error.get("kind")
@@ -121,9 +123,58 @@ def summarize_response(status_code: int, payload: Any) -> dict[str, Any]:
     if 200 <= status_code < 300:
         summary: dict[str, Any] = {"status_code": status_code, "status": "passed"}
         if isinstance(payload, dict):
+            # 上传和状态接口只保留稳定的业务标识和生命周期状态，不保留
+            # object key、collection、原文或任何底层异常信息。
+            for field in (
+                "document_id",
+                "version_id",
+                "job_id",
+                "generation_id",
+                "document_status",
+                "job_status",
+                "version_status",
+                "generation_status",
+            ):
+                if isinstance(payload.get(field), str):
+                    summary[field] = payload[field]
             for field in ("published", "granted", "revoked"):
                 if isinstance(payload.get(field), bool):
                     summary[field] = payload[field]
+            artifacts = payload.get("artifacts")
+            if isinstance(artifacts, dict):
+                safe_artifacts: dict[str, Any] = {}
+                for name, artifact in artifacts.items():
+                    if not isinstance(name, str) or len(name) > 64:
+                        continue
+                    if isinstance(artifact, str):
+                        safe_artifacts[name] = artifact
+                    elif isinstance(artifact, dict):
+                        safe_artifact = {
+                            field: artifact[field]
+                            for field in ("status", "item_count")
+                            if field in artifact
+                            and isinstance(artifact[field], (str, int))
+                        }
+                        if safe_artifact:
+                            safe_artifacts[name] = safe_artifact
+                if safe_artifacts:
+                    summary["artifacts"] = safe_artifacts
+            generation = payload.get("generation")
+            if isinstance(generation, dict):
+                safe_generation = {
+                    field: generation[field]
+                    for field in (
+                        "generation_id",
+                        "status",
+                        "expected_item_count",
+                        "actual_item_count",
+                        "checkpoint",
+                    )
+                    if field in generation
+                    and isinstance(generation[field], (str, int))
+                }
+                if safe_generation:
+                    summary["generation"] = safe_generation
             for field in ("answer_status", "citation_validation"):
                 if isinstance(payload.get(field), str):
                     summary[field] = payload[field]
@@ -143,9 +194,17 @@ def summarize_response(status_code: int, payload: Any) -> dict[str, Any]:
                         "parent_candidates",
                         "rrf_k",
                         "reranker_used",
+                        "mode",
+                        "fallback_reasons",
                     )
                     if name in trace
                 }
+            if "answer_status" in payload and (
+                payload.get("answer_status") != "answered"
+                or payload.get("citation_validation") != "passed"
+                or not citations
+            ):
+                summary["status"] = "failed"
         return summary
 
     summary = {"status_code": status_code, "status": "blocked" if status_code == 404 else "failed"}
@@ -164,29 +223,29 @@ def _read_json(response: httpx.Response) -> Any:
         return {}
 
 
-def _issue_tokens(secret: str) -> dict[str, str]:
+def _issue_tokens(secret: str, *, tenant_suffix: str = "") -> dict[str, str]:
     """在进程内为四个固定 smoke 身份签发短期 token。"""
 
     codec = DevTokenCodec(secret, ttl_seconds=900)
     return {
         "uploader": codec.issue(
             actor_id="smoke-uploader",
-            tenant_id="smoke-tenant-a",
+            tenant_id=f"smoke-tenant-a{tenant_suffix}",
             roles=["editor"],
         ),
         "admin": codec.issue(
             actor_id="smoke-admin",
-            tenant_id="smoke-tenant-a",
+            tenant_id=f"smoke-tenant-a{tenant_suffix}",
             roles=["admin"],
         ),
         "reader": codec.issue(
             actor_id="smoke-reader",
-            tenant_id="smoke-tenant-a",
+            tenant_id=f"smoke-tenant-a{tenant_suffix}",
             roles=["reader"],
         ),
         "other_tenant": codec.issue(
             actor_id="smoke-other",
-            tenant_id="smoke-tenant-b",
+            tenant_id=f"smoke-tenant-b{tenant_suffix}",
             roles=["reader"],
         ),
     }
@@ -225,7 +284,8 @@ async def run_smoke(
         return redact_report(report)
 
     try:
-        tokens = _issue_tokens(dev_auth_secret)
+        # 隔离每次运行的 tenant，历史测试 ACL 不应影响本轮撤权断言。
+        tokens = _issue_tokens(dev_auth_secret, tenant_suffix=f"-{uuid4().hex[:12]}")
     except ValueError:
         report["run_status"] = "blocked"
         report["stages"]["readiness"] = {
@@ -268,6 +328,15 @@ async def run_smoke(
             )
             if upload_response.status_code != 201 or not isinstance(upload_payload, dict):
                 return _finish_report(report, "failed")
+            if not (
+                upload_payload.get("published") is True
+                and upload_payload.get("version_status") == "published"
+                and upload_payload.get("generation_status") == "active"
+                and all(upload_payload.get("artifacts", {}).get(kind) == "ready"
+                        for kind in ("raw", "parsed", "embedding", "sparse"))
+            ):
+                report["stages"]["upload"]["status"] = "failed"
+                return _finish_report(report, "failed")
             document_id = upload_payload.get("document_id")
             if not isinstance(document_id, str) or not document_id:
                 return _finish_report(report, "failed")
@@ -281,7 +350,14 @@ async def run_smoke(
                 "status",
                 summarize_response(status_response.status_code, _read_json(status_response)),
             )
-            if status_response.status_code != 200:
+            status_payload = _read_json(status_response)
+            if status_response.status_code != 200 or not (
+                status_payload.get("document_status") == "ready"
+                and (status_payload.get("current_version") or {}).get("version_id")
+                == upload_payload.get("version_id")
+                and (status_payload.get("generation") or {}).get("status") == "active"
+            ):
+                report["stages"]["status"]["status"] = "failed"
                 return _finish_report(report, "failed")
 
             cross_tenant_response = await client.get(
@@ -299,6 +375,29 @@ async def run_smoke(
             if cross_tenant_response.status_code != 404:
                 return _finish_report(report, "failed")
 
+            query_request = {
+                "question": "Aurora 项目的发布冻结窗口是什么时间？",
+                "top_k": 3,
+                "candidate_k": 10,
+                "max_tokens": 1024,
+                "timeout_ms": 120_000,
+            }
+            cross_tenant_query_response = await client.post(
+                "/api/v1/rag/query",
+                headers=_auth_headers(tokens["other_tenant"]),
+                json=query_request,
+            )
+            _set_stage(
+                report,
+                "cross_tenant_query_deny",
+                summarize_response(
+                    cross_tenant_query_response.status_code,
+                    _read_json(cross_tenant_query_response),
+                ),
+            )
+            if cross_tenant_query_response.status_code != 404:
+                return _finish_report(report, "failed")
+
             grant_response = await client.put(
                 f"/api/v1/documents/{document_id}/acl/user/smoke-reader",
                 headers=_auth_headers(tokens["admin"]),
@@ -314,20 +413,21 @@ async def run_smoke(
             query_response = await client.post(
                 "/api/v1/rag/query",
                 headers=_auth_headers(tokens["reader"]),
-                json={
-                    "question": "Aurora 项目的发布冻结窗口是什么时间？",
-                    "top_k": 3,
-                    "candidate_k": 10,
-                    "max_tokens": 256,
-                    "timeout_ms": 120_000,
-                },
+                json=query_request,
             )
             _set_stage(
                 report,
                 "query",
                 summarize_response(query_response.status_code, _read_json(query_response)),
             )
-            if query_response.status_code != 200:
+            if report["stages"]["query"]["status"] != "passed":
+                return _finish_report(report, "failed")
+            trace = report["stages"]["query"].get("retrieval_trace", {})
+            if not (
+                trace.get("dense_hits", 0) > 0 and trace.get("sparse_hits", 0) > 0
+                and trace.get("fused_candidates", 0) > 0
+                and trace.get("rrf_k") == 60 and trace.get("reranker_used") is True
+            ):
                 return _finish_report(report, "failed")
 
             revoke_response = await client.delete(
@@ -345,13 +445,7 @@ async def run_smoke(
             revoked_query_response = await client.post(
                 "/api/v1/rag/query",
                 headers=_auth_headers(tokens["reader"]),
-                json={
-                    "question": "Aurora 项目的发布冻结窗口是什么时间？",
-                    "top_k": 3,
-                    "candidate_k": 10,
-                    "max_tokens": 256,
-                    "timeout_ms": 120_000,
-                },
+                json=query_request,
             )
             _set_stage(
                 report,
@@ -363,14 +457,47 @@ async def run_smoke(
             )
             if revoked_query_response.status_code != 404:
                 return _finish_report(report, "failed")
+
+            regrant_response = await client.put(
+                f"/api/v1/documents/{document_id}/acl/user/smoke-reader",
+                headers=_auth_headers(tokens["admin"]),
+            )
+            _set_stage(
+                report,
+                "regrant",
+                summarize_response(regrant_response.status_code, _read_json(regrant_response)),
+            )
+            if regrant_response.status_code != 200:
+                return _finish_report(report, "failed")
+
+            regranted_query_response = await client.post(
+                "/api/v1/rag/query",
+                headers=_auth_headers(tokens["reader"]),
+                json=query_request,
+            )
+            _set_stage(
+                report,
+                "regranted_query",
+                summarize_response(
+                    regranted_query_response.status_code,
+                    _read_json(regranted_query_response),
+                ),
+            )
+            if report["stages"]["regranted_query"]["status"] != "passed":
+                return _finish_report(report, "failed")
     except httpx.TimeoutException:
-        report["stages"]["readiness"] = {
+        # 当前待执行阶段才是故障位置，不能覆盖已经成功的 readiness 证据。
+        stage = next(name for name in _REQUIRED_STAGES
+                     if report["stages"][name]["status"] == "pending")
+        report["stages"][stage] = {
             "status": "blocked",
             "error_kind": "timeout",
         }
         return _finish_report(report, "blocked")
     except httpx.HTTPError:
-        report["stages"]["readiness"] = {
+        stage = next(name for name in _REQUIRED_STAGES
+                     if report["stages"][name]["status"] == "pending")
+        report["stages"][stage] = {
             "status": "blocked",
             "error_kind": "network_unavailable",
         }

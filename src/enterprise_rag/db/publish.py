@@ -470,15 +470,48 @@ async def publish_product_generation(
     if acl_exists is None:
         raise DenseGenerationPublishError("文档缺少 READ ACL，不能发布")
 
-    # 先按 document -> version 的既有锁顺序发布版本，再刷新同一事务中的状态；
-    # 随后的 generation pointer 切换若失败，调用方事务会回滚全部修改。
-    await publish_version(
-        session,
-        tenant_id=generation.tenant_id,
-        document_id=generation.document_id,
-        version_id=generation.version_id,
-        now=now,
+    # 同一已发布版本可以新增另一个 embedding profile；这时只切换该 profile
+    # 的 generation pointer，不重复修改文档版本状态。新版本仍沿用完整发布流程。
+    document = await session.scalar(
+        select(DocumentModel).where(
+            DocumentModel.tenant_id == generation.tenant_id,
+            DocumentModel.id == generation.document_id,
+        ).with_for_update()
     )
+    if document is None:
+        raise DenseGenerationPublishError("generation 对应 document 不存在")
+    version = await session.scalar(
+        select(DocumentVersionModel)
+        .where(
+            DocumentVersionModel.tenant_id == generation.tenant_id,
+            DocumentVersionModel.document_id == generation.document_id,
+            DocumentVersionModel.id == generation.version_id,
+        )
+        .with_for_update()
+    )
+    if version is None:
+        raise DenseGenerationPublishError("generation 对应 version 不存在")
+    if version.status is VersionStatus.READY:
+        await publish_version(
+            session,
+            tenant_id=generation.tenant_id,
+            document_id=generation.document_id,
+            version_id=generation.version_id,
+            now=now,
+        )
+    elif version.status is VersionStatus.PUBLISHED:
+        if document.current_version_id != version.id or document.status is not DocumentStatus.READY:
+            raise DenseGenerationPublishError("已发布version不是当前可见版本")
+        artifacts = (await session.scalars(select(VersionArtifactModel).where(
+            VersionArtifactModel.tenant_id == generation.tenant_id,
+            VersionArtifactModel.document_id == generation.document_id,
+            VersionArtifactModel.version_id == generation.version_id,
+        ))).all()
+        ready = {artifact.kind for artifact in artifacts if artifact.status is ArtifactStatus.READY}
+        if ready != set(ArtifactKind):
+            raise DenseGenerationPublishError("已发布version的新profile产物未完整")
+    else:
+        raise DenseGenerationPublishError(f"version 状态不可发布: {version.status.value}")
     await session.flush()
     return await publish_dense_generation(session, generation_id, now=now)
 

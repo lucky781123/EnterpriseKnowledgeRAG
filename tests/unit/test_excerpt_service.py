@@ -92,6 +92,14 @@ def test_prompt_uses_internal_labels_and_declares_untrusted_evidence() -> None:
     assert '"evidence_id": "caller-id"' in messages[1].content
 
 
+def test_prompt_requests_complete_clauses_without_duplicate_full_evidence() -> None:
+    """收紧表达长度但不限制条文数、不遗漏相关事实，也不能弱化逐字引用。"""
+    messages = build_excerpt_prompt("试用期条文", [{"evidence_id": "doc-1", "text": "公开事实"}])
+    assert "不要遗漏" in messages[0].content
+    assert "最短" in messages[0].content
+    assert "逐字" in messages[0].content
+
+
 def test_visible_stream_sanitizer_drops_split_reasoning_wrapper() -> None:
     """跨多个网络增量拆开的 reasoning 标签也不能进入可见 token。"""
 
