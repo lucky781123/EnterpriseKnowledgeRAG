@@ -156,7 +156,8 @@ class ProductRagQueryRequest(BaseModel):
     candidate_k: int = Field(default=20, ge=1, le=100)
     model_alias: str = Field(default="local_answer", pattern="^local_answer$")
     temperature: float = Field(default=0.0, ge=0.0, le=1.0)
-    max_tokens: int = Field(default=2048, ge=1, le=2048)
+    # 回答生成预算独立于 Embedding/Reranker 输入预算；允许最多生成 8192 tokens。
+    max_tokens: int = Field(default=8192, ge=1, le=8192)
     timeout_ms: int = Field(default=300_000, ge=1_000, le=300_000)
 
     @field_validator("question")

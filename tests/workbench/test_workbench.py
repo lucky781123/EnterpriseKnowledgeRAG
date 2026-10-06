@@ -309,7 +309,7 @@ async def test_product_query_default_budget_covers_multi_clause_answer() -> None
     client = _Client()
     await query_product(client, token="", question="相关条文", anonymous=True)
     request = client.calls[0]["json"]
-    assert request["max_tokens"] == ProductRagQueryRequest(question="相关条文").max_tokens == 2048
+    assert request["max_tokens"] == ProductRagQueryRequest(question="相关条文").max_tokens == 8192
     assert request["timeout_ms"] == ProductRagQueryRequest(question="相关条文").timeout_ms == 300_000
 
 
@@ -320,8 +320,63 @@ def test_product_ui_budget_default_and_pending_output() -> None:
     config = blocks.get_config_file()
     components = config["components"]
     slider = next(item for item in components if item["props"].get("label") == "Max tokens")
-    assert slider["props"]["value"] == 2048
+    assert slider["props"]["value"] == 8192
+    assert slider["props"]["maximum"] == 8192
     assert any(item["props"].get("label") == "回答" for item in components)
     query_event = next(item for item in config["dependencies"] if item.get("api_name") == "query_action")
     assert query_event["types"]["generator"] is True
     assert len(query_event["outputs"]) == 2
+
+
+@pytest.mark.parametrize(
+    ("http_status", "task_status", "expected"),
+    [(202, "queued", "accepted"), (200, "running", "processing"),
+     (200, "retry_wait", "processing"), (200, "succeeded", "passed"),
+     (200, "dead_letter", "failed")],
+)
+def test_async_task_is_not_finished_on_accept(http_status, task_status, expected):
+    """202 与进行中状态不能显示为入库完成，死信也不能因 HTTP200 标成成功。"""
+    result = summarize_product_response(http_status, {
+        "task_id": "task_public", "status": task_status, "stage": "parse",
+    })
+    assert result["status"] == expected
+
+
+async def test_async_ui_upload_and_task_status_use_new_routes(tmp_path):
+    """异步UI不调用旧同步上传，状态查询用任务ID且不自报身份。"""
+    class AsyncClient(_Client):
+        """只提供异步受理与阶段状态的离线响应。"""
+
+        async def post(self, path, **kwargs):
+            """捕获受理字段，响应只含安全任务状态。"""
+            self.calls.append({"method": "POST", "path": path, **kwargs})
+            return _Response(202, {"task_id": "task_public", "status": "queued", "stage": "parse"})
+
+        async def get(self, path, **kwargs):
+            """捕获状态请求，不模拟Worker已完成。"""
+            self.calls.append({"method": "GET", "path": path, **kwargs})
+            return _Response(200, {"task_id": "task_public", "status": "running", "stage": "embedding"})
+
+    client = AsyncClient()
+    path = tmp_path / "public.txt"
+    path.write_text("公开测试", encoding="utf-8")
+    result = await upload_product_documents(
+        client, token="", file_paths=[path], anonymous=True, async_ingestion=True,
+    )
+    assert result["status"] == "accepted"
+    assert client.calls[0]["path"] == "/api/v1/ingestion/tasks"
+    status = await get_product_document_status(
+        client, token="", document_id="task_public", anonymous=True,
+    )
+    assert client.calls[1]["path"] == "/api/v1/ingestion/tasks/task_public"
+    assert status["status"] == "processing"
+    assert all(call["headers"] == {} for call in client.calls)
+
+
+def test_async_ui_exposes_task_id_and_submit_button():
+    """显式异步模式展示Task ID和提交操作；默认同步UI保持原样。"""
+    pytest.importorskip("gradio")
+    config = build_product_workbench(anonymous=True, async_ingestion=True).get_config_file()
+    props = [item["props"] for item in config["components"]]
+    assert any(item.get("label") == "Task ID / Document ID" for item in props)
+    assert any(item.get("value") == "提交入库" for item in props)

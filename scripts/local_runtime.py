@@ -104,6 +104,7 @@ def start() -> int:
     state = {
         "pid": process.pid, "port": port, "api": api,
         "anonymous": os.getenv("P0_ANONYMOUS_ENABLED", "false").lower() in {"true", "1", "yes", "on"},
+        "async_enabled": os.getenv("RAG_INFRA_ENABLED", "false").lower() in {"true", "1"},
     }
     STATE.write_text(json.dumps(state, indent=2) + "\n")
     deadline = time.monotonic() + 180
@@ -129,9 +130,21 @@ def start() -> int:
 def main() -> int:
     """提供 start/status/stop；错误只输出类型，避免 traceback 泄露配置。"""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=["start", "status", "stop"], nargs="?", default="start")
+    parser.add_argument(
+        "action", choices=["start", "status", "stop", "start-async", "async-status", "async-stop"],
+        nargs="?", default="start",
+    )
     args = parser.parse_args()
     try:
+        if args.action in {"start-async", "async-status", "async-stop"}:
+            from scripts import local_infrastructure_runtime
+
+            if args.action == "start-async":
+                return local_infrastructure_runtime.start()
+            if args.action == "async-stop":
+                return local_infrastructure_runtime.stop()
+            local_infrastructure_runtime.status()
+            return 0
         if args.action == "start":
             return start()
         state = read_state()

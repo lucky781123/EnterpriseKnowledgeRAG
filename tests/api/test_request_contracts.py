@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
 from enterprise_rag.api.app import create_app
-from enterprise_rag.api.schemas import ExcerptQueryRequest
+from enterprise_rag.api.schemas import ExcerptQueryRequest, RetrievalQueryRequest
 from enterprise_rag.providers.fake import FakeChatProvider
 from enterprise_rag.providers.registry import ProviderRegistry
 
@@ -61,6 +61,19 @@ def test_integer_fields_reject_boolean_and_float_values(field: str) -> None:
         payload[field] = value
         with pytest.raises(ValidationError):
             ExcerptQueryRequest.model_validate(payload)
+
+
+@pytest.mark.parametrize("model", [ExcerptQueryRequest, RetrievalQueryRequest])
+def test_legacy_request_output_ceiling_expands_without_changing_default(model):
+    """旧入口默认512不变，允许产品共享8192预算，8193及非正预算仍拒绝。"""
+    payload = _valid_payload() if model is ExcerptQueryRequest else {
+        "tenant_id": "test", "version_id": "test-version", "question": "公开问题",
+    }
+    assert model.model_validate(payload).max_tokens == 512
+    assert model.model_validate(payload | {"max_tokens": 8192}).max_tokens == 8192
+    for value in (0, -1, 8193):
+        with pytest.raises(ValidationError):
+            model.model_validate(payload | {"max_tokens": value})
 
 
 @pytest.mark.parametrize("value", [True, "0.5", math.nan, math.inf, -math.inf])

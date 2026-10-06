@@ -159,6 +159,36 @@ def _app(
     return app, token, provider
 
 
+@pytest.mark.parametrize("max_tokens", [None, 8192, 8193])
+def test_product_output_budget_reaches_provider_or_is_rejected(max_tokens):
+    """默认及显式8192须贯穿内部摘录请求，超限则在检索与模型调用前拒绝。"""
+    result = ProductRetrievalResult(
+        candidates=(_candidate(),), trace=ProductRetrievalTrace.empty(),
+    )
+    app, token, provider = _app(
+        chat_response=json.dumps({
+            "answer_status": "answered", "message": "由部署任务执行。",
+            "excerpts": [{"evidence_id": "retrieved-1", "quote": "部署任务"}],
+        }, ensure_ascii=False),
+        retrieval_result=result,
+    )
+    body = {"question": "谁执行部署？"}
+    if max_tokens is not None:
+        body["max_tokens"] = max_tokens
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/v1/rag/query", headers={"Authorization": f"Bearer {token}"}, json=body,
+        )
+    if max_tokens == 8193:
+        assert response.status_code == 422
+        assert not provider.calls
+        assert app.state.product_retrieval_service.calls == 0
+    else:
+        assert response.status_code == 200
+        assert response.json()["citation_validation"] == "passed"
+        assert provider.calls[0].max_tokens == 8192
+
+
 def test_product_rag_query_returns_answer_and_safe_retrieval_trace() -> None:
     """产品入口从服务端身份取得 scope，并返回引用和不含内部 key 的 trace。"""
 
@@ -268,6 +298,39 @@ def test_product_rag_query_hides_revoked_citation_and_does_not_return_answer() -
         "error": {"kind": "evidence_not_found", "message": "引用对应的资源不可见"}
     }
     assert len(provider.calls) == 1
+
+
+def test_online_routing_rechecks_acl_before_external_call() -> None:
+    """检索之后撤权时不允许在线外发，不等回答返回后才执行授权校验。"""
+    from enterprise_rag.providers.routed import DeepSeekSettings, PolicyRoutedProvider
+    from enterprise_rag.providers.scheduler import LocalLLMScheduler
+
+    result = ProductRetrievalResult(
+        candidates=(_candidate(),), trace=ProductRetrievalTrace.empty(),
+    )
+    application, token, local = _app(
+        chat_response='{"answer_status":"not_found","message":"none","excerpts":[]}',
+        retrieval_result=result, revoked=True,
+    )
+    online = FakeChatProvider(lambda _request: "never called")
+    routed = PolicyRoutedProvider(
+        local, online,
+        DeepSeekSettings(enabled=True, api_key="test-only", allowed_tenants=("tenant-a",)),
+        "local-model",
+    )
+    application.state.provider_registry.register(
+        "local_answer", routed, capabilities={"chat.complete"},
+    )
+    application.state.schedulers["local_answer"] = LocalLLMScheduler(
+        routed, max_concurrency=1, max_queue_size=1,
+    )
+    with TestClient(application) as client:
+        response = client.post(
+            "/api/v1/rag/query", headers={"Authorization": f"Bearer {token}"},
+            json={"question": "谁执行部署？"},
+        )
+    assert response.status_code == 404
+    assert not local.calls and not online.calls
 
 
 def test_product_rag_query_rejects_client_scope_and_evidence_fields() -> None:

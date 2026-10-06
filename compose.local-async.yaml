@@ -1,0 +1,26 @@
+# 本机验收只新增独立双 Redis；不借用其他项目的 6379 或修改业务模型/存储。
+services:
+  redis-cache:
+    image: redis:7.4
+    command: ["redis-server", "--maxmemory", "512mb", "--maxmemory-policy", "allkeys-lru", "--appendonly", "yes"]
+    ports: ["127.0.0.1::6379"]
+    volumes: ["local_async_cache:/data"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      retries: 30
+  redis-coordination:
+    image: redis:7.4
+    command: ["redis-server", "--maxmemory", "512mb", "--maxmemory-policy", "noeviction", "--appendonly", "yes", "--appendfsync", "everysec"]
+    ports: ["127.0.0.1::6379"]
+    volumes: ["local_async_coordination:/data"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      retries: 30
+
+volumes:
+  local_async_cache:
+  local_async_coordination:

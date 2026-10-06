@@ -1,0 +1,7 @@
+# 仅用于本机 development 演练，不是生产 OIDC/membership。
+# 新增租户/成员必须由管理员显式维护；active=false 或移除立即阻止后续阶段。
+[[members]]
+tenant_id = "local-demo"
+actor_id = "local-demo-user"
+roles = ["reader", "editor"]
+active = true

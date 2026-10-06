@@ -47,6 +47,7 @@ from enterprise_rag.providers.lmstudio import LMStudioChatProvider
 from enterprise_rag.providers.protocols import ChatResponse, ChatStreamEvent, ChatUsage
 from enterprise_rag.providers.readiness import ProviderReadinessManager
 from enterprise_rag.providers.registry import ProviderRegistry, RegisteredProvider
+from enterprise_rag.providers.routed import PolicyRoutedProvider, model_scope
 from enterprise_rag.providers.scheduler import LocalLLMScheduler, SchedulerLease
 from enterprise_rag.retrieval.repository import PostgresVectorRepository
 from enterprise_rag.security.authorization import (
@@ -226,6 +227,9 @@ def create_app(
     authorization_service: AuthorizationService | None = None,
     dev_token_codec: DevTokenCodec | None = None,
     product_readiness_manager: ProductReadinessManager | Any | None = None,
+    async_ingestion_service: Any | None = None,
+    write_gate: Any | None = None,
+    managed_resources: tuple = (),
 ) -> FastAPI:
     """创建应用并装配共享 Chat、Embedding、检索和产品上传依赖。"""
 
@@ -319,6 +323,14 @@ def create_app(
         """按依赖逆序释放 readiness、Provider client 和数据库连接池。"""
 
         try:
+            if async_ingestion_service is not None:
+                from enterprise_rag.db.migrations import ASYNC_INGESTION_VERSION, check_database_readiness
+
+                readiness = await check_database_readiness(
+                    resolved_database.engine, target_version=ASYNC_INGESTION_VERSION,
+                )
+                if not readiness.ready:
+                    raise RuntimeError("异步入口需要显式完成 0005 migration")
             yield
         finally:
             # readiness 可能仍有共享 probe task；先收拢它，再关闭 Provider
@@ -341,6 +353,10 @@ def create_app(
                 closed_clients.add(id(client))
                 await close()
 
+            # 显式装配入口将其拥有的 Redis、S3、Database 注入；测试借用资源不关闭。
+            for resource in reversed(managed_resources):
+                await resource.close()
+
             if owns_database and resolved_database is not None:
                 await resolved_database.dispose()
 
@@ -358,6 +374,9 @@ def create_app(
                 if resolved_settings.product_upload_max_bytes is not None
                 else None
             ),
+            "/api/v1/ingestion/tasks": (
+                getattr(async_ingestion_service, "max_bytes", 104857600) + 64 * 1024
+            ),
             "/product-workbench/gradio_api/upload": (
                 resolved_settings.product_upload_max_bytes + 64 * 1024
                 if resolved_settings.product_upload_max_bytes is not None
@@ -368,6 +387,7 @@ def create_app(
             # 否则文件本体虽能上传，极大批量仍会在入库前被拦截。
             "/product-workbench/gradio_api/queue/join": None,
         },
+        streaming_paths=frozenset({"/api/v1/ingestion/tasks"}),
     )
     if resolved_settings.local_anonymous_enabled:
         @app.middleware("http")
@@ -387,6 +407,9 @@ def create_app(
     app.state.provider_readiness = provider_readiness
     app.state.schedulers = schedulers
     app.state.product_ingestion_service = product_ingestion_service
+    app.state.async_ingestion_service = async_ingestion_service
+    from .async_ingestion import ingestion_router
+
     app.state.product_retrieval_service = product_retrieval_service
     app.state.authorization_service = authorization_service or AuthorizationService()
     app.state.dev_token_codec = resolved_dev_token_codec
@@ -399,6 +422,26 @@ def create_app(
         product_ingestion_service=product_ingestion_service,
         product_retrieval_service=product_retrieval_service,
     )
+    if write_gate is not None:
+        @app.middleware("http")
+        async def protect_writes(request: Request, call_next):
+            """所有业务变更路径持 shared gate，查询/状态和健康检查不受维护窗口阻塞。"""
+            from enterprise_rag.infrastructure.write_gate import MaintenanceBlocked
+
+            mutable = (
+                request.method in {"PUT", "PATCH", "DELETE"}
+                or request.method == "POST" and (
+                    request.url.path.startswith("/api/v1/documents")
+                    or request.url.path.startswith("/api/v1/ingestion/tasks")
+                )
+            )
+            if not mutable:
+                return await call_next(request)
+            try:
+                async with write_gate.writer():
+                    return await call_next(request)
+            except MaintenanceBlocked:
+                return JSONResponse(status_code=503, content={"error": {"kind": "maintenance"}})
 
     def provider_error_response(error: ProviderError) -> JSONResponse:
         """将领域错误映射为稳定 HTTP 响应，并丢弃未经信任的原始异常文本。"""
@@ -495,11 +538,24 @@ def create_app(
                 },
             )
 
+    app.include_router(ingestion_router(product_context_dependency))
+
     @app.get("/health/product/ready", response_model=ProductReadinessResponse)
     async def product_ready(response: Response) -> ProductReadinessResponse:
         """返回本地 P0 产品逐项 readiness；未就绪时稳定返回 503。"""
 
         readiness = await app.state.product_readiness_manager.check()
+        if async_ingestion_service is not None:
+            from enterprise_rag.db.migrations import ASYNC_INGESTION_VERSION, check_database_readiness
+
+            async_schema = await check_database_readiness(
+                app.state.database.engine, target_version=ASYNC_INGESTION_VERSION,
+            )
+            if not async_schema.ready:
+                response.status_code = 503
+                return ProductReadinessResponse(
+                    status="unavailable", dependencies={"async_schema": {"status": "unavailable"}},
+                )
         response.status_code = 200 if readiness.status == "ready" else 503
         return ProductReadinessResponse(
             status=readiness.status,
@@ -951,6 +1007,22 @@ def create_app(
             )
 
         try:
+            registered = registry.resolve(request.model_alias)
+            if (
+                isinstance(registered.provider, PolicyRoutedProvider)
+                and registered.provider.permits_online(context.tenant_id)
+            ):
+                # 在线外发前再次复核全部模型输入资源，不能等回答后才发现撤权。
+                async with (
+                    asyncio.timeout(_remaining_seconds(deadline)),
+                    database_dependency.session() as session,
+                ):
+                    for candidate in candidate_by_evidence_id.values():
+                        document = await app.state.authorization_service.require_document_read(
+                            session, context, candidate.result.document_id,
+                        )
+                        if document.version_id != candidate.result.version_id:
+                            raise ResourceNotFound("资源不存在")
             remaining_ms = int(_remaining_seconds(deadline) * 1000)
             if remaining_ms < 1000:
                 return JSONResponse(
@@ -965,7 +1037,17 @@ def create_app(
                 max_tokens=request.max_tokens,
                 timeout_ms=remaining_ms,
             )
-            response = await query(excerpt_request)
+            # 在线路由只接受产品入口注入的可信 tenant；继承检索消耗后的总 deadline。
+            with model_scope(context.tenant_id, deadline):
+                response = await query(excerpt_request)
+        except ResourceNotFound:
+            return JSONResponse(
+                status_code=404, content={"error": {"kind": "evidence_not_found"}},
+            )
+        except TimeoutError:
+            return JSONResponse(
+                status_code=504, content={"error": {"kind": "timeout"}},
+            )
         except ValueError:
             return JSONResponse(
                 status_code=503,
@@ -981,18 +1063,15 @@ def create_app(
             return response
 
         response = response.model_copy(update={"context_source": "retrieved"})
-        if response.citation_validation == "passed":
-            # 模型引用返回前重新打开数据库 session，复核当前版本和 ACL；这一步
-            # 不信任检索阶段缓存的授权结论，撤权后旧 citation 不能继续出站。
+        if response is not None:
+            # 正常、失败 message 和无引用回答都可能携带证据，必须复核全部输入资源，
+            # 而不是只复核 passed citation；撤权后的模型文本同样不能出站。
             try:
                 async with (
                     asyncio.timeout(_remaining_seconds(deadline)),
                     database_dependency.session() as session,
                 ):
-                    for citation in response.citations:
-                        candidate = candidate_by_evidence_id.get(citation.evidence_id)
-                        if candidate is None:
-                            raise ResourceNotFound("资源不存在")
+                    for candidate in candidate_by_evidence_id.values():
                         document = await app.state.authorization_service.require_document_read(
                             session,
                             context,

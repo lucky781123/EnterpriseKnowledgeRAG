@@ -107,6 +107,14 @@ def summarize_product_response(status_code: int, payload: Any) -> dict[str, Any]
     if 200 <= status_code < 300:
         data = _sanitize_display_value(payload) if isinstance(payload, dict) else {}
         status = "passed"
+        if data.get("task_id"):
+            # 受理只证明任务已保存；必须等真实阶段终态才显示完成。
+            status = {
+                "queued": "processing", "running": "processing",
+                "retry_wait": "processing", "succeeded": "passed", "dead_letter": "failed",
+            }.get(data.get("status"), "failed")
+            if status_code == 202 and status != "failed":
+                status = "accepted"
         answer_status = data.get("answer_status")
         if answer_status == "incomplete":
             status = "incomplete"
@@ -190,6 +198,7 @@ async def upload_product_document(
     title: str,
     idempotency_key: str,
     anonymous: bool = False,
+    async_ingestion: bool = False,
 ) -> dict[str, Any]:
     """通过产品上传 API 提交文档，不在工作台复制摄取或发布逻辑。"""
 
@@ -206,7 +215,7 @@ async def upload_product_document(
         digest = hashlib.file_digest(content, "sha256").hexdigest()
         content.seek(0)
         response = await client.post(
-            "/api/v1/documents",
+            "/api/v1/ingestion/tasks" if async_ingestion else "/api/v1/documents",
             headers={} if anonymous else _authorization_headers(token),
             data={
                 "source_id": source_id.strip() or f"upload:{path.name}",
@@ -250,6 +259,7 @@ async def upload_product_documents(
     title: str = "",
     idempotency_key: str = "",
     anonymous: bool = False,
+    async_ingestion: bool = False,
 ) -> dict[str, Any]:
     """逐个上传多份文档并汇总结果；单个失败不阻断其他文档。"""
     paths = _resolve_upload_paths(file_paths)
@@ -266,11 +276,21 @@ async def upload_product_documents(
             result = await upload_product_document(
                 client, token=token, file_path=path, source_id=per_source,
                 title=title, idempotency_key=per_key, anonymous=anonymous,
+                async_ingestion=async_ingestion,
             )
         except (httpx.HTTPError, OSError):
             # 只保存安全类别，不将网络地址/文件路径/异常正文放入批量回包。
             result = {"status": "failed", "error_kind": "upload_unavailable"}
         results.append({"filename": path.name, "result": result})
+    if async_ingestion:
+        accepted = all(
+            item["result"].get("status") in {"accepted", "processing", "passed"} for item in results
+        )
+        return {
+            "status_code": 202 if accepted else 207,
+            "status": "accepted" if accepted else "partial", "count": len(results),
+            "results": results,
+        }
     passed = all(item["result"].get("status") == "passed" for item in results)
     return {
         "status_code": 200 if passed else 207,
@@ -291,8 +311,14 @@ async def get_product_document_status(
 
     if (not anonymous and not token.strip()) or not document_id.strip():
         return {"status_code": 400, "status": "failed", "error_kind": "invalid_request"}
+    identity = document_id.strip()
+    # 服务端任务ID固定task_前缀；旧Document ID状态路径保持兼容。
+    path = (
+        f"/api/v1/ingestion/tasks/{identity}" if identity.startswith("task_")
+        else f"/api/v1/documents/{identity}/status"
+    )
     response = await client.get(
-        f"/api/v1/documents/{document_id.strip()}/status",
+        path,
         headers={} if anonymous else _authorization_headers(token),
     )
     return summarize_product_response(response.status_code, _response_payload(response))
@@ -305,7 +331,7 @@ async def query_product(
     question: str,
     top_k: int = 5,
     candidate_k: int = 20,
-    max_tokens: int = 2048,
+    max_tokens: int = 8192,
     timeout_ms: int = 300_000,
     anonymous: bool = False,
 ) -> dict[str, Any]:
@@ -349,6 +375,7 @@ def build_product_workbench(
     *,
     api_base_url: str = _DEFAULT_PRODUCT_API_BASE_URL,
     anonymous: bool = False,
+    async_ingestion: bool = False,
 ):
     """构建方案 C P0 工作台：上传、状态查询和带引用产品问答。"""
 
@@ -375,9 +402,11 @@ def build_product_workbench(
                 title=title,
                 idempotency_key=idempotency_key,
                 anonymous=anonymous,
+                async_ingestion=async_ingestion,
             )
         document_ids = [
-            item["result"].get("data", {}).get("document_id", "")
+            item["result"].get("data", {}).get("document_id")
+            or item["result"].get("data", {}).get("task_id", "")
             for item in summary.get("results", [])
         ]
         # 单文件保持已有上传响应契约；多文件才展示逐文件汇总。
@@ -437,9 +466,13 @@ def build_product_workbench(
             source_id = gr.Textbox(label="Source ID")
             title = gr.Textbox(label="标题")
             idempotency_key = gr.Textbox(label="幂等键")
-            upload_button = gr.Button("上传并发布", variant="primary")
+            upload_button = gr.Button(
+                "提交入库" if async_ingestion else "上传并发布", variant="primary",
+            )
             upload_result = gr.Code(label="上传结果", language="json")
-            document_id = gr.Textbox(label="Document ID", lines=3)
+            document_id = gr.Textbox(
+                label="Task ID / Document ID" if async_ingestion else "Document ID", lines=3,
+            )
             status_button = gr.Button("查询状态")
             status_result = gr.Code(label="文档状态", language="json")
 
@@ -464,7 +497,7 @@ def build_product_workbench(
                 value=20,
                 step=1,
             )
-            max_tokens = gr.Slider(label="Max tokens", minimum=1, maximum=2048, value=2048, step=1)
+            max_tokens = gr.Slider(label="Max tokens", minimum=1, maximum=8192, value=8192, step=1)
             query_button = gr.Button("查询并回答", variant="primary")
             answer = gr.Textbox(label="回答", lines=10, interactive=False)
             query_result = gr.Code(label="回答、引用与检索摘要", language="json")
@@ -480,6 +513,7 @@ def mount_product_workbench(
     app: Any, *, path: str = "/product-workbench",
     api_base_url: str = _DEFAULT_PRODUCT_API_BASE_URL,
     anonymous: bool = False,
+    async_ingestion: bool = False,
 ) -> None:
     """将方案 C P0 工作台挂载到 FastAPI，缺少 Gradio 时显式失败。"""
 
@@ -487,7 +521,9 @@ def mount_product_workbench(
         import gradio as gr
     except ImportError as exc:
         raise RuntimeError("未安装可选依赖 gradio，请安装项目的 workbench 依赖") from exc
-    blocks = build_product_workbench(api_base_url=api_base_url, anonymous=anonymous)
+    blocks = build_product_workbench(
+        api_base_url=api_base_url, anonymous=anonymous, async_ingestion=async_ingestion,
+    )
     # Gradio6的标准upload_fn固定max_files=1000；项目单独注册兼容上传路径，
     # 复用它的磁盘multipart parser和文件缓存信任集合，不修改第三方全局对象。
     from .uploads import mount_unlimited_upload

@@ -1,0 +1,14 @@
+# 独立 development Compose 的模型地址；不修改本机 local-llm.toml。
+model = "qwen3-coder-next-reap-48b-a3b-mlx"
+base_url = "http://host.docker.internal:1234"
+max_concurrency = 2
+max_queue_size = 8
+
+[embedding]
+base_url = "http://host.docker.internal:11434"
+model = "feadxus/qwen3-embedding:4b"
+dimension = 2560
+
+[reranker]
+base_url = "http://host.docker.internal:8003"
+model = "jina-reranker-v3-mlx"

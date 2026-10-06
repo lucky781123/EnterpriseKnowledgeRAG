@@ -13,6 +13,101 @@
 
 ## 2. 当前状态（2026-10-03）
 
+### 2026-10-06 回答生成预算8192（最新）
+
+- 已确认：用户报告UI达到长度上限，要求最多8192；此为回答LLM输出预算，
+  不能取Embedding/Reranker输入上限。未修改切块、向量维度、模型或外发策略。
+- 已实现：产品API/UI默认及上限8192，共用Excerpt/旧PG请求上限8192，
+  旧入口默认512不变；300秒deadline与length→incomplete校验不变。
+- 已验证：默认/显式8192传到Provider，8193调用前422；全量477 passed/12 skipped/
+  10 warnings，工作台与新增测试Ruff通过。schema六条既有style告警在HEAD确认，
+  未顺带修复。真实PG集成本轮未重跑。
+- 已重启本项目API8001并刷新UI，Worker/dispatcher仍运行；真实公开HTTP与
+  浏览器8192默认问答answered/引用passed/stop。截图.local/runtime/max-tokens-8192.png。
+  证据artifacts/experiments/2026-10-06_output-budget/verification.json。
+- 待验证：用户原长问题未复跑，不宣称全部长回答/实际输出8192tokens已通过；
+  增加预算不等于重复生成、引用或托管验收问题已修复。
+
+### 2026-10-06 本机异步后台/UI 启动验收（最新）
+
+- 用户明确要求启动后台和UI。已新增`bash start.sh start-async/async-status/async-stop`，
+  新建独立双Redis7.4持久实例、显式0005迁移、Celery macOS solo/dispatcher、
+  重启登记归属API8001。PG/Weaviate/Ollama/Jina/LM Studio健康，Worker ping通过。
+- 已补UI异步入口：提交入库返回202/Task ID，查询阶段，仅succeeded完成、死信失败；
+  原同步API与旧Document ID查询保留。UI仅infra启用后切换，默认不变。
+- 已验证真实运行公开样本受理0.047秒、六阶段发布28.387秒，
+  HTTP与浏览器问答answered/引用passed。API/UI与后台留运行供用户验收。
+  截图`.local/runtime/async-ui-acceptance.png`，状态`service.json/background.json`。
+- 已验证全量472 passed/12 skipped/6 warnings，定向33项与局部Ruff/compileall/diff通过；
+  本轮未重跑真实PG integration；前轮隔离16项结果保留为历史证据。
+  归档`artifacts/experiments/2026-10-06_local-async-ui/verification.json`。
+- 边界：storage local、development匿名/loopback、macOS solo；
+  没有托管MinIO配置，业务allowlist仍空，UI走真实LM Studio；不外发私人文档。
+  入库Ollama仅本机复用，不是生产资源隔离。托管恢复/生产身份/容量仍待验收。
+
+### 2026-10-06 DeepSeek 真实公开样本联调（最新）
+
+- 已确认用户填入真实 key；`config/deepseek.toml` 为 enabled=true/空 allowlist。
+  未打印 key、不读 `.env`，未修改业务 allowlist、运行服务、数据库或已有文档。
+- 已实现 `scripts/deepseek_smoke.py`：默认计划，显式 execute 才访问模型，
+  仅源码固定公开合成证据；进程内临时放行 `deepseek-public-smoke`。
+- 已验证真实 DeepSeek 非流式3.097秒、SSE3.467秒，均 answered/引用passed/stop；
+  注入HTTP503后真实LM Studio非流式/流式均仅兜底一次并通过引用；
+  未允许tenant/无context均在线调用0。不是完整RAG在线验收。
+- 已实现专用公开身份Worker和在线完整隔离演练：202→Celery六阶段→发布→
+  混合检索/Jina→DeepSeek answered/引用passed，在线1/兜底0；跨tenant404、
+  撤权后404且在线次数不增、对象hash/pointer通过。补守卫后复跑通过。
+  使用local对象/macOS solo，临时容器已关闭，不代表托管或生产验收。
+- 已验证最终离线全量462 passed/12 skipped/6 warnings，真实隔离PG集成16 passed；
+  局部Ruff/compileall/diff通过。
+  证据 `artifacts/experiments/2026-10-06_deepseek-public-smoke/verification.json`。
+- 待实验/阻塞：业务租户外发授权、托管备份恢复权限、
+  Linux prefork kill/redelivery、生产OIDC、50QPS、RPO/RTO。真实key不再是阻塞。
+- 非目标：不把 `local-demo` 假定为纯公开数据，不先外发私人文档再过滤输出；
+  空业务allowlist仍只走本地。最终托管验收尚未完成。
+
+### 2026-10-06 异步业务装配与真实隔离闭环（最新）
+
+- 已实现异步 202 受理、任务状态/replay、Celery opaque event 消费、outbox/recovery、
+  parse/Embedding/Dense/Sparse/verify/publish 六阶段、PG checkpoint/fence 原子发布。
+  原同步 API 保留，新能力默认关闭；Worker 必须重载身份而非使用角色快照。
+- 已实现 Redis tenant cache/锁/限流接入、全写入 PG 门禁、原文迁移工具、
+  四系统 backup/restore/restore-verify CLI；恢复只允许空隔离目标。
+- 已实现 DeepSeek 主用/LM Studio 单次兜底，deadline 继承、首事件后不切换，
+  在线外发前和回答出站前复核全部资源 ACL。配置 `config/deepseek.toml`，
+  key 填 `.local/secrets/deepseek-api-key.txt`；默认关闭、空 allowlist 拒绝外发。
+- 已验证隔离 PostgreSQL16/双 Redis7.4/Weaviate1.27.10 + 真实 Ollama/Jina/LM Studio
+  的公开合成文档 202→Celery 六阶段→发布→检索问答；
+  `answered/citation passed`、跨租户404、原文/manifest/pointer 校验通过。
+  本次用 local storage/macOS solo，不代表托管 MinIO 或 Linux prefork 验收。
+- 离线全量459 passed/12 skipped，隔离真实PG集成16 passed；局部Ruff、compileall、
+  diff检查通过。新增运行与恢复说明 `docs/architecture/infrastructure-runbook.md`。
+- 阻塞/待实验：真实DeepSeek key/外发allowlist、托管MinIO与Weaviate backup权限、
+  Linux prefork kill/redelivery、四系统恢复演练、RPO/RTO、50QPS和生产OIDC。
+  MinIO镜像当前拉取被registry拒绝，未把SDK替身或备份完整性测试冒充真实恢复。
+- 当前结论：此次主要代码已实现、公开隔离闭环通过，**最终真实托管环境验收未完成**。
+
+### 2026-10-06 基础设施演进（最新追加，尚未完整装配）
+
+- 用户已批准推荐方案：MinIO/Weaviate/DeepSeek 托管，Redis/Celery/PostgreSQL 自建；
+  Celery 使用 Redis broker/backend，不引入 RabbitMQ，缓存和协调使用独立 Redis 实例。
+  此次决策覆盖第 3 节旧 Celery+RabbitMQ 规划；共享单机不宣称主机级 HA。
+- 已新增基础配置、Redis 缓存/锁/限流与 tenant/profile Embedding wrapper、
+  MinIO ObjectStorage adapter 和 Celery 配置工厂。默认关闭，旧 factory/API 未切换。
+- 已提供显式 `0005_async_ingestion` migration 与 TaskLedger/OutboxDispatcher：
+  任务/stage/outbox 同事务、tenant/owner 可见性、最多额外重试 3 次、
+  PG 死信/人工 replay、租约/fence/checkpoint、过期阶段和丢消息恢复。
+  默认 migration/CLI 仍为 0004，未应用到真实库。
+- 已验证离线全量 437 passed/12 skipped；基础组件/账本 59 项、连同旧迁移定向 70 项；
+  局部 Ruff、compileall、diff 检查通过。12 项缺 DSN 跳过，未跑真实 Redis/MinIO/Celery/PG。
+- 待实现真实阶段 Worker、异步受理/状态/replay API、流式原文与迁移、
+  全业务写入门禁、四系统备份/恢复脚本、DeepSeek 外发政策/单次本地兜底、
+  生产身份、Compose/监控装配；50 QPS 与 RPO/RTO 仍待实验。
+- DeepSeek endpoint/key/model 留空；未读取 `.env`、未改现有模型/容器/业务对象。
+  历史股东题引用失败与失败 message 出站 ACL 风险没有因新增基础组件而修复。
+- 架构与迁移/恢复/回滚见 `docs/architecture/infrastructure-evolution.md`；
+  激活计划 `.planning/2026-10-06-infrastructure/`，下一步为阶段 2 真实业务装配。
+
 ### 最新：三类模型统一配置与Embedding / Jina切换
 
 - 运行配置唯一入口为`config/local-llm.toml`，`.env`通过`LOCAL_LLM_CONFIG_FILE`

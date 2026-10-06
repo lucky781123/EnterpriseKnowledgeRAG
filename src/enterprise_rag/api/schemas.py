@@ -71,7 +71,8 @@ class ExcerptQueryRequest(BaseModel):
     evidence: list[EvidenceRequest] = Field(min_length=1, max_length=16)
     model_alias: Literal["local_answer"] = "local_answer"
     temperature: StrictFloat = Field(default=0.0, ge=0.0, le=1.0)
-    max_tokens: StrictInt = Field(default=512, ge=1, le=2048)
+    # 产品路由复用此请求模型；上限必须兼容产品8192预算，旧入口默认512不变。
+    max_tokens: StrictInt = Field(default=512, ge=1, le=8192)
     # timeout_ms 是调用级总预算，不允许客户端通过超大值绕过服务端保护。
     # 具体的排队、模型调用和流式发送都必须共同消耗这份预算。
     timeout_ms: StrictInt = Field(default=120_000, ge=1_000, le=300_000)
@@ -113,7 +114,8 @@ class RetrievalQueryRequest(BaseModel):
     top_k: StrictInt = Field(default=5, ge=1, le=20)
     model_alias: Literal["local_answer"] = "local_answer"
     temperature: StrictFloat = Field(default=0.0, ge=0.0, le=1.0)
-    max_tokens: StrictInt = Field(default=512, ge=1, le=2048)
+    # 与共用摘录生成保持相同上限，不改变旧PG检索入口的默认预算。
+    max_tokens: StrictInt = Field(default=512, ge=1, le=8192)
     # 检索和生成共享同一调用预算；当前 P0 先由 F2-G 生成阶段执行该预算。
     timeout_ms: StrictInt = Field(default=120_000, ge=1_000, le=300_000)
 

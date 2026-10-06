@@ -28,10 +28,18 @@ from enterprise_rag.api.app import create_app
 from enterprise_rag.config.settings import Settings
 from enterprise_rag.db.session import Database
 from enterprise_rag.embedding.ollama import OllamaEmbeddingProvider
+from enterprise_rag.infrastructure.redis import RedisCoordinator, TenantEmbeddingCache
+from enterprise_rag.infrastructure.runtime import RedisRuntime
+from enterprise_rag.infrastructure.settings import InfrastructureSettings
+from enterprise_rag.infrastructure.write_gate import WriteGate
+from enterprise_rag.ingestion.async_service import AsyncIngestionService
 from enterprise_rag.ingestion.product_service import ProductIngestionService
 from enterprise_rag.ingestion.service import IngestionService
+from enterprise_rag.ingestion.stage_worker import StageWorker
+from enterprise_rag.ingestion.task_ledger import TaskLedger
 from enterprise_rag.providers.lmstudio import LMStudioChatProvider
 from enterprise_rag.providers.registry import ProviderRegistry
+from enterprise_rag.providers.routed import DeepSeekSettings, PolicyRoutedProvider
 from enterprise_rag.reranking.adapters import SyncRerankerAdapter
 from enterprise_rag.reranking.bge import BGEReranker
 from enterprise_rag.reranking.http import HTTPReranker
@@ -45,7 +53,9 @@ from enterprise_rag.retrieval.weaviate import WeaviateHTTPXTransport
 from enterprise_rag.retrieval.weaviate_sparse import WeaviateBM25FTransport
 from enterprise_rag.security.authorization import AuthorizationService
 from enterprise_rag.security.dev_token import DevTokenCodec
+from enterprise_rag.security.worker_identity import FileIdentityResolver
 from enterprise_rag.storage.local import LocalObjectStorage
+from enterprise_rag.storage.s3 import S3ObjectStorage
 from enterprise_rag.workbench.app import mount_product_workbench
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -119,6 +129,8 @@ def create_local_p0_app(
     storage: LocalObjectStorage | None = None,
     http_client: httpx.AsyncClient | None = None,
     reranker: Any | None = None,
+    infrastructure: InfrastructureSettings | None = None,
+    identity_resolver: Any | None = None,
 ) -> FastAPI:
     """装配同步上传、双路索引、ACL、混合检索和引用问答产品链。"""
 
@@ -136,20 +148,36 @@ def create_local_p0_app(
         statement_timeout_ms=resolved_settings.postgres_statement_timeout_ms,
         lock_timeout_ms=resolved_settings.postgres_lock_timeout_ms,
     )
-    resolved_storage = storage or LocalObjectStorage(_storage_root_from_env())
+    infra = infrastructure or InfrastructureSettings.from_env()
+    # 本工厂仅用于 development；生产必须提供正式认证/成员关系而非开发 token。
+    if infra.environment == "production":
+        raise RuntimeError("local_p0_api 不是生产身份入口")
+    resolved_storage = storage or (
+        S3ObjectStorage.from_settings(infra) if infra.storage_provider == "s3"
+        else LocalObjectStorage(_storage_root_from_env())
+    )
     shared_client = http_client or _shared_http_client()
 
     # 所有外部 HTTP 依赖共享连接池，但 endpoint 仍由服务端固定配置；请求体
     # 不会获得修改模型、Weaviate 或 Ollama 地址的能力。
     provider_registry = ProviderRegistry()
+    local_provider = LMStudioChatProvider(
+        shared_client, base_url=resolved_settings.local_llm_base_url,
+        model=resolved_settings.local_llm_model, api_key=resolved_settings.local_llm_api_key,
+    )
+    online_settings = DeepSeekSettings.load(_PROJECT_ROOT)
+    routed_provider = local_provider
+    if online_settings.enabled:
+        # 兼容协议复用现有 adapter；网关真实模型/协议仍由 smoke 验证。
+        online_provider = LMStudioChatProvider(
+            shared_client, base_url=online_settings.base_url,
+            model=online_settings.model, api_key=online_settings.api_key,
+        )
+        routed_provider = PolicyRoutedProvider(
+            local_provider, online_provider, online_settings, resolved_settings.local_llm_model,
+        )
     provider_registry.register(
-        "local_answer",
-        LMStudioChatProvider(
-            shared_client,
-            base_url=resolved_settings.local_llm_base_url,
-            model=resolved_settings.local_llm_model,
-            api_key=resolved_settings.local_llm_api_key,
-        ),
+        "local_answer", routed_provider,
         capabilities={"chat.complete", "chat.stream"},
     )
     embedding_provider = OllamaEmbeddingProvider(
@@ -246,6 +274,43 @@ def create_local_p0_app(
         resolved_settings.dev_auth_secret,
         ttl_seconds=resolved_settings.dev_auth_token_ttl_seconds,
     )
+    async_service, stage_worker, write_gate, redis_runtime = None, None, None, None
+    resources = []
+    if database is None:
+        # Database 的 close alias 只负责 dispose，不执行 migration 或清理数据。
+        resources.append(resolved_database)
+    if storage is None and isinstance(resolved_storage, S3ObjectStorage):
+        resources.append(resolved_storage)
+    if infra.enabled:
+        if not infra.celery_enabled:
+            raise RuntimeError("异步业务装配需要启用 RAG_CELERY_ENABLED")
+        if not infra.ingestion_embedding_base_url:
+            raise RuntimeError("异步业务装配需要显式 INGESTION_OLLAMA_BASE_URL")
+        redis_runtime = RedisRuntime.create(infra)
+        resources.append(redis_runtime)
+        write_gate = WriteGate(resolved_database)
+        resources.append(write_gate)
+        ledger = TaskLedger(resolved_database, lease_seconds=infra.task_time_limit_seconds)
+        async_service = AsyncIngestionService(
+            ledger, resolved_storage, dense_profile,
+            spool_root=_PROJECT_ROOT / ".local/ingestion-spool",
+        )
+        stage_worker = StageWorker(
+            ledger, resolved_storage,
+            OllamaEmbeddingProvider(
+                shared_client, base_url=infra.ingestion_embedding_base_url,
+                model=resolved_settings.ollama_embedding_model,
+            ),
+            dense_transport, sparse_transport, dense_profile, sparse_profile, generation_service,
+            identity_resolver=identity_resolver or FileIdentityResolver(
+                _PROJECT_ROOT / "config/worker-identities.toml",
+            ),
+            write_gate=write_gate,
+            embedding_cache=TenantEmbeddingCache(
+                redis_runtime.cache, ttl_seconds=infra.embedding_cache_ttl_seconds,
+            ),
+            coordinator=RedisCoordinator(redis_runtime.coordination),
+        )
 
     # 只显式注入产品服务；默认 API factory 的 fail-closed 逻辑和旧 PostgreSQL
     # retrieval 路径保持不变。create_app 会接管共享 Provider client 的关闭。
@@ -258,7 +323,15 @@ def create_local_p0_app(
         product_retrieval_service=product_retrieval_service,
         authorization_service=authorization_service,
         dev_token_codec=dev_token_codec,
+        async_ingestion_service=async_service,
+        write_gate=write_gate,
+        managed_resources=tuple(resources),
     )
+    application.state.stage_worker = stage_worker
+    application.state.redis_runtime = redis_runtime
+    application.state.infrastructure = infra
+    if redis_runtime is not None:
+        application.state.redis_coordinator = RedisCoordinator(redis_runtime.coordination)
 
     # Gradio 是可选依赖；只有显式打开时才挂载产品工作台，不影响没有安装
     # Gradio 的 API smoke 和基础测试启动路径。
@@ -272,6 +345,7 @@ def create_local_p0_app(
             application,
             api_base_url=os.getenv("P0_API_BASE_URL", "http://127.0.0.1:8000"),
             anonymous=resolved_settings.local_anonymous_enabled,
+            async_ingestion=infra.enabled,
         )
     return application
 

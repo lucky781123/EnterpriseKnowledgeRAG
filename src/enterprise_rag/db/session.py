@@ -114,6 +114,10 @@ class Database:
 
         await self.engine.dispose()
 
+    async def close(self) -> None:
+        """允许显式 factory 使用统一生命周期接口，等价于 dispose。"""
+        await self.dispose()
+
     async def migrate(self) -> None:
         """执行仓库内 Python migration contract。"""
 

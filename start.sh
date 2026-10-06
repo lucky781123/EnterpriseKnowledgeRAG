@@ -24,5 +24,5 @@ if [[ -f .env ]]; then
     source .env
     set +a
 fi
-export PYTHONPATH="$ROOT/src${PYTHONPATH:+:$PYTHONPATH}"
+export PYTHONPATH="$ROOT:$ROOT/src${PYTHONPATH:+:$PYTHONPATH}"
 exec "$RAG_PYTHON" "$ROOT/scripts/local_runtime.py" "${1:-start}"

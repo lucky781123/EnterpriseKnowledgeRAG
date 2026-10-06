@@ -1,0 +1,71 @@
+# 独立 development 装配：托管 MinIO/Weaviate，不创建或覆盖这些服务。
+x-runtime: &runtime
+  build:
+    context: .
+    args:
+      PIP_EXTRAS: infrastructure
+  env_file: ["${RAG_RUNTIME_ENV_FILE:?provide explicit project runtime env file}"]
+  extra_hosts: ["host.docker.internal:host-gateway"]
+  environment:
+    APP_ENV: development
+    RAG_INFRA_ENABLED: "true"
+    RAG_CELERY_ENABLED: "true"
+    LOCAL_LLM_CONFIG_FILE: /app/config/container-llm.toml
+    OBJECT_STORAGE_PROVIDER: s3
+    REDIS_CACHE_URL: redis://redis-cache:6379/0
+    REDIS_COORDINATION_URL: redis://redis-coordination:6379/0
+    CELERY_RESULT_BACKEND: redis://redis-coordination:6379/1
+    DEV_AUTH_ENABLED: "true"
+    WEAVIATE_ENABLED: "true"
+    P0_WORKBENCH_ENABLED: "false"
+  volumes:
+    - ./config:/app/config:ro
+    - ./.local/secrets:/app/.local/secrets:ro
+  tmpfs: ["/app/.local/ingestion-spool:uid=10001,gid=10001,mode=700"]
+
+services:
+  redis-cache:
+    image: redis:7.4
+    command: ["redis-server", "--maxmemory", "512mb", "--maxmemory-policy", "allkeys-lru", "--appendonly", "yes"]
+    volumes: ["infra_cache:/data"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 12
+  redis-coordination:
+    image: redis:7.4
+    command: ["redis-server", "--maxmemory", "512mb", "--maxmemory-policy", "noeviction", "--appendonly", "yes", "--appendfsync", "everysec"]
+    volumes: ["infra_coordination:/data"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 12
+  migration:
+    <<: *runtime
+    command: ["python", "-m", "scripts.migrate_async_ingestion"]
+    restart: "no"
+  api:
+    <<: *runtime
+    command: ["uvicorn", "scripts.local_p0_api:app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--no-proxy-headers"]
+    ports: ["127.0.0.1:${RAG_ASYNC_API_PORT:-8002}:8000"]
+    depends_on:
+      migration: {condition: service_completed_successfully}
+      redis-cache: {condition: service_healthy}
+      redis-coordination: {condition: service_healthy}
+  worker:
+    <<: *runtime
+    command: ["celery", "-A", "scripts.celery_worker:app", "worker", "--pool=prefork", "--concurrency=1", "--loglevel=WARNING"]
+    depends_on:
+      migration: {condition: service_completed_successfully}
+      redis-cache: {condition: service_healthy}
+      redis-coordination: {condition: service_healthy}
+  dispatcher:
+    <<: *runtime
+    command: ["python", "-m", "scripts.ingestion_runtime"]
+    depends_on:
+      migration: {condition: service_completed_successfully}
+      redis-coordination: {condition: service_healthy}
+
+volumes:
+  infra_cache:
+  infra_coordination:

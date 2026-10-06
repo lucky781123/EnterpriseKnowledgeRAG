@@ -14,12 +14,20 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+# 注册新增模型，但只有显式 0005 目标才允许创建它们。
+from enterprise_rag.db import async_ingestion as _async_ingestion  # noqa: F401
 from enterprise_rag.db.models import Base, SchemaMigrationModel
 
 INITIAL_VERSION = "0001_initial"
 EMBEDDING_VERSION = "0002_embedding_records"
 WEAVIATE_DENSE_VERSION = "0003_weaviate_dense_generations"
 WEAVIATE_HYBRID_VERSION = "0004_weaviate_hybrid_generations"
+# 新能力尚未接入默认 factory，因此默认目标仍为 0004，避免隐式升级。
+ASYNC_INGESTION_VERSION = "0005_async_ingestion"
+ASYNC_INGESTION_TABLE_ORDER = (
+    "async_ingestion_tasks", "async_ingestion_stages", "async_ingestion_outbox",
+)
+ASYNC_INGESTION_TABLES = frozenset(ASYNC_INGESTION_TABLE_ORDER)
 LATEST_VERSION = WEAVIATE_HYBRID_VERSION
 EXPECTED_TABLES = frozenset(
     {
@@ -50,6 +58,7 @@ SUPPORTED_VERSIONS = frozenset(
         EMBEDDING_VERSION,
         WEAVIATE_DENSE_VERSION,
         WEAVIATE_HYBRID_VERSION,
+        ASYNC_INGESTION_VERSION,
     }
 )
 INITIAL_TABLES = EXPECTED_TABLES - {"embedding_records"} - WEAVIATE_DENSE_TABLES
@@ -134,6 +143,7 @@ def _inspect_schema_readiness(
         EMBEDDING_VERSION: EMBEDDING_TABLES,
         WEAVIATE_DENSE_VERSION: EXPECTED_TABLES,
         WEAVIATE_HYBRID_VERSION: EXPECTED_TABLES,
+        ASYNC_INGESTION_VERSION: EXPECTED_TABLES | ASYNC_INGESTION_TABLES,
     }
     required_tables = required_tables_by_version[target_version]
     missing_tables = tuple(sorted(required_tables - table_names))
@@ -197,7 +207,10 @@ def _apply_initial_schema(connection: Connection) -> None:
     for table in Base.metadata.tables.values():
         # ``embedding_records`` 属于 ``0002``，Dense generation 表属于 ``0003``，
         # 都不能被旧版本迁移提前创建。
-        if table.name == "embedding_records" or table.name in WEAVIATE_DENSE_TABLES:
+        if (
+            table.name == "embedding_records"
+            or table.name in WEAVIATE_DENSE_TABLES | ASYNC_INGESTION_TABLES
+        ):
             continue
         table.to_metadata(migration_metadata)
     migration_metadata.create_all(connection)
@@ -235,12 +248,17 @@ async def upgrade_database(engine: AsyncEngine, target_version: str = LATEST_VER
                 EMBEDDING_VERSION,
                 WEAVIATE_DENSE_VERSION,
                 WEAVIATE_HYBRID_VERSION,
+                ASYNC_INGESTION_VERSION,
             }:
                 await connection.run_sync(_apply_embedding_schema)
-            if target_version in {WEAVIATE_DENSE_VERSION, WEAVIATE_HYBRID_VERSION}:
+            if target_version in {
+                WEAVIATE_DENSE_VERSION, WEAVIATE_HYBRID_VERSION, ASYNC_INGESTION_VERSION,
+            }:
                 await connection.run_sync(_apply_weaviate_dense_schema)
-            if target_version == WEAVIATE_HYBRID_VERSION:
+            if target_version in {WEAVIATE_HYBRID_VERSION, ASYNC_INGESTION_VERSION}:
                 await connection.run_sync(_apply_weaviate_hybrid_schema)
+            if target_version == ASYNC_INGESTION_VERSION:
+                await connection.run_sync(_apply_async_ingestion_schema)
     except Exception as exc:
         raise MigrationError(target_version, exc) from exc
 
@@ -299,7 +317,26 @@ def _apply_weaviate_hybrid_schema(connection: Connection) -> None:
     )
 
 
+def _apply_async_ingestion_schema(connection: Connection) -> None:
+    """显式创建 0005 三张新表；不删除或修改同步 API 的既有列。"""
+    applied_versions = _read_applied_versions(connection)
+    _validate_applied_versions(applied_versions)
+    if ASYNC_INGESTION_VERSION in applied_versions:
+        return
+    if WEAVIATE_HYBRID_VERSION not in applied_versions:
+        raise RuntimeError("应用 0005 前必须先完成 0004")
+    metadata = MetaData()
+    for table in Base.metadata.tables.values():
+        table.to_metadata(metadata)
+    for name in ASYNC_INGESTION_TABLE_ORDER:
+        metadata.tables[name].create(connection, checkfirst=True)
+    connection.execute(
+        SchemaMigrationModel.__table__.insert().values(version=ASYNC_INGESTION_VERSION)
+    )
+
+
 __all__ = [
+    "ASYNC_INGESTION_VERSION",
     "EMBEDDING_VERSION",
     "EXPECTED_TABLES",
     "INITIAL_VERSION",

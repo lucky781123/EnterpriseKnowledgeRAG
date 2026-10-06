@@ -27,12 +27,14 @@ class RequestBodyLimitMiddleware:
         app: Callable[..., Awaitable[None]],
         max_bytes: int = 128 * 1024,
         path_limits: dict[str, int | None] | None = None,
+        streaming_paths: frozenset[str] = frozenset(),
     ) -> None:
         if max_bytes <= 0:
             raise ValueError("max_bytes 必须大于 0")
         self.app = app
         self.max_bytes = max_bytes
         self.path_limits = path_limits or {}
+        self.streaming_paths = streaming_paths
         if any(limit is not None and limit <= 0 for limit in self.path_limits.values()):
             raise ValueError("path_limits 中的请求体预算必须大于 0")
 
@@ -50,6 +52,38 @@ class RequestBodyLimitMiddleware:
             # 无大小上限的上传交给multipart解析器流式落临时文件，不在middleware
             # 无界积累body；普通JSON仍走下面的实际字节计数与413保护。
             await self.app(scope, receive, send)
+            return
+        if scope.get("path") in self.streaming_paths:
+            # multipart 每片直接交给解析器，不缓存整份上传；超限错误由外层响应。
+            total = 0
+            exceeded = False
+            started = False
+
+            async def limited_receive():
+                """实际累计读取，不能只信任 Content-Length。"""
+                nonlocal total, exceeded
+                message = await receive()
+                if message.get("type") == "http.request":
+                    total += len(message.get("body", b""))
+                    if total > max_bytes:
+                        exceeded = True
+                        raise ValueError("multipart 请求体超限")
+                return message
+
+            async def guarded_send(message):
+                """超限时抑制框架的解析错误响应，统一发送历史 413。"""
+                nonlocal started
+                if not exceeded:
+                    started |= message.get("type") == "http.response.start"
+                    await send(message)
+
+            try:
+                await self.app(scope, limited_receive, guarded_send)
+            except ValueError:
+                if not exceeded:
+                    raise
+            if exceeded and not started:
+                await self._send_too_large(send, max_bytes)
             return
         chunks: list[bytes] = []
         total_bytes = 0

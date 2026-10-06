@@ -1,0 +1,9 @@
+# 在线模型使用用户指定的第三方网关；真实协议与可用性仍需联调。
+# 填好独立密钥文件后再启用，不把 key 提交到仓库。
+enabled = true
+base_url = "https://api.aiportx.com/v1"
+model = "deepseek-v4.1-flash"
+api_key_file = ".local/secrets/deepseek-api-key.txt"
+# 默认拒绝租户数据外发；仅将明确允许外发的 tenant 写入列表。
+allowed_tenants = []
+primary_seconds = 30

@@ -1,5 +1,8 @@
 # EnterpriseKnowledgeRAG
 
+异步入库、Redis/Celery、DeepSeek 主备和备份恢复的迁移、启动、验证及回滚：
+[基础设施操作手册](docs/architecture/infrastructure-runbook.md)。
+
 面向研发技术文档的企业级 RAG 学习与验证工程。
 
 **当前状态：2026-10-03 已完成真实本地 P0 闭环验收。** 上传、解析、
@@ -24,6 +27,28 @@ bash start.sh status
 # 只停止该脚本管理的 API；保留外部模型、数据库和用户其他服务
 bash start.sh stop
 ```
+
+异步后台与 UI 本机验收入口：
+
+```bash
+bash start.sh start-async
+bash start.sh async-status
+bash start.sh async-stop
+```
+
+`start-async` 复用当前 `.env` 配置；缺双 Redis 时只新增项目独立 Redis7.4 实例，
+不借用其他项目6379，持久卷保留。显式新增0005任务表、启动Celery Worker/dispatcher，
+重启自己的API/UI后等待readiness与Worker ping。本机macOS用solo，Linux用prefork。
+默认使用现有本地对象存储，未配置托管MinIO则不宣称其已接入；
+入库Embedding未单独配置时复用当前Ollama，仅适用于本机验收。
+异步UI点击“提交入库”后返回Task ID，点“查询状态”，`succeeded` 后再问答。
+旧Document ID仍可查文档状态；原同步API不变。`async-stop`不删除数据卷或停止外部模型。
+业务外发白名单仍为空，本机工作台使用LM Studio，不外发现有私人文档。
+
+工作台 `Max tokens` 与产品问答 API 默认值、上限均为 **8192**。
+这是回答 LLM 的输出预算，不是 Embedding/Reranker 的输入上下文上限；
+三类预算不能互换。旧摘录/PG检索接口默认512不变，上限兼容8192。
+总请求预算仍最多300秒；生成达到上限仍明确返回incomplete，不自动无限续写。
 
 脚本加载根目录 `.env`，检查 Python 3.11+ 和依赖，启动已有 PostgreSQL 容器和
 Compose Weaviate，执行 migration，启动产品 API 与同端口 Gradio 并等待就绪。
@@ -150,6 +175,13 @@ PYTHON=/Users/liuhui/opt/anaconda3/envs/enterprise-rag/bin/python
 干净shell中 `python -m pytest -q` 可离线回归；加载开发 `.env` 后仅运行
 `python -m pytest -q tests/integration` 检查真实PostgreSQL。
 不要把全部开发环境变量注入确定性单测。
+
+## 高级工程面试材料
+
+面向 RAG 与工程综合面试的详细问题驱动问答集见
+[高级 RAG 工程面试问答集](docs/interview/advanced-rag-engineering-qa.md)。
+文档严格区分已实现、已验证、历史实验和生产演进方案，避免把规划能力当成当前能力。
+直接阅读 [HTML 版](docs/interview/advanced-rag-engineering-qa.html)，73 题均包含白话解析、逐步输入/处理/代码/输出、离线时序图及简版口述。Markdown 为正文源，安装开发依赖后运行 `python scripts/render_interview_doc.py` 同步生成 HTML。
 
 ## 工程入口
 
