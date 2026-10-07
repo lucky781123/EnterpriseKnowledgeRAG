@@ -45,6 +45,20 @@ bash start.sh async-stop
 旧Document ID仍可查文档状态；原同步API不变。`async-stop`不删除数据卷或停止外部模型。
 业务外发白名单仍为空，本机工作台使用LM Studio，不外发现有私人文档。
 
+## P1 质量与性能证据
+
+P1 的检索五模式消融、显式 RAG 质量门禁、安全/可靠性 JUnit 门禁和评测集结构审计
+已实现并完成离线验证。40 条评测草案结构通过，但尚未 frozen，也没有人工确认的
+质量阈值，因此不能把当前结果写成线上质量达标。
+
+本机 LM Studio 小样本 benchmark 已归档到
+`artifacts/experiments/2026-10-07_p1-local-performance/`：固定 evidence 的
+Excerpt JSON/SSE 共 4/4 成功，均为 `answered / citation_validation=passed / stop`。
+JSON 完成延迟 p50/p95 为 `1398/2388 ms`，SSE 完成延迟 p50/p95 为
+`1011/1998 ms`，SSE TTFT p50/p95 为 `523/1523 ms`。该实验不覆盖真实
+Weaviate、Embedding、Reranker、PostgreSQL 检索链路，不能作为完整 RAG 或生产容量
+结论。下一步是取得授权 frozen golden 集、人工标注和真实 Weaviate ranking。
+
 工作台 `Max tokens` 与产品问答 API 默认值、上限均为 **8192**。
 这是回答 LLM 的输出预算，不是 Embedding/Reranker 的输入上下文上限；
 三类预算不能互换。旧摘录/PG检索接口默认512不变，上限兼容8192。
@@ -204,13 +218,21 @@ PYTHON=/Users/liuhui/opt/anaconda3/envs/enterprise-rag/bin/python
 `.planning/2026-10-03-runtime-acceptance/` 和 `.planning/handoff/HANDOFF.md`。
 专题文档见 `docs/README.md`。
 
+本轮高级面试能力补齐见
+[能力清单与验收边界](docs/architecture/interview-capabilities.md)：
+RAG 离线评测、请求/阶段 Observability、Groundedness/Citation/Abstention、
+Prompt Injection 防护、备份恢复计划和 OIDC/JWT/租户治理已完成代码与离线验证。
+这些能力不等于托管环境最终验收；真实 OIDC、托管恢复、Linux prefork 故障演练和
+50 QPS/10 万文档容量实验仍待外部条件。
+
 实际解析器为自研UTF-8 TXT/Markdown/HTML/PyPDF2；Parent800/Child320 **字符**，无overlap。
 两路索引共用generation/active pointer，不是独立发布。
 Sparse-only降级使用Child正文，部分locator可能为空。
 检索和最终ACL继承同一deadline；HTTP取消只证明本地等待/传输取消，不保证服务端立即停止推理。
 
-尚未接入：Keycloak/OIDC、Redis、Celery/RabbitMQ、Git同步、OCR、Agentic Rewrite、
-生产队列、容量/SLO、HA、备份恢复及在线Provider fallback。
+尚未完成真实验收：托管 MinIO/Weaviate 恢复、正式 IdP/membership、Linux prefork
+故障演练、容量/SLO/RPO/RTO。Redis/Celery、备份恢复 CLI、在线 Provider fallback
+和 OIDC 适配已有代码路径，但默认关闭或需要真实部署注入。
 小样本通过不是完整RAG质量结论。开发HMAC token不是企业SSO。
 匿名模式默认关闭，仅development与loopback可用；共享固定身份不是企业多用户鉴权。
 配置改动后stop/start，重复start只复用原进程、不热加载.env。

@@ -24,6 +24,55 @@ from enterprise_rag.storage.s3 import S3ObjectStorage
 COMPONENTS = {"postgres", "minio", "weaviate", "redis_cache", "redis_coordination"}
 
 
+def build_backup_plan(action: str, directory: Path) -> dict:
+    """生成不执行变更的备份/恢复计划，供 CLI、审批和面试演示复用。"""
+
+    if action not in {"backup", "verify", "restore", "restore-verify"}:
+        raise BackupError("备份操作不受支持")
+    steps = {
+        "backup": [
+            "acquire-global-write-gate",
+            "pg-custom-dump",
+            "minio-current-object-export",
+            "weaviate-native-backup",
+            "redis-cache-rdb",
+            "redis-coordination-rdb",
+            "write-complete-manifest",
+        ],
+        "verify": ["validate-manifest", "verify-local-sha256", "verify-weaviate-backup-status"],
+        "restore": [
+            "validate-completed-manifest",
+            "validate-empty-isolated-targets",
+            "restore-postgres",
+            "restore-minio",
+            "restore-weaviate",
+            "stage-offline-redis-rdb",
+        ],
+        "restore-verify": [
+            "verify-schema-and-migration",
+            "verify-object-sha256",
+            "verify-generation-pointer",
+            "verify-dense-sparse-lineage",
+            "verify-redis-noeviction-aof",
+            "run-acl-query-replay-smoke",
+        ],
+    }[action]
+    return {
+        "mode": "plan",
+        "action": action,
+        "directory": str(directory),
+        "steps": steps,
+        "mutated": False,
+        "safety": {
+            "requires_execute": action != "verify",
+            "restore_requires_empty_targets": action in {"restore", "restore-verify"},
+            "target_must_be_empty_and_isolated": action in {"restore", "restore-verify"},
+            "never_deletes_source": True,
+            "never_restores_to_source_identity": True,
+        },
+    }
+
+
 class BackupError(RuntimeError):
     """命令/SDK/协议异常只能返回安全类别，不回显密钥和 endpoint。"""
 
@@ -202,6 +251,11 @@ class BackupRunner:
                         "Weaviate native remote snapshot requires retained provider backup storage",
                         "No writers outside the shared gate are allowed during the window",
                     ],
+                    "restore_contract": {
+                        "target_must_be_empty_and_isolated": True,
+                        "order": ["postgres", "minio", "weaviate", "redis"],
+                        "business_ready_requires_restore_verify": True,
+                    },
                 }
                 (directory / "manifest.json").write_text(
                     json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8",
@@ -226,6 +280,12 @@ def _redis_identity(url):
     """Redis 恢复必须隔离整个实例，不能只换 logical DB。"""
     value = urlsplit(url)
     return [value.hostname, value.port or 6379]
+
+
+def _s3_identity(endpoint: str, bucket: str) -> list[str]:
+    """返回不含凭据的对象存储实例与 bucket identity。"""
+
+    return [endpoint.rstrip("/"), bucket]
 
 
 def verify(directory: Path) -> dict:
@@ -257,7 +317,7 @@ class RestoreRunner(BackupRunner):
         source = manifest["source"]
         if (
             _pg_identity(self.database.url) == source["postgres"]
-            or [self.infra.s3_endpoint.rstrip("/"), self.infra.s3_bucket] == source["minio"]
+            or _s3_identity(self.infra.s3_endpoint, self.infra.s3_bucket) == source["minio"]
             or self.weaviate_url == source["weaviate"]
             or _redis_identity(self.infra.redis_cache_url) in source["redis"]
             or _redis_identity(self.infra.redis_coordination_url) in source["redis"]

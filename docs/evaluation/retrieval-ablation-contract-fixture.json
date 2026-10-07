@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "dataset_id": "retrieval-ablation-contract-v1",
+  "dataset_kind": "deterministic-contract-fixture",
+  "chunk_ids": [
+    "chunk-idempotency",
+    "chunk-retry-429",
+    "chunk-create-user-auth",
+    "chunk-deploy-rollback",
+    "chunk-trace-correlation"
+  ],
+  "queries": [
+    {
+      "query_id": "q-sem-idempotency",
+      "relevant_chunk_ids": ["chunk-idempotency"],
+      "dense": ["chunk-idempotency", "chunk-retry-429"],
+      "bm25f": ["chunk-retry-429", "chunk-idempotency"],
+      "reranker": ["chunk-idempotency", "chunk-retry-429"],
+      "latency_ms": {
+        "dense": 3.1,
+        "bm25f": 2.4,
+        "dense_bm25f": 5.5,
+        "rrf": 5.8,
+        "rrf_reranker": 9.2
+      }
+    },
+    {
+      "query_id": "q-lex-auth",
+      "relevant_chunk_ids": ["chunk-create-user-auth"],
+      "dense": ["chunk-retry-429", "chunk-create-user-auth"],
+      "bm25f": ["chunk-create-user-auth", "chunk-retry-429"],
+      "reranker": ["chunk-create-user-auth", "chunk-retry-429"],
+      "latency_ms": {
+        "dense": 3.0,
+        "bm25f": 2.3,
+        "dense_bm25f": 5.3,
+        "rrf": 5.6,
+        "rrf_reranker": 9.0
+      }
+    },
+    {
+      "query_id": "q-mix-release-trace",
+      "relevant_chunk_ids": [
+        "chunk-deploy-rollback",
+        "chunk-trace-correlation"
+      ],
+      "dense": [
+        "chunk-deploy-rollback",
+        "chunk-trace-correlation",
+        "chunk-retry-429"
+      ],
+      "bm25f": [
+        "chunk-trace-correlation",
+        "chunk-deploy-rollback",
+        "chunk-retry-429"
+      ],
+      "reranker": [
+        "chunk-deploy-rollback",
+        "chunk-trace-correlation",
+        "chunk-retry-429"
+      ],
+      "latency_ms": {
+        "dense": 3.4,
+        "bm25f": 2.7,
+        "dense_bm25f": 6.1,
+        "rrf": 6.4,
+        "rrf_reranker": 10.1
+      }
+    }
+  ]
+}

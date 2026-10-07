@@ -15,6 +15,7 @@
 ## 开发与运维
 
 - [基础设施渐进改造](./architecture/infrastructure-evolution.md)：Redis/Celery/MinIO、备份恢复、DeepSeek 的已实现边界、目标架构、迁移与回滚。
+- [高级岗位能力清单](./architecture/interview-capabilities.md)：评测、Observability、安全、备份和租户治理的实现与验收边界。
 - [环境预检](./preflight-checklist.md)：本地模型和基础设施检查项。
 - [本地 Reranker](./reranker-local.md)：BGE Reranker 安装与 smoke test。
 - [ADR 规范](./adr/README.md)：重要技术决策的记录格式。

@@ -1,6 +1,66 @@
 <!-- 项目入口：新会话优先读取本文件，再按任务读取 docs/ 下的专题文档。 -->
 # EnterpriseKnowledgeRAG 项目上下文
 
+P0 本地代码交付和本机真实闭环已完成；P0 生产最终验收仍未完成。P1 工程验收通过，
+检索消融 runner 与显式 RAG 质量门禁已实现；最新带 JUnit 全量回归为
+`527 passed, 12 skipped, 6 warnings`；安全/可靠性 JUnit 门禁 12/12 场景通过；40 条草案
+评测集结构审计通过但尚未 frozen。真实本机合成数据排名已采集；冻结 golden 集、人工阈值校准、
+完整 RAG 真实模型性能以及托管恢复/正式 IdP 等外部验收仍待完成；Fake 应用层性能
+基线和固定 evidence 的 LM Studio Excerpt benchmark 已归档，均不作为生产容量证据。
+
+当前 P1 验收结论为 `engineering-accepted / production-pending`：Codex 已完成代码、
+自动化测试、本机真实依赖链路和脱敏证据的工程验收；正式生产验收必须由项目负责人或
+生产环境负责人基于真实 golden 数据、租户授权、IdP/托管资源、备份恢复和 RPO/RTO
+完成确认。验收报告位于
+  `artifacts/experiments/2026-10-07_p1-acceptance/`。
+
+## 复核状态（2026-10-08）
+
+- 已验证：定向 `73 passed, 2 warnings`；最新带 JUnit 全量
+  `527 passed, 12 skipped, 6 warnings`；门禁 `12/12` 场景、`17/17` 必需测试通过。
+- 已验证：精确 P1 文件范围 Ruff、compileall、验收 JSON/敏感扫描、diff check 通过；
+  扩大旧目录范围 Ruff 存在 17 项既有问题，未做无关清理。
+- 本机真实检索与模型实验沿用 2026-10-07 证据，本次未重跑；12 项 PostgreSQL
+  集成仍因缺少 `POSTGRES_DSN` 跳过。正式生产验收状态保持 `pending`。
+
+## 最新状态（2026-10-07）
+
+- P1 真实本机双路与重排采集已完成：真实 Weaviate `1.27.10`、Ollama
+  `feadxus/qwen3-embedding:4b`（2560 维）和 Jina `jina-reranker-v3-mlx` 完成
+  10 个公开合成文档、8 条 query 的五模式消融；Dense/Sparse 临时 collection
+  均清理成功，产物位于
+  `artifacts/experiments/2026-10-07_p1-retrieval-ablation-real/`。
+  结果只属于本机公开合成数据，不代表 frozen golden、线上质量或生产容量。
+- 本轮真实采集相关定向测试 `22 passed`，相关 Ruff、`compileall`、
+  `git diff --check` 通过；当日最终全量和 JUnit 结果如下。
+- 本轮最终全量回归为 `527 passed, 12 skipped, 10 warnings`；P1 JUnit 门禁为
+  `12/12` 场景、`17/17` 必需测试通过。12 个 PostgreSQL 集成测试因未设置
+  `POSTGRES_DSN` 跳过；这不影响本机公开合成 Weaviate 双路采集结论。
+
+- 已实现并完成离线/定向验证：RAG 脱敏评测、请求/阶段 Observability、
+  Groundedness/Citation/Abstention、Prompt Injection evidence boundary、
+  备份恢复 plan/restore-verify、OIDC/JWT、tenant membership、租户配额和审计。
+- 新增面试能力总览：[docs/architecture/interview-capabilities.md](docs/architecture/interview-capabilities.md)。
+- 本轮定向回归 `32 passed, 2 warnings`，最终全量回归 `493 passed, 12 skipped,
+  6 warnings`；Observability 接入曾导致旧 query handler 的 trace 未初始化并返回
+  500，已修复。
+- P1 本机性能证据已补齐：LM Studio model discovery 成功，JSON/SSE 各 `2/2`
+  成功且均为 `answered/citation_validation=passed/stop`；产物位于
+  `artifacts/experiments/2026-10-07_p1-local-performance/`。该实验是固定 evidence
+  的 Excerpt 流程，不覆盖真实 Weaviate/Embedding/Reranker/PostgreSQL。
+- 2026-10-07 最终离线回归为 `518 passed, 12 skipped, 6 warnings`；JUnit 安全/
+  可靠性门禁 `12/12` 场景、`17/17` 必需测试通过。P1 新增/相关文件的 Ruff、
+  `compileall`、`git diff --check` 和 benchmark JSON 结构检查通过；全仓 Ruff
+  仍有 141 项既有问题，未在本轮扩大清理。
+- 当前仍不能宣称：托管 MinIO/Weaviate 真实恢复、正式 IdP/OIDC 真实联调、
+  Linux prefork kill/redelivery、50 QPS/10 万文档容量、RPO/RTO 最终验收。
+- 第 5 项 Linux 故障演练和第 7 项容量压测按用户要求跳过，属于明确非目标。
+- 2026-10-07 最新 API 进程已重新加载本轮代码；真实异步上传、六阶段发布、
+  产品问答、引用校验、Observability 和治理端点均已再次验证通过。
+- P1 验收报告已完成收口：工程验收 `passed`，正式生产验收 `pending`；
+  生产质量、生产容量和生产就绪均明确为 `false`。不能把本机公开合成数据、
+  Fake benchmark、macOS `solo` 或固定 evidence benchmark 外推成生产结论。
+
 ## 1. 项目目标
 
 从零开发一个面向研发技术文档的企业级 RAG 知识库，用于高级大模型开发岗面试。目标不是冒充真实生产平台，而是完成：

@@ -9,7 +9,10 @@ import pytest
 
 from enterprise_rag.retrieval.sparse import SparseObject, SparseProfile
 from enterprise_rag.retrieval.weaviate import WeaviateTransportError
-from enterprise_rag.retrieval.weaviate_sparse import WeaviateBM25FTransport
+from enterprise_rag.retrieval.weaviate_sparse import (
+    WeaviateBM25FTransport,
+    prepare_bm25_query,
+)
 
 
 def _profile() -> SparseProfile:
@@ -50,6 +53,30 @@ def _object() -> SparseObject:
             "source_locators": [{"line": 3}],
         },
     )
+
+
+def test_prepare_bm25_query_preserves_mixed_language_terms_and_expands_hyphens() -> None:
+    """混合中英文问题必须保留原文，并补充连字符技术词的独立 token。"""
+
+    prepared = prepare_bm25_query("Rerank为什么要用 Cross-Encoder")
+
+    assert prepared.startswith("Rerank为什么要用 Cross-Encoder")
+    assert "Rerank" in prepared.split()
+    assert "Cross-Encoder" in prepared.split()
+    assert "Cross" in prepared.split()
+    assert "Encoder" in prepared.split()
+
+
+@pytest.mark.parametrize("query", ["Cross-Encoder", "Bi-Encoder"])
+def test_prepare_bm25_query_expands_common_encoder_terms(query: str) -> None:
+    """Bi-Encoder 和 Cross-Encoder 都必须保留连字符形式及其组成词。"""
+
+    prepared = prepare_bm25_query(query)
+
+    assert query in prepared
+    left, right = query.split("-", maxsplit=1)
+    assert left in prepared.split()
+    assert right in prepared.split()
 
 
 @pytest.mark.asyncio
@@ -186,6 +213,42 @@ async def test_bm25f_query_uses_weights_and_tenant_version_filter() -> None:
         "version-1",
     ]
     assert rows[0]["chunk_id"] == "child-1"
+
+
+@pytest.mark.asyncio
+async def test_bm25f_query_preprocesses_mixed_language_technical_terms() -> None:
+    """BM25F 请求应增强混合中英文技术词，但不能改变 scope 变量。"""
+
+    observed_payload: dict[str, object] = {}
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        """记录增强后的 query，并返回最小合法响应。"""
+
+        observed_payload.update(json.loads(request.content))
+        return httpx.Response(
+            200,
+            json={"data": {"Get": {"SparseTenant_demo": []}}},
+            request=request,
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        transport = WeaviateBM25FTransport(client, "http://weaviate.test")
+        await transport.search(
+            "SparseTenant_demo",
+            profile=_profile(),
+            tenant_id="tenant-a",
+            generation_id="generation-1",
+            version_id="version-1",
+            query="Rerank为什么要用 Cross-Encoder",
+            top_k=20,
+        )
+
+    variables = observed_payload["variables"]
+    query = variables["query"]
+    assert isinstance(query, str)
+    assert "Rerank为什么要用 Cross-Encoder" in query
+    assert {"Rerank", "Cross-Encoder", "Cross", "Encoder"} <= set(query.split())
+    assert variables["where"]["operands"][0]["valueText"] == "tenant-a"
 
 
 @pytest.mark.asyncio

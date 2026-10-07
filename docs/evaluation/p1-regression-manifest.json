@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "required_scenarios": [
+    {
+      "scenario_id": "tenant-document-isolation",
+      "category": "security",
+      "tests": [
+        "tests/unit/test_authorization.py::test_document_read_is_tenant_scoped_and_hides_idor",
+        "tests/unit/test_retrieval_scope.py::test_scope_requires_current_acl_and_active_generation"
+      ]
+    },
+    {
+      "scenario_id": "revocation-blocks-citation",
+      "category": "security",
+      "tests": [
+        "tests/api/test_product_rag_query_api.py::test_product_rag_query_hides_revoked_citation_and_does_not_return_answer"
+      ]
+    },
+    {
+      "scenario_id": "prompt-injection-evidence-boundary",
+      "category": "security",
+      "tests": [
+        "tests/unit/test_grounding_and_prompt_injection.py::test_prompt_injection_is_detected_without_returning_source_text"
+      ]
+    },
+    {
+      "scenario_id": "external-call-acl-recheck",
+      "category": "security",
+      "tests": [
+        "tests/api/test_product_rag_query_api.py::test_online_routing_rechecks_acl_before_external_call"
+      ]
+    },
+    {
+      "scenario_id": "worker-acl-recheck",
+      "category": "security",
+      "tests": [
+        "tests/infrastructure/test_async_pipeline.py::test_worker_reloads_acl_before_publish"
+      ]
+    },
+    {
+      "scenario_id": "server-side-membership",
+      "category": "security",
+      "tests": [
+        "tests/unit/test_oidc_governance.py::test_oidc_dependency_uses_server_membership_roles"
+      ]
+    },
+    {
+      "scenario_id": "duplicate-event-idempotency",
+      "category": "reliability",
+      "tests": [
+        "tests/infrastructure/test_task_ledger.py::test_event_context_loaded_from_pg_and_duplicate_consumption_is_noop",
+        "tests/infrastructure/test_async_pipeline.py::test_real_handlers_publish_and_duplicate_event_does_not_embed"
+      ]
+    },
+    {
+      "scenario_id": "bounded-retry-dead-letter-replay",
+      "category": "reliability",
+      "tests": [
+        "tests/infrastructure/test_task_ledger.py::test_retry_budget_dead_letter_and_replay_preserve_history",
+        "tests/infrastructure/test_async_pipeline.py::test_async_api_replay_only_dead_letter_and_keeps_history"
+      ]
+    },
+    {
+      "scenario_id": "nonretryable-failure-stops",
+      "category": "reliability",
+      "tests": [
+        "tests/infrastructure/test_task_ledger.py::test_nonretryable_failure_never_requeues"
+      ]
+    },
+    {
+      "scenario_id": "outbox-redelivery",
+      "category": "reliability",
+      "tests": [
+        "tests/infrastructure/test_task_ledger.py::test_outbox_failure_is_durable_and_next_dispatch_can_retry",
+        "tests/infrastructure/test_task_ledger.py::test_broker_message_loss_requeues_only_unclaimed_current_stage"
+      ]
+    },
+    {
+      "scenario_id": "lease-fencing",
+      "category": "reliability",
+      "tests": [
+        "tests/infrastructure/test_task_ledger.py::test_fencing_and_checkpoints_reject_expired_worker",
+        "tests/infrastructure/test_task_ledger.py::test_old_dispatcher_token_cannot_ack_new_claim"
+      ]
+    },
+    {
+      "scenario_id": "stage-progression-idempotency",
+      "category": "reliability",
+      "tests": [
+        "tests/infrastructure/test_task_ledger.py::test_stages_advance_once_and_old_delivery_cannot_run_next_stage"
+      ]
+    }
+  ]
+}

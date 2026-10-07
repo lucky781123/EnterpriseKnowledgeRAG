@@ -242,6 +242,12 @@ class WeaviateHTTPXTransport:
         }
         await self._request("POST", "/v1/schema", json=schema)
 
+    async def delete_collection(self, collection_name: str) -> None:
+        """删除指定 collection，供隔离实验和显式清理流程使用。"""
+
+        collection_name = self.physical_collection_name(collection_name)
+        await self._request("DELETE", f"/v1/schema/{collection_name}")
+
     async def upsert_batch(
         self, collection_name: str, objects: Sequence[WeaviateObject]
     ) -> WeaviateBatchResult:
@@ -379,12 +385,10 @@ class WeaviateHTTPXTransport:
         collection_name = self.physical_collection_name(collection_name)
         if top_k <= 0:
             raise ValueError("top_k 必须大于 0")
-        selection = " ".join(
-            (
-                "tenant_id document_id version_id generation_id chunk_id parent_id",
-                "text parent_text heading_path",
-                "source_locators { kind start end page line } _additional { distance }",
-            )
+        selection = (
+            "tenant_id document_id version_id generation_id chunk_id parent_id "
+            "text parent_text heading_path "
+            "source_locators { kind start end page line } _additional { distance }"
         )
         # Weaviate 1.27 的 where 输入类型按 collection 动态生成，没有通用 WhereFilter。
         where_type = f"GetObjects{collection_name}WhereInpObj!"

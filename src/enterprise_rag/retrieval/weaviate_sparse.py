@@ -8,10 +8,9 @@ BM25F query 和 scope filter 兼容性。它不保存 sparse generation 发布�
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Sequence
 from typing import Any
-
-import httpx
 
 from enterprise_rag.retrieval.contracts import SparseGenerationSnapshot
 from enterprise_rag.retrieval.sparse import SparseObject, SparseProfile
@@ -21,6 +20,44 @@ from enterprise_rag.retrieval.weaviate import (
 )
 
 _BM25F_FIELDS = ("title", "section_title", "api_symbols", "body")
+_ASCII_QUERY_TOKEN = re.compile(
+    r"(?<![A-Za-z0-9])(?:"
+    r"[A-Za-z][A-Za-z0-9]*(?:[-_./:][A-Za-z0-9]+)+"
+    r"|[A-Za-z][A-Za-z0-9]{1,}"
+    r")(?![A-Za-z0-9])"
+)
+
+
+def prepare_bm25_query(query: str) -> str:
+    """保留原问题并补充 ASCII 技术词，改善 ``word`` tokenizer 的混合语言召回。
+
+    当前生产 Sparse profile 仍然是 ``word + identity``，不能在没有索引迁移和
+    评测证据的情况下直接切换到 ``cjk_bigram``。因此这里只做查询侧的有界增强：
+    原始问题保留中文语义和短语顺序；英文、数字和连字符技术词额外以独立 token
+    出现，使 ``Cross-Encoder`` 同时贡献完整词和 ``Cross``/``Encoder``。
+    """
+
+    normalized = " ".join(query.split())
+    if not normalized:
+        return ""
+
+    parts = [normalized]
+    seen = {normalized}
+    standalone_tokens = set(normalized.split())
+    for match in _ASCII_QUERY_TOKEN.finditer(normalized):
+        token = match.group(0)
+        if token not in standalone_tokens and token not in seen:
+            parts.append(token)
+            seen.add(token)
+
+        components = re.split(r"[-_./:]+", token)
+        if len(components) <= 1:
+            continue
+        for component in components:
+            if component not in seen:
+                parts.append(component)
+                seen.add(component)
+    return " ".join(parts)
 
 
 class WeaviateBM25FTransport(WeaviateHTTPXTransport):
@@ -231,7 +268,7 @@ class WeaviateBM25FTransport(WeaviateHTTPXTransport):
         payload = {
             "query": query_text,
             "variables": {
-                "query": query,
+                "query": prepare_bm25_query(query),
                 "where": self._scope_where(tenant_id, generation_id, version_id),
             },
         }
@@ -385,4 +422,4 @@ class WeaviateBM25FTransport(WeaviateHTTPXTransport):
         await self._request("DELETE", f"/v1/schema/{collection_name}")
 
 
-__all__ = ["WeaviateBM25FTransport"]
+__all__ = ["WeaviateBM25FTransport", "prepare_bm25_query"]

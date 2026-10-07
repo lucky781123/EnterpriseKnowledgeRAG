@@ -2,7 +2,8 @@
 
 ## 1. 目标闭环
 
-本节是目标图，不代表Git同步、OIDC、Agentic或完整审计/指标已接入。
+本节是目标图；当前新增的 OIDC 适配、审计/指标和备份恢复 CLI 已有代码与离线契约，
+但真实 IdP、托管恢复和生产容量仍未验收。
 
 ### 当前实际链路（2026-10-03）
 
@@ -36,7 +37,7 @@ Sparse-only为Child正文，部分locator缺失；BGE线程取消与多scope串�
   → RRF + Reranker
   → Parent 回溯与证据组装
   → Linear 问答 / 有界 Agentic
-  → SSE、引用、审计、指标
+  → SSE、引用、Groundedness、审计、指标
 ```
 
 ## 1.1 历史 Dense 迁移切片状态（2026-09-16）

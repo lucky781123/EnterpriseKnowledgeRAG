@@ -163,6 +163,24 @@ async def test_ensure_collection_only_creates_after_not_found():
 
 
 @pytest.mark.asyncio
+async def test_delete_collection_uses_schema_endpoint():
+    """Dense transport 清理 collection 时必须调用固定 schema 删除接口。"""
+
+    observed: list[httpx.Request] = []
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        observed.append(request)
+        return httpx.Response(200, request=request)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        transport = WeaviateHTTPXTransport(client, "http://weaviate.test")
+        await transport.delete_collection("DenseTenant_demo")
+
+    assert observed[0].method == "DELETE"
+    assert observed[0].url.path == "/v1/schema/DenseTenant_demo"
+
+
+@pytest.mark.asyncio
 async def test_list_objects_encodes_query_parameters_and_parses_response():
     """对象列表请求应使用 HTTPX 可用的查询字符串编码。"""
 

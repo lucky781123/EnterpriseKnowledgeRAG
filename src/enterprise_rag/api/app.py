@@ -36,6 +36,7 @@ from enterprise_rag.db.models import (
 from enterprise_rag.db.session import Database
 from enterprise_rag.embedding.ollama import OllamaEmbeddingProvider
 from enterprise_rag.excerpts.service import ExcerptAnswerService, VisibleStreamSanitizer
+from enterprise_rag.excerpts.grounding import assess_groundedness
 from enterprise_rag.excerpts.validation import ExcerptValidationError
 from enterprise_rag.ingestion.product_service import (
     ProductIndexingError,
@@ -50,6 +51,13 @@ from enterprise_rag.providers.registry import ProviderRegistry, RegisteredProvid
 from enterprise_rag.providers.routed import PolicyRoutedProvider, model_scope
 from enterprise_rag.providers.scheduler import LocalLLMScheduler, SchedulerLease
 from enterprise_rag.retrieval.repository import PostgresVectorRepository
+from enterprise_rag.observability import MetricsRegistry, RequestObservabilityMiddleware, current_trace
+from enterprise_rag.security.governance import TenantGovernance, TenantQuotaExceeded
+from enterprise_rag.security.oidc import (
+    OIDCSettings,
+    TenantMembershipResolver,
+    build_oidc_context_dependency,
+)
 from enterprise_rag.security.authorization import (
     AuthorizationDenied,
     AuthorizationService,
@@ -229,6 +237,9 @@ def create_app(
     product_readiness_manager: ProductReadinessManager | Any | None = None,
     async_ingestion_service: Any | None = None,
     write_gate: Any | None = None,
+    oidc_verifier: Any | None = None,
+    membership_resolver: TenantMembershipResolver | None = None,
+    tenant_governance: TenantGovernance | None = None,
     managed_resources: tuple = (),
 ) -> FastAPI:
     """创建应用并装配共享 Chat、Embedding、检索和产品上传依赖。"""
@@ -361,6 +372,8 @@ def create_app(
                 await resolved_database.dispose()
 
     app = FastAPI(title="EnterpriseKnowledgeRAG", version="0.1.0", lifespan=lifespan)
+    observability = MetricsRegistry()
+    app.add_middleware(RequestObservabilityMiddleware, metrics=observability)
     # 请求体预算必须位于 FastAPI/Pydantic 解析之前。这样即使攻击者不提供
     # Content-Length，分片正文累计超过 128 KiB 时也会在业务路由前得到稳定
     # 的 413；未超限的正文由 middleware 只重放一次，避免下游看到空 body。
@@ -399,6 +412,11 @@ def create_app(
                 return JSONResponse(status_code=exc.status_code, content={"error": exc.detail})
             return await call_next(request)
     app.state.settings = resolved_settings
+    app.state.observability = observability
+    app.state.tenant_governance = tenant_governance or TenantGovernance(
+        requests_per_minute=resolved_settings.tenant_requests_per_minute,
+        uploads_per_minute=resolved_settings.tenant_uploads_per_minute,
+    )
     app.state.database = resolved_database
     app.state.embedding_provider = resolved_embedding_provider
     app.state.vector_repository = resolved_vector_repository
@@ -481,6 +499,18 @@ def create_app(
 
         return {"status": "ok"}
 
+    @app.get("/health/metrics")
+    async def metrics() -> dict[str, object]:
+        """返回脱敏聚合指标，不暴露正文、密钥、token 或无界身份标签。"""
+
+        return app.state.observability.snapshot()
+
+    @app.get("/health/governance")
+    async def governance() -> dict[str, object]:
+        """返回租户配额和审计数量，不返回 token 或请求正文。"""
+
+        return app.state.tenant_governance.snapshot()
+
     @app.get("/health/ready")
     async def ready(response: Response) -> dict[str, object]:
         """同时检查数据库 schema 和 Provider 可达性，但绝不执行 migration。"""
@@ -521,7 +551,19 @@ def create_app(
             "provider": provider_payload,
         }
 
-    if resolved_settings.local_anonymous_enabled:
+    if resolved_settings.oidc_enabled:
+        if oidc_verifier is None or membership_resolver is None:
+            raise ValueError("OIDC_ENABLED=true 时必须注入 verifier 和 membership_resolver")
+        product_context_dependency = build_oidc_context_dependency(
+            oidc_verifier,
+            membership_resolver,
+            settings=OIDCSettings(
+                issuer=resolved_settings.oidc_issuer,
+                audience=resolved_settings.oidc_audience,
+                jwks_url=resolved_settings.oidc_jwks_url,
+            ),
+        )
+    elif resolved_settings.local_anonymous_enabled:
         product_context_dependency = build_local_anonymous_dependency()
     elif resolved_dev_token_codec is not None:
         product_context_dependency = build_request_context_dependency(resolved_dev_token_codec)
@@ -850,6 +892,12 @@ def create_app(
         # 上传权限检查；领域服务仍会再次校验，形成纵深防御。
         try:
             AuthorizationService().require_any_role(context, {"editor", "admin"})
+            await app.state.tenant_governance.check(context, "document.upload")
+        except TenantQuotaExceeded as exc:
+            raise HTTPException(
+                status_code=429,
+                detail={"kind": "tenant_quota_exceeded", "message": "租户上传频率受限"},
+            ) from exc
         except AuthorizationDenied as exc:
             raise HTTPException(
                 status_code=403,
@@ -938,18 +986,40 @@ def create_app(
                 },
             )
 
+        trace = current_trace()
+        try:
+            await app.state.tenant_governance.check(context, "rag.query")
+        except TenantQuotaExceeded:
+            return JSONResponse(
+                status_code=429,
+                content={"error": {"kind": "tenant_quota_exceeded", "message": "租户查询频率受限"}},
+            )
+        if trace is not None:
+            trace.set_attribute("operation", "product_rag_query")
+            trace.set_attribute("top_k", request.top_k)
+            trace.set_attribute("candidate_k", request.candidate_k)
         try:
             async with (
                 asyncio.timeout(_remaining_seconds(deadline)),
                 database_dependency.session() as session,
             ):
-                retrieval_result = await retrieval_service.search(
-                    session,
-                    context,
-                    question=request.question,
-                    candidate_k=request.candidate_k,
-                    top_k=request.top_k,
-                )
+                if trace is None:
+                    retrieval_result = await retrieval_service.search(
+                        session,
+                        context,
+                        question=request.question,
+                        candidate_k=request.candidate_k,
+                        top_k=request.top_k,
+                    )
+                else:
+                    with trace.span("retrieval", candidate_k=request.candidate_k):
+                        retrieval_result = await retrieval_service.search(
+                            session,
+                            context,
+                            question=request.question,
+                            candidate_k=request.candidate_k,
+                            top_k=request.top_k,
+                        )
         except TimeoutError:
             return JSONResponse(
                 status_code=504,
@@ -1039,7 +1109,11 @@ def create_app(
             )
             # 在线路由只接受产品入口注入的可信 tenant；继承检索消耗后的总 deadline。
             with model_scope(context.tenant_id, deadline):
-                response = await query(excerpt_request)
+                if trace is None:
+                    response = await query(excerpt_request)
+                else:
+                    with trace.span("generation", model_alias=request.model_alias):
+                        response = await query(excerpt_request)
         except ResourceNotFound:
             return JSONResponse(
                 status_code=404, content={"error": {"kind": "evidence_not_found"}},
@@ -1095,6 +1169,10 @@ def create_app(
                     },
                 )
 
+        if trace is not None:
+            trace.set_attribute("answer_status", response.answer_status)
+            trace.set_attribute("citation_validation", response.citation_validation)
+            trace.set_attribute("retrieved_candidates", len(retrieval_result.candidates))
         payload = response.model_dump()
         payload["retrieval_trace"] = ProductRetrievalTraceResponse.from_result(
             retrieval_result
@@ -1116,6 +1194,7 @@ def create_app(
         validation_ms: float | None = None
         lease: SchedulerLease | None = None
         provider_response: ChatResponse | None = None
+        trace = current_trace()
 
         try:
             registered = app.state.provider_registry.resolve(request.model_alias, "chat.complete")
@@ -1143,16 +1222,33 @@ def create_app(
                 if remaining <= 0:
                     raise TimeoutError
                 generation_started = time.monotonic()
-                async with asyncio.timeout(remaining):
-                    provider_response = await registered.provider.complete(prepared_request)
+                if trace is None:
+                    async with asyncio.timeout(remaining):
+                        provider_response = await registered.provider.complete(prepared_request)
+                else:
+                    with trace.span("generation", model_alias=request.model_alias):
+                        async with asyncio.timeout(remaining):
+                            provider_response = await registered.provider.complete(prepared_request)
                 generation_ms = _elapsed_ms(generation_started)
             finally:
                 await lease.release()
                 lease = None
 
             validation_started = time.monotonic()
-            result = service.interpret_response(provider_response, validated_bundle)
+            if trace is None:
+                result = service.interpret_response(provider_response, validated_bundle)
+            else:
+                with trace.span("citation_validation"):
+                    result = service.interpret_response(provider_response, validated_bundle)
             validation_ms = _elapsed_ms(validation_started)
+            if trace is not None:
+                trace.set_attribute("answer_status", result.answer_status)
+                trace.set_attribute("citation_validation", result.citation_validation)
+                if provider_response.usage is not None:
+                    if provider_response.usage.input_tokens is not None:
+                        trace.set_attribute("input_tokens", provider_response.usage.input_tokens)
+                    if provider_response.usage.output_tokens is not None:
+                        trace.set_attribute("output_tokens", provider_response.usage.output_tokens)
 
             completion_ms = _elapsed_ms(started_at)
             provider_result = _provider_result_payload(
@@ -1171,6 +1267,16 @@ def create_app(
                 citation_validation=result.citation_validation,
                 message=result.message,
                 citations=[CitationResponse(**item) for item in result.citations],
+                groundedness=assess_groundedness(
+                    answer_status=result.answer_status,
+                    citation_validation=result.citation_validation,
+                    citation_count=len(result.citations),
+                ).status,
+                groundedness_reason=assess_groundedness(
+                    answer_status=result.answer_status,
+                    citation_validation=result.citation_validation,
+                    citation_count=len(result.citations),
+                ).reason,
                 provider_result=provider_result,
                 timings=_timings_payload(
                     queue_ms=queue_ms,
@@ -1401,6 +1507,8 @@ def create_app(
                 answer_status: str,
                 citation_validation: str,
                 message: str,
+                groundedness: str = "not_checked",
+                groundedness_reason: str = "",
                 response: ChatResponse | None = None,
                 error: ProviderError | None = None,
                 status: str | None = None,
@@ -1427,6 +1535,8 @@ def create_app(
                     answer_status=answer_status,
                     citation_validation=citation_validation,
                     message=message,
+                    groundedness=groundedness,
+                    groundedness_reason=groundedness_reason,
                     provider_result=provider_result.model_dump(),
                     timings=_timings_payload(
                         queue_ms=lease.queue_ms,
@@ -1607,6 +1717,16 @@ def create_app(
                         answer_status=result.answer_status,
                         citation_validation=result.citation_validation,
                         message=result.message,
+                        groundedness=assess_groundedness(
+                            answer_status=result.answer_status,
+                            citation_validation=result.citation_validation,
+                            citation_count=len(result.citations),
+                        ).status,
+                        groundedness_reason=assess_groundedness(
+                            answer_status=result.answer_status,
+                            citation_validation=result.citation_validation,
+                            citation_count=len(result.citations),
+                        ).reason,
                         response=provider_response,
                         status="success",
                     )

@@ -45,6 +45,11 @@ Child 用于精确定位，Parent 补足解释上下文；Parent 过大增加噪
 
 ## 4. 证据清单
 
+- RAG 离线评测报告：检索、引用支持、拒答和权限结果；
+- 请求/阶段 trace 与脱敏指标；
+- Groundedness、Citation Support、Abstention 和 Prompt Injection 测试；
+- OIDC/JWT、tenant membership、配额和审计测试；
+- 备份/恢复 plan 与 restore-verify 契约；
 - 检索消融报告；
 - 权限和撤权测试报告；
 - 任务重复投递与崩溃恢复报告；

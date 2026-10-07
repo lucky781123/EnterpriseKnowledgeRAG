@@ -151,6 +151,12 @@ class Settings:
     reranker_model: str | None = None
     reranker_device: str | None = None
     dense_profile_namespace: bool = False
+    oidc_enabled: bool = False
+    oidc_issuer: str = ""
+    oidc_audience: str = ""
+    oidc_jwks_url: str = ""
+    tenant_requests_per_minute: int = 600
+    tenant_uploads_per_minute: int = 120
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -182,6 +188,12 @@ class Settings:
             reranker_model=reranker["model"] if reranker else _env("BGE_RERANKER_MODEL"),
             reranker_device=_env("BGE_RERANKER_DEVICE"),
             dense_profile_namespace="embedding" in local_llm,
+            oidc_enabled=_env_bool("OIDC_ENABLED", False),
+            oidc_issuer=_env("OIDC_ISSUER", "") or "",
+            oidc_audience=_env("OIDC_AUDIENCE", "") or "",
+            oidc_jwks_url=_env("OIDC_JWKS_URL", "") or "",
+            tenant_requests_per_minute=_env_int("TENANT_REQUESTS_PER_MINUTE", 600),
+            tenant_uploads_per_minute=_env_int("TENANT_UPLOADS_PER_MINUTE", 120),
             grok_api_key=_env("GROK_API_KEY"),
             grok_base_url=_env("GROK_BASE_URL", "https://api.deepspacecode.chat/v1") or "",
             grok_model=_env("GROK_MODEL", "grok-4.6") or "",
@@ -242,3 +254,11 @@ class Settings:
             and self.product_upload_max_bytes < self.api_request_body_max_bytes
         ):
             raise ValueError("PRODUCT_UPLOAD_MAX_BYTES 不能小于 API_REQUEST_BODY_MAX_BYTES")
+        if self.oidc_enabled:
+            from enterprise_rag.security.oidc import OIDCSettings
+
+            OIDCSettings(
+                issuer=self.oidc_issuer,
+                audience=self.oidc_audience,
+                jwks_url=self.oidc_jwks_url,
+            ).validate()

@@ -195,3 +195,5 @@ class ExcerptResponse(BaseModel):
     citations: list[CitationResponse]
     provider_result: ProviderResultResponse
     timings: TimingsResponse
+    groundedness: str = "not_checked"
+    groundedness_reason: str = ""
